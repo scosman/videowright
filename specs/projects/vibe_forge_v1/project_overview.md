@@ -355,6 +355,19 @@ Internal structure of the `skill/` folder is **not yet designed**. Open below.
 
 ---
 
+## Quality
+
+Project should be high quality
+
+ - write tests as we go
+ - use best practices: linting, formatting, etc
+ - write CI (custom phase to run tests/linter/etc on)
+ - Typescript strict
+ - refactor when needed, don't let mistakes drag.
+
+
+---
+
 ## Open questions / next steps
 
 Pick up here. Don't make new decisions in the locked sections above; if something there needs revisiting, raise it explicitly rather than silently changing course.
