@@ -5,8 +5,10 @@
 		"noEmit": true,
 		"composite": false,
 		"declaration": false,
-		"declarationMap": false
+		"declarationMap": false,
+		"types": ["node"]
 	},
 	"include": ["src/**/*", "test/**/*"],
+	"exclude": ["src/cli/entry/**/*"],
 	"references": [{ "path": "./tsconfig.json" }]
 }

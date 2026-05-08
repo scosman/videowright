@@ -5,7 +5,7 @@
 	"description": "Compose browser-native video segments with any web technology",
 	"license": "MIT",
 	"bin": {
-		"videowright": "./dist/cli/index.js"
+		"videowright": "./dist/cli/bin.js"
 	},
 	"exports": {
 		".": {
@@ -17,15 +17,19 @@
 			"import": "./dist/cli/index.js"
 		}
 	},
-	"files": ["dist", "skill"],
+	"files": ["dist", "skill", "src/cli/entry"],
 	"scripts": {
 		"build": "vite build",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},
+	"dependencies": {
+		"tsx": "^4.19.0",
+		"vite": "^6.3.5"
+	},
 	"devDependencies": {
+		"@types/node": "^25.6.2",
 		"jsdom": "^29.1.1",
-		"vite": "^6.3.5",
 		"vite-plugin-dts": "^4.5.3",
 		"vitest": "^3.1.3"
 	}

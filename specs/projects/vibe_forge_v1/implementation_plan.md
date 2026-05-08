@@ -16,7 +16,7 @@ Phased build order. Each phase is one coherent CR. Test, lint, and typecheck sta
 
 - [x] **Phase 4: Player.** `src/player/`: `<vw-slot>` custom element, hash router, input handling, HUD, forward/backward step, two-slot transition orchestration, seek-to-beat-N, error overlay, render-mode stub. Unit + integration tests per `components/player.md` test plan (jsdom-based).
 
-- [ ] **Phase 5: CLI.** `src/cli/`: argv parser, config + timeline discovery, `tsx`-based TS module loader for Node, `videowright dev` (programmatic Vite boot with internal entry HTML and `@consumer` alias), `videowright script` with `--write`. Per `components/cli.md` test plan.
+- [x] **Phase 5: CLI.** `src/cli/`: argv parser, config + timeline discovery, `tsx`-based TS module loader for Node, `videowright dev` (programmatic Vite boot with internal entry HTML and `@consumer` alias), `videowright script` with `--write`. Per `components/cli.md` test plan.
 
 - [ ] **Phase 6: Skill content.** `packages/lib/skill/`: `SKILL.md`, four references (`setup.md`, `authoring_segment.md`, `authoring_video.md`, `style_matching.md`), `assets/hello_world/` templates. Wire `package.json#files` to include `skill/`. Manual eval: a fresh agent with only the skill scaffolds a working video.
 
