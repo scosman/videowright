@@ -44,3 +44,7 @@ export {
 
 // Script helper
 export { script } from "./script/index.js";
+
+// Player
+export { Player } from "./player/index.js";
+export type { PlayerOptions } from "./player/index.js";

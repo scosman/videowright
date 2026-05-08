@@ -14,7 +14,7 @@ Phased build order. Each phase is one coherent CR. Test, lint, and typecheck sta
 
 - [x] **Phase 3: Timeline loader, transitions, script helper.** `src/timeline/`: `buildSegmentLoaderMap`, `buildTransitionLoaderMap`, `validateTimeline`, `applyMetaDefaults`. `src/player/transitions/`: `cut`, `fade`, `slideLeft/Right/Up/Down` (WAAPI). `src/script/script.ts`: VO concat helper. Unit tests per `components/timeline_loader.md` plus transition tests from `components/player.md`.
 
-- [ ] **Phase 4: Player.** `src/player/`: `<vw-slot>` custom element, hash router, input handling, HUD, forward/backward step, two-slot transition orchestration, seek-to-beat-N, error overlay, render-mode stub. Unit + integration tests per `components/player.md` test plan (jsdom-based).
+- [x] **Phase 4: Player.** `src/player/`: `<vw-slot>` custom element, hash router, input handling, HUD, forward/backward step, two-slot transition orchestration, seek-to-beat-N, error overlay, render-mode stub. Unit + integration tests per `components/player.md` test plan (jsdom-based).
 
 - [ ] **Phase 5: CLI.** `src/cli/`: argv parser, config + timeline discovery, `tsx`-based TS module loader for Node, `videowright dev` (programmatic Vite boot with internal entry HTML and `@consumer` alias), `videowright script` with `--write`. Per `components/cli.md` test plan.
 

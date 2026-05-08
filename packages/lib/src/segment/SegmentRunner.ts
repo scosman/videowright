@@ -22,7 +22,7 @@ export class SegmentRunner {
 	private seekBeatsRemaining: number;
 	private abortCtrl = new AbortController();
 	private mountedAt = 0;
-	private playPromise: Promise<void> | null = null;
+	private _playPromise: Promise<void> | null = null;
 	private state: RunnerState = "created";
 
 	constructor(segment: Segment, opts: SegmentRunnerOptions) {
@@ -47,10 +47,10 @@ export class SegmentRunner {
 			throw new Error("SegmentRunner: not mounted");
 		}
 		this.state = "playing";
-		this.playPromise = this.segment.play(this.makeContext()).finally(() => {
+		this._playPromise = this.segment.play(this.makeContext()).finally(() => {
 			this.state = "done";
 		});
-		return this.playPromise;
+		return this._playPromise;
 	}
 
 	triggerNext(): boolean {
@@ -94,6 +94,22 @@ export class SegmentRunner {
 
 	get currentBeat(): number {
 		return this.beatCounter;
+	}
+
+	get isDone(): boolean {
+		return this.state === "done";
+	}
+
+	get playPromise(): Promise<void> | null {
+		return this._playPromise;
+	}
+
+	get currentState(): RunnerState {
+		return this.state;
+	}
+
+	get elapsedSinceMount(): number {
+		return this.mountedAt > 0 ? performance.now() - this.mountedAt : 0;
 	}
 
 	// ---- Private ----
