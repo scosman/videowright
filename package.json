@@ -1,0 +1,16 @@
+{
+	"name": "videowright-monorepo",
+	"private": true,
+	"type": "module",
+	"workspaces": ["packages/lib"],
+	"scripts": {
+		"typecheck": "tsc --build",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"test": "npm test --workspace=packages/lib"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"typescript": "^5.7.3"
+	}
+}

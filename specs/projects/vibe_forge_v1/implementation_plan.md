@@ -8,7 +8,7 @@ Phased build order. Each phase is one coherent CR. Test, lint, and typecheck sta
 
 ## Phases
 
-- [ ] **Phase 1: Repo bootstrap & tooling.** npm workspaces, `tsconfig.base.json` (strict), `packages/lib/` package skeleton with `bin: videowright`, ESLint + Prettier (or Biome — pick during this phase), Vitest config, root scripts (`typecheck`, `lint`, `test`), empty `src/` skeleton, `LICENSE` (MIT), `notes_for_readme.md`. No runtime code yet.
+- [x] **Phase 1: Repo bootstrap & tooling.** npm workspaces, `tsconfig.base.json` (strict), `packages/lib/` package skeleton with `bin: videowright`, ESLint + Prettier (or Biome — pick during this phase), Vitest config, root scripts (`typecheck`, `lint`, `test`), empty `src/` skeleton, `LICENSE` (MIT), `notes_for_readme.md`. No runtime code yet.
 
 - [ ] **Phase 2: Types + segment authoring.** `src/types.ts` (`Segment`, `SegmentSpec`, `PlayerContext`, `Timeline`, `TimelineEntry`, `TimelineMeta`, `Config`, `Transition`). `src/segment/`: `defineSegment`, `defineConfig`, internal `SegmentRunner` with ctx-creation, beat counter, abort signal, seek-beats. Unit tests per `components/segment_helper.md` test plan.
 

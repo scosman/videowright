@@ -1,0 +1,12 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": ".",
+		"noEmit": true,
+		"composite": false,
+		"declaration": false,
+		"declarationMap": false
+	},
+	"include": ["src/**/*", "test/**/*"],
+	"references": [{ "path": "./tsconfig.json" }]
+}
