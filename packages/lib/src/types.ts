@@ -99,7 +99,7 @@ export type Transition = (
 /** Repo-wide configuration from videowright.config.ts. */
 export interface Config {
 	/** Setup marker; bumped when layout changes. */
-	projectStructure: string;
+	projectStructure: "v1";
 	/** Default values for timeline meta fields. */
 	defaults?: {
 		resolution?: [number, number];

@@ -1,1 +1,1 @@
-// Script helper -- implemented in Phase 3.
+export { script } from "./script.js";

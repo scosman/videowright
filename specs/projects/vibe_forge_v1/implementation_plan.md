@@ -12,7 +12,7 @@ Phased build order. Each phase is one coherent CR. Test, lint, and typecheck sta
 
 - [x] **Phase 2: Types + segment authoring.** `src/types.ts` (`Segment`, `SegmentSpec`, `PlayerContext`, `Timeline`, `TimelineEntry`, `TimelineMeta`, `Config`, `Transition`). `src/segment/`: `defineSegment`, `defineConfig`, internal `SegmentRunner` with ctx-creation, beat counter, abort signal, seek-beats. Unit tests per `components/segment_helper.md` test plan.
 
-- [ ] **Phase 3: Timeline loader, transitions, script helper.** `src/timeline/`: `buildSegmentLoaderMap`, `buildTransitionLoaderMap`, `validateTimeline`, `applyMetaDefaults`. `src/player/transitions/`: `cut`, `fade`, `slideLeft/Right/Up/Down` (WAAPI). `src/script/script.ts`: VO concat helper. Unit tests per `components/timeline_loader.md` plus transition tests from `components/player.md`.
+- [x] **Phase 3: Timeline loader, transitions, script helper.** `src/timeline/`: `buildSegmentLoaderMap`, `buildTransitionLoaderMap`, `validateTimeline`, `applyMetaDefaults`. `src/player/transitions/`: `cut`, `fade`, `slideLeft/Right/Up/Down` (WAAPI). `src/script/script.ts`: VO concat helper. Unit tests per `components/timeline_loader.md` plus transition tests from `components/player.md`.
 
 - [ ] **Phase 4: Player.** `src/player/`: `<vw-slot>` custom element, hash router, input handling, HUD, forward/backward step, two-slot transition orchestration, seek-to-beat-N, error overlay, render-mode stub. Unit + integration tests per `components/player.md` test plan (jsdom-based).
 
