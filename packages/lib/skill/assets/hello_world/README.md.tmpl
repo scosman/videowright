@@ -1,0 +1,20 @@
+# {{title}}
+
+A Videowright video.
+
+## Segments
+
+- **hello-intro** -- Title card with animated entrance
+- **hello-outro** -- Closing card with call to action
+
+## Running
+
+```bash
+npx videowright dev videos/{{video_name}}/timeline.ts
+```
+
+## Editing
+
+- Edit segments in `segments/hello-intro/index.ts` and `segments/hello-outro/index.ts`
+- Add new segments to `segments/<name>/index.ts` and wire them in `timeline.ts`
+- The dev server reloads automatically on file changes

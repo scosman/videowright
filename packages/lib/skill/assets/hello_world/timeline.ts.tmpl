@@ -1,0 +1,13 @@
+import type { Timeline } from 'videowright';
+
+const timeline: Timeline = {
+  meta: {
+    title: '{{title}}',
+  },
+  segments: [
+    { id: 'hello-intro' },
+    { id: 'hello-outro', transition: 'fade' },
+  ],
+};
+
+export default timeline;
