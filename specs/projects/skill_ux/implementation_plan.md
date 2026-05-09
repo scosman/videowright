@@ -18,12 +18,12 @@ Ten phases. Phases 1–5 build the skill structure and reference content; phases
 
 - [x] **Phase 5: Hello-world reference example.** Replace `skill/assets/hello_world/` with the new shape (no `.tmpl`, plain reference files). Verify the timeline.ts top-of-file style import convention works end-to-end against a placeholder style.
 
-- [ ] **Phase 6: Style pack — Modern.** Design and ship `skill/assets/styles/modern/` (STYLE.md + tokens.css + sample-segment). Visual design polish to 2026 standards.
+- [x] **Phase 6: Style pack — Modern.** Design and ship `skill/assets/styles/modern/` (STYLE.md + tokens.css + sample-segment). Visual design polish to 2026 standards.
 
-- [ ] **Phase 7: Style pack — Retro.** Same shape; 80s/90s warmth, bolder color, typographic personality.
+- [x] **Phase 7: Style pack — Retro.** Same shape; 80s/90s warmth, bolder color, typographic personality.
 
-- [ ] **Phase 8: Style pack — Bauhaus.** Same shape; geometric, primary palette, strict grid.
+- [x] **Phase 8: Style pack — Bauhaus.** Same shape; geometric, primary palette, strict grid.
 
-- [ ] **Phase 9: Style pack — Animated Explainer.** Same shape; illustrative, generous motion, friendly typography.
+- [x] **Phase 9: Style pack — Animated Explainer.** Same shape; illustrative, generous motion, friendly typography.
 
 - [ ] **Phase 10: Manual evals + polish + release readiness.** Run the architecture §11 evals (cold-start, hero use case, style swap, Mode 1 ingest, Mode 1 at scale). Fix surfaced issues. Final pass over cross-links and prose. Ship.

@@ -197,48 +197,78 @@ describe("skill file structure", () => {
 		expect(content).toContain("transition");
 	});
 
-	it("placeholder style pack exists with required files", () => {
-		const styleDir = resolve(SKILL_ROOT, "assets/styles/placeholder");
-		expect(existsSync(styleDir)).toBe(true);
+	const STYLE_PACKS = ["placeholder", "modern", "retro", "bauhaus", "animated-explainer"] as const;
 
-		expect(existsSync(resolve(styleDir, "STYLE.md"))).toBe(true);
-		expect(existsSync(resolve(styleDir, "tokens.css"))).toBe(true);
-		expect(existsSync(resolve(styleDir, "sample-segment/index.ts"))).toBe(true);
-	});
+	const RECOMMENDED_TOKENS = [
+		"--color-bg",
+		"--color-fg",
+		"--color-accent",
+		"--font-display",
+		"--font-body",
+		"--font-mono",
+	];
 
-	it("placeholder STYLE.md has required frontmatter fields", () => {
-		const content = readFileSync(
-			resolve(SKILL_ROOT, "assets/styles/placeholder/STYLE.md"),
-			"utf-8",
-		);
-		expect(content).toMatch(/^---\n/);
-		expect(content).toMatch(/title:/);
-		expect(content).toMatch(/slug:\s*placeholder/);
-		expect(content).toMatch(/picker_description:/);
-		expect(content).toMatch(/font_sources:/);
-	});
+	describe.each(STYLE_PACKS)("style pack: %s", (packName) => {
+		const styleDir = resolve(SKILL_ROOT, `assets/styles/${packName}`);
 
-	it("placeholder tokens.css has the 6 recommended tokens", () => {
-		const content = readFileSync(
-			resolve(SKILL_ROOT, "assets/styles/placeholder/tokens.css"),
-			"utf-8",
-		);
-		expect(content).toContain("--color-bg:");
-		expect(content).toContain("--color-fg:");
-		expect(content).toContain("--color-accent:");
-		expect(content).toContain("--font-display:");
-		expect(content).toContain("--font-body:");
-		expect(content).toContain("--font-mono:");
-	});
+		it("pack folder exists with required files", () => {
+			expect(existsSync(styleDir)).toBe(true);
+			expect(existsSync(resolve(styleDir, "STYLE.md"))).toBe(true);
+			expect(existsSync(resolve(styleDir, "tokens.css"))).toBe(true);
+			expect(existsSync(resolve(styleDir, "sample-segment/index.ts"))).toBe(true);
+		});
 
-	it("placeholder sample-segment uses defineSegment, voiceover, waitForNext, and tokens", () => {
-		const content = readFileSync(
-			resolve(SKILL_ROOT, "assets/styles/placeholder/sample-segment/index.ts"),
-			"utf-8",
-		);
-		expect(content).toContain("defineSegment");
-		expect(content).toContain("voiceover");
-		expect(content).toContain("waitForNext");
-		expect(content).toContain("var(--color-accent)");
+		it("STYLE.md has required frontmatter fields", () => {
+			const content = readFileSync(resolve(styleDir, "STYLE.md"), "utf-8");
+			expect(content).toMatch(/^---\n/);
+			expect(content).toMatch(/title:/);
+			expect(content).toMatch(new RegExp(`slug:\\s*${packName}`));
+			expect(content).toMatch(/picker_description:/);
+			expect(content).toMatch(/font_sources:/);
+		});
+
+		it("tokens.css defines the 6 recommended tokens", () => {
+			const content = readFileSync(resolve(styleDir, "tokens.css"), "utf-8");
+			for (const token of RECOMMENDED_TOKENS) {
+				expect(content, `Missing token ${token} in tokens.css`).toContain(`${token}:`);
+			}
+		});
+
+		it("sample-segment uses defineSegment, voiceover, waitForNext, and references recommended tokens", () => {
+			const content = readFileSync(resolve(styleDir, "sample-segment/index.ts"), "utf-8");
+			expect(content).toContain("defineSegment");
+			expect(content).toContain("voiceover");
+			expect(content).toContain("waitForNext");
+
+			// Must reference at least one CSS var from the 6 recommended tokens
+			const varRefs = content.match(/var\(--[\w-]+\)/g) ?? [];
+			const recommendedSet = new Set(RECOMMENDED_TOKENS);
+			const usedRecommended = varRefs.filter((ref) => {
+				const token = ref.match(/var\((--[\w-]+)\)/)?.[1] ?? "";
+				return recommendedSet.has(token);
+			});
+			expect(
+				usedRecommended.length,
+				"sample-segment/index.ts must reference at least one CSS var from the 6 recommended tokens",
+			).toBeGreaterThanOrEqual(1);
+		});
+
+		it("sample-segment imports nothing from outside its own pack folder", () => {
+			const content = readFileSync(resolve(styleDir, "sample-segment/index.ts"), "utf-8");
+			const imports = content.match(/from\s+["']([^"']+)["']/g) ?? [];
+			for (const imp of imports) {
+				const path = imp.match(/from\s+["']([^"']+)["']/)?.[1] ?? "";
+				expect(
+					path === "videowright" || path.startsWith("./") || path.startsWith("../"),
+					`Import "${path}" should be from "videowright" or a relative path within the pack`,
+				).toBe(true);
+				if (path.startsWith("../")) {
+					expect(
+						!path.startsWith("../../"),
+						`Import "${path}" escapes the ${packName} pack folder`,
+					).toBe(true);
+				}
+			}
+		});
 	});
 });
