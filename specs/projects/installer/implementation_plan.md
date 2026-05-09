@@ -20,7 +20,7 @@ Three phases. Phase 1 ships the paste-driven install (the v1 must-have). Phase 2
   - Vitest unit tests for each function per architecture's testing strategy.
   - Verify `npm init videowright` resolves and hands off correctly to each agent locally.
 
-- [ ] **Phase 3: Manual eval pass and fixes**
+- [x] **Phase 3: Manual eval pass and fixes**
   - Run the manual eval matrix from architecture §Testing Strategy across all three agents and all listed scenarios.
   - Record results in `specs/projects/installer/manual_eval.md`.
   - Fix any bugs surfaced (likely small wording or flow tweaks in `INSTALL.md`).
