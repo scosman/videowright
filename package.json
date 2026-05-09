@@ -2,13 +2,13 @@
 	"name": "videowright-monorepo",
 	"private": true,
 	"type": "module",
-	"workspaces": ["packages/lib", "examples/*"],
+	"workspaces": ["packages/lib", "packages/create-videowright", "examples/*"],
 	"scripts": {
 		"dev:demo": "npm run dev --workspace=examples/demo_example",
 		"typecheck": "tsc --build && tsc --noEmit --project examples/demo_example/tsconfig.json",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
-		"test": "npm test --workspace=packages/lib"
+		"test": "npm test --workspace=packages/lib && npm test --workspace=packages/create-videowright"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",

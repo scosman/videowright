@@ -1,0 +1,17 @@
+{
+	"name": "create-videowright",
+	"version": "0.0.0",
+	"type": "module",
+	"description": "npm init videowright — detect your coding agent and hand off the Videowright install",
+	"license": "MIT",
+	"bin": {
+		"create-videowright": "./bin/cli.js"
+	},
+	"files": ["bin"],
+	"scripts": {
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"vitest": "^3.1.3"
+	}
+}

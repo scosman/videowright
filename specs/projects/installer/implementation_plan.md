@@ -14,7 +14,7 @@ Three phases. Phase 1 ships the paste-driven install (the v1 must-have). Phase 2
   - Update root `README.md` — add the paste-prompt block in the install section.
   - At end of phase: paste-flow installs work end-to-end in at least Claude Code (developer's primary agent).
 
-- [ ] **Phase 2: `create-videowright` initializer (P2)**
+- [x] **Phase 2: `create-videowright` initializer (P2)**
   - Add `packages/create-videowright/` to monorepo workspaces.
   - Implement `bin/index.js`: `detectAgents`, `chooseAgent`, `handoffCommand`, `spawnAgent`, no-agent fallback.
   - Vitest unit tests for each function per architecture's testing strategy.

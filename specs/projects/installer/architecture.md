@@ -34,7 +34,8 @@ videowright/
 │   └── create-videowright/                         # NEW package
 │       ├── package.json
 │       ├── bin/
-│       │   └── index.js                            # the initializer entry point
+│       │   ├── cli.js                              # shebang entry point
+│       │   └── index.js                            # library (all exports)
 │       └── test/
 │           └── *.test.js
 ```
@@ -55,7 +56,8 @@ Monorepo workspace already includes `packages/lib`. Add `packages/create-videowr
 ### `create-videowright` publishing
 
 - Published to npm as `create-videowright`. npm convention: `npm init videowright` resolves to `npx create-videowright`.
-- Initial `package.json` has `bin: { "create-videowright": "./bin/index.js" }`.
+- Initial `package.json` has `bin: { "create-videowright": "./bin/cli.js" }`.
+- Two-file split: `bin/cli.js` is the thin shebang entry point (`#!/usr/bin/env node`) that imports and calls `main()` from `bin/index.js`. `bin/index.js` is a pure library with all exports — no auto-execution. This keeps `index.js` cleanly importable by tests without triggering `main()`.
 - No build step needed (plain Node, ESM, no TypeScript for this package — keep it tiny and dependency-free).
 
 ---
@@ -91,13 +93,14 @@ A short appendix at the end describes the **marked-region writer algorithm** and
 
 ## `create-videowright` Module
 
-### Module breakdown (single file, ~100 LOC)
+### Module breakdown (~100 LOC across two files)
 
 ```js
-// bin/index.js — single entry point
+// bin/cli.js — shebang entry point (imports and calls main())
+// bin/index.js — all logic, cleanly importable by tests
 
 main()
-  ├── detectAgents()              → { claude: bool, codex: bool, opencode: bool }
+  ├── detectAgents()              → Promise<{ claude: bool, codex: bool, opencode: bool }>
   ├── chooseAgent(detected)       → 'claude' | 'codex' | 'opencode' | null
   │      ├── 0 detected → null (caller prints fallback)
   │      ├── 1 detected → that one
@@ -108,7 +111,7 @@ main()
 
 ### `detectAgents()`
 
-Cross-platform agent detection. Don't use shell `which`. Instead, try `child_process.spawnSync(<bin>, ['--version'], { stdio: 'ignore' })` and check `status === 0` (or `error == null`). Detects all three in parallel.
+Cross-platform agent detection. Don't use shell `which`. Instead, use async `child_process.spawn(<bin>, ['--version'], { stdio: 'ignore' })` wrapped in a promise, and probe all three agents in parallel via `Promise.all`. Each probe resolves to `true` if the process exits with code 0, `false` otherwise. This is non-blocking and naturally parallel, matching the "detects all three in parallel" intent — `spawnSync` in a loop would be sequential.
 
 Falls back to `false` on any spawn error. Doesn't distinguish "not installed" from "broken install" — same effect either way.
 
@@ -253,7 +256,7 @@ No retries, no fallbacks beyond what's listed. The failure modes here are user-e
 
 Unit tests covering:
 
-- **`detectAgents`**: mock `child_process.spawnSync` to simulate each combination of installed/missing agents. Verify return shape.
+- **`detectAgents`**: mock `child_process.spawn` to simulate each combination of installed/missing agents. Verify return shape.
 - **`chooseAgent`**: feed it various detection results. For 2+ detected, mock `readline` input; verify the right agent is returned for each input.
 - **`handoffCommand`**: parametrized — for each of the three agents, assert `cmd` and `args` are exactly the documented strings.
 - **No-agent fallback**: capture stdout, verify the fallback message contains the URL.
