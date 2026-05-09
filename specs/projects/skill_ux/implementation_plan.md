@@ -10,7 +10,7 @@ Ten phases. Phases 1–5 build the skill structure and reference content; phases
 
 - [x] **Phase 1: Skill skeleton + lib type additions.** Rewrite `skill/SKILL.md` (entry, when-to-trigger, setup gate, intent dispatch table, core principles). Stub `references/*.md` files empty. Add `Config.defaultStyle?: string` and `TimelineMeta.style?: string` to lib types in `packages/lib/src/`. Confirm typecheck passes.
 
-- [ ] **Phase 2: Style architecture references.** Write `references/styles.md` (folder layout, timeline.ts import convention, swap workflow, style-matching) and `references/setup_new_style.md` (modes 1–3, caller flags). Mode 3 picker reads `skill/assets/styles/*/STYLE.md` frontmatter — the picker mechanic is wired even though the 4 packs come later.
+- [x] **Phase 2: Style architecture references.** Write `references/styles.md` (folder layout, timeline.ts import convention, swap workflow, style-matching) and `references/setup_new_style.md` (modes 1–3, caller flags). Mode 3 picker reads `skill/assets/styles/*/STYLE.md` frontmatter — the picker mechanic is wired even though the 4 packs come later.
 
 - [ ] **Phase 3: Core workflow references.** Write `references/setup.md` (gate semantics, scaffold steps, dispatch to setup_new_style for first style), `references/new_video.md` (intent capture, PLAN.md skeleton embedded inline, one-shot heuristic, dispatch to create_or_edit_video), `references/create_or_edit_video.md` (translate PLAN.md → segments + timeline, edit-mode for existing videos, verify with `videowright dev`).
 
