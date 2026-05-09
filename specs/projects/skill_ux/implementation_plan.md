@@ -26,4 +26,4 @@ Ten phases. Phases 1–5 build the skill structure and reference content; phases
 
 - [x] **Phase 9: Style pack — Animated Explainer.** Same shape; illustrative, generous motion, friendly typography.
 
-- [ ] **Phase 10: Manual evals + polish + release readiness.** Run the architecture §11 evals (cold-start, hero use case, style swap, Mode 1 ingest, Mode 1 at scale). Fix surfaced issues. Final pass over cross-links and prose. Ship.
+- [x] **Phase 10: Manual evals + polish + release readiness.** Run the architecture §11 evals (cold-start, hero use case, style swap, Mode 1 ingest, Mode 1 at scale). Fix surfaced issues. Final pass over cross-links and prose. Ship.
