@@ -90,7 +90,9 @@ The HUD is a semi-transparent overlay at the bottom of the player that shows:
 
 Press **H** to toggle the HUD on and off. The HUD is visible by default.
 
-The `?hideHud=1` query parameter starts with the HUD hidden. This is used internally by `videowright record` so the HUD does not appear in exported videos.
+The `?hideHud=1` query parameter starts with the HUD hidden. This is used internally by `videowright render` so the HUD does not appear in exported frames.
+
+The `?recordMode=1` query parameter is used by `videowright record` to start the player in record mode with reduced HUD chrome for external screen capture.
 
 ### Error display
 

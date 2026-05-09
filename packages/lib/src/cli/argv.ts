@@ -23,6 +23,10 @@ export interface ParsedArgs {
 
 const KNOWN_COMMANDS = new Set<string>(["dev", "script", "record", "render"]);
 
+/** Flags that only apply to the `render` command. Rejected on all other commands. */
+const RENDER_ONLY_FLAGS = ["width", "height", "fps", "output"] as const;
+const RENDER_ONLY_COMMANDS = new Set<Command>(["render"]);
+
 export class ArgvError extends Error {
 	override name = "ArgvError";
 }
@@ -111,8 +115,19 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 		}
 	}
 
+	const command = subcommand as Command;
+
+	// Reject render-only flags on commands that don't support them
+	if (!RENDER_ONLY_COMMANDS.has(command)) {
+		for (const flag of RENDER_ONLY_FLAGS) {
+			if (values[flag] !== undefined) {
+				throw new ArgvError(`--${flag} is only valid for the "render" command`);
+			}
+		}
+	}
+
 	return {
-		command: subcommand as Command,
+		command,
 		positional: positionals[0],
 		flags: {
 			port,

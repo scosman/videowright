@@ -1,6 +1,6 @@
 /**
  * videowright CLI main logic.
- * Parses argv, dispatches to dev or script subcommands.
+ * Parses argv, dispatches to dev, script, record, and render subcommands.
  * The binary entry point is bin.ts (not this file).
  */
 
@@ -37,16 +37,16 @@ const HELP_TEXT = `Usage: videowright <command> [options]
 Commands:
   dev [path]      Start the dev server
   script [path]   Generate voiceover script
-  record [path]   Record video via Playwright + ffmpeg (screenshot-based)
+  record [path]   Auto-advance playback for visual review or external screen capture
   render [path]   Deterministic frame-by-frame export via CDP + ffmpeg
 
 Options:
   --port <n>      Dev server port (default: 5173)
   --write         Write script to file instead of stdout
-  --width <n>     Video width in pixels (default: 1920)
-  --height <n>    Video height in pixels (default: 1080)
-  --fps <n>       Frames per second (default: 30 for record, 60 for render)
-  --output <path> Output file path (default: output.mp4)
+  --width <n>     Video width in pixels (render only, default: 1920)
+  --height <n>    Video height in pixels (render only, default: 1080)
+  --fps <n>       Frames per second (render only, default: 60)
+  --output <path> Output file path (render only, default: output.mp4)
   --verbose       Show extra detail
   --help          Show this help
   --version       Show version
@@ -102,6 +102,8 @@ export async function main(argv?: string[]): Promise<number> {
 			// Keep alive until Ctrl-C
 			await new Promise<void>((resolve) => {
 				const onSignal = () => {
+					process.removeListener("SIGINT", onSignal);
+					process.removeListener("SIGTERM", onSignal);
 					result.close().then(() => resolve());
 				};
 				process.on("SIGINT", onSignal);
@@ -131,15 +133,21 @@ export async function main(argv?: string[]): Promise<number> {
 			const result = await runRecord({
 				cwd,
 				positional,
-				width: flags.width,
-				height: flags.height,
-				fps: flags.fps,
-				output: flags.output,
 				verbose: flags.verbose,
 			});
 			console.log(
-				`\n  Recorded ${result.frames} frames (${result.duration.toFixed(1)}s) to ${result.outputPath}\n`,
+				`\n  videowright record running at ${result.url}\n  No mp4 output -- use "videowright render" for export.\n`,
 			);
+			// Keep alive until Ctrl-C (same pattern as dev)
+			await new Promise<void>((resolve) => {
+				const onSignal = () => {
+					process.removeListener("SIGINT", onSignal);
+					process.removeListener("SIGTERM", onSignal);
+					result.close().then(() => resolve());
+				};
+				process.on("SIGINT", onSignal);
+				process.on("SIGTERM", onSignal);
+			});
 			return 0;
 		}
 

@@ -23,7 +23,10 @@ import {
 } from "../../index.js";
 import type { Config, Timeline } from "../../index.js";
 
-// Extend window for ready signal used by record command
+// Extend window for ready signals used by render command (__VW_PLAYER_READY__,
+// __VW_SEGMENT_ADVANCES__) and internally for segment-load tracking
+// (__VW_SEGMENTS_LOADED__). The record command no longer reads these globals
+// directly -- it opens a URL and the user drives playback in-browser.
 declare global {
 	interface Window {
 		__VW_PLAYER_READY__: boolean;
@@ -98,9 +101,14 @@ async function boot() {
 	const host = document.getElementById("player-host");
 	if (!host) throw new Error("No #player-host element found");
 
-	// Support ?hideHud=1 for record mode (HUD must not appear in recordings)
-	const hideHud = new URLSearchParams(window.location.search).has("hideHud");
-	const player = new Player(host, hideHud ? { hud: false } : undefined);
+	// Support ?hideHud=1 for render screenshots (HUD must not appear in rendered frames)
+	// Support ?recordMode=1 for record mode (reduced HUD for external screen capture;
+	// Phase 3 will differentiate this from hideHud by showing a play button)
+	const params = new URLSearchParams(window.location.search);
+	const hideHud = params.has("hideHud");
+	const recordMode = params.has("recordMode");
+	const playerOpts = hideHud || recordMode ? { hud: false } : undefined;
+	const player = new Player(host, playerOpts);
 	await player.load(finalTimeline, segmentLoaders, transitionLoaders);
 	await player.start();
 

@@ -6,29 +6,6 @@ describe("argv parser: record command", () => {
 		const result = parseArgv(["record"]);
 		expect(result.command).toBe("record");
 		expect(result.positional).toBeUndefined();
-		expect(result.flags.width).toBeUndefined();
-		expect(result.flags.height).toBeUndefined();
-		expect(result.flags.fps).toBeUndefined();
-		expect(result.flags.output).toBeUndefined();
-	});
-
-	it("argv_record_with_output", () => {
-		const result = parseArgv(["record", "--output", "my_video.mp4"]);
-		expect(result.command).toBe("record");
-		expect(result.flags.output).toBe("my_video.mp4");
-	});
-
-	it("argv_record_with_resolution", () => {
-		const result = parseArgv(["record", "--width", "1280", "--height", "720"]);
-		expect(result.command).toBe("record");
-		expect(result.flags.width).toBe(1280);
-		expect(result.flags.height).toBe(720);
-	});
-
-	it("argv_record_with_fps", () => {
-		const result = parseArgv(["record", "--fps", "24"]);
-		expect(result.command).toBe("record");
-		expect(result.flags.fps).toBe(24);
 	});
 
 	it("argv_record_with_path", () => {
@@ -37,46 +14,45 @@ describe("argv parser: record command", () => {
 		expect(result.positional).toBe("videos/demo/timeline.ts");
 	});
 
-	it("argv_record_all_flags", () => {
-		const result = parseArgv([
-			"record",
-			"videos/demo/timeline.ts",
-			"--width",
-			"1280",
-			"--height",
-			"720",
-			"--fps",
-			"30",
-			"--output",
-			"export.mp4",
-			"--verbose",
-		]);
+	it("argv_record_with_verbose", () => {
+		const result = parseArgv(["record", "--verbose"]);
 		expect(result.command).toBe("record");
-		expect(result.positional).toBe("videos/demo/timeline.ts");
-		expect(result.flags.width).toBe(1280);
-		expect(result.flags.height).toBe(720);
-		expect(result.flags.fps).toBe(30);
-		expect(result.flags.output).toBe("export.mp4");
 		expect(result.flags.verbose).toBe(true);
 	});
 
-	it("argv_record_invalid_width", () => {
-		expect(() => parseArgv(["record", "--width", "abc"])).toThrow(ArgvError);
-		expect(() => parseArgv(["record", "--width", "abc"])).toThrow("Invalid width");
+	it("argv_record_with_path_and_verbose", () => {
+		const result = parseArgv(["record", "videos/demo/timeline.ts", "--verbose"]);
+		expect(result.command).toBe("record");
+		expect(result.positional).toBe("videos/demo/timeline.ts");
+		expect(result.flags.verbose).toBe(true);
 	});
 
-	it("argv_record_invalid_height", () => {
-		expect(() => parseArgv(["record", "--height", "0"])).toThrow(ArgvError);
-		expect(() => parseArgv(["record", "--height", "0"])).toThrow("Invalid height");
+	it("argv_record_rejects_output_flag", () => {
+		expect(() => parseArgv(["record", "--output", "foo.mp4"])).toThrow(ArgvError);
+		expect(() => parseArgv(["record", "--output", "foo.mp4"])).toThrow(
+			'--output is only valid for the "render" command',
+		);
 	});
 
-	it("argv_record_invalid_fps", () => {
-		expect(() => parseArgv(["record", "--fps", "0"])).toThrow(ArgvError);
-		expect(() => parseArgv(["record", "--fps", "0"])).toThrow("Invalid fps");
+	it("argv_record_rejects_width_flag", () => {
+		expect(() => parseArgv(["record", "--width", "1920"])).toThrow(ArgvError);
+		expect(() => parseArgv(["record", "--width", "1920"])).toThrow(
+			'--width is only valid for the "render" command',
+		);
 	});
 
-	it("argv_record_fps_out_of_range", () => {
-		expect(() => parseArgv(["record", "--fps", "999"])).toThrow(ArgvError);
+	it("argv_record_rejects_height_flag", () => {
+		expect(() => parseArgv(["record", "--height", "1080"])).toThrow(ArgvError);
+		expect(() => parseArgv(["record", "--height", "1080"])).toThrow(
+			'--height is only valid for the "render" command',
+		);
+	});
+
+	it("argv_record_rejects_fps_flag", () => {
+		expect(() => parseArgv(["record", "--fps", "30"])).toThrow(ArgvError);
+		expect(() => parseArgv(["record", "--fps", "30"])).toThrow(
+			'--fps is only valid for the "render" command',
+		);
 	});
 });
 
@@ -115,5 +91,24 @@ describe("argv parser: render command", () => {
 		expect(result.flags.width).toBe(1920);
 		expect(result.flags.height).toBe(1080);
 		expect(result.flags.fps).toBe(60);
+	});
+
+	it("argv_render_invalid_width", () => {
+		expect(() => parseArgv(["render", "--width", "abc"])).toThrow(ArgvError);
+		expect(() => parseArgv(["render", "--width", "abc"])).toThrow("Invalid width");
+	});
+
+	it("argv_render_invalid_height", () => {
+		expect(() => parseArgv(["render", "--height", "0"])).toThrow(ArgvError);
+		expect(() => parseArgv(["render", "--height", "0"])).toThrow("Invalid height");
+	});
+
+	it("argv_render_invalid_fps", () => {
+		expect(() => parseArgv(["render", "--fps", "0"])).toThrow(ArgvError);
+		expect(() => parseArgv(["render", "--fps", "0"])).toThrow("Invalid fps");
+	});
+
+	it("argv_render_fps_out_of_range", () => {
+		expect(() => parseArgv(["render", "--fps", "999"])).toThrow(ArgvError);
 	});
 });

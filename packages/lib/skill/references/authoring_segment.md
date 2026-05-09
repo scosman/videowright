@@ -40,7 +40,7 @@ export default defineSegment({
 | Field | Required | Purpose |
 |---|---|---|
 | `id` | Yes | Unique identifier. Must match the folder name under `segments/`. |
-| `advances` | Yes | Timing array for render/record mode (see below). |
+| `advances` | Yes | Timing array for automated playback (render export and record auto-advance; see below). |
 | `voiceover` | No | VO text for this segment. Used by `videowright script` and shown in the HUD. |
 | `notes` | No | Freeform notes. Not rendered anywhere. |
 | `mount(el, ctx)` | No | Called when the player gives the segment its host `HTMLElement`. Set up DOM here. |
@@ -81,7 +81,7 @@ Use **`ctx.hold(ms)`** for timed pauses — animations that play out on a clock.
 
 ## The `advances` array
 
-Every segment must declare an `advances` array. It tells the export pipeline (record/render) when to fire each advance during automated playback.
+Every segment must declare an `advances` array. It tells the render export pipeline and the record auto-advance mode when to fire each advance during automated playback.
 
 Each entry is a **segment-relative time in seconds** at which the driver fires a `triggerNext()`. The array must be **monotonically increasing** and contain only **positive numbers**.
 
@@ -135,7 +135,7 @@ Three advances total. Each waitForNext consumes a press, and the final press aft
 - `advances` is **required** on every segment. `defineSegment` throws if it is missing or empty.
 - Values must be **positive** and **monotonically increasing**.
 - The array length determines how many presses the export pipeline fires for this segment.
-- `advances` is only used in render/record mode. In interactive (dev) mode, the user's key presses drive timing.
+- `advances` is used in render mode (deterministic export) and record mode (auto-advance playback). In interactive dev mode, the user's key presses drive timing.
 
 ## Internal beats with `next()`
 

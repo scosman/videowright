@@ -3,15 +3,6 @@ import { main } from "../../src/cli/index.js";
 
 describe("CLI main: record/render commands", () => {
 	it("main_record_missing_config_exits_1", async () => {
-		// Mock findFfmpeg to succeed so we test config-missing path deterministically
-		vi.mock("../../src/cli/ffmpeg.js", () => ({
-			findFfmpeg: () => "/usr/bin/ffmpeg",
-			spawnFfmpeg: vi.fn(),
-		}));
-		vi.mock("../../src/cli/playwright_check.js", () => ({
-			ensurePlaywright: async () => ({ chromium: { launch: vi.fn() } }),
-		}));
-
 		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 		const code = await main(["record"]);
 		expect(code).toBe(1);
@@ -20,8 +11,6 @@ describe("CLI main: record/render commands", () => {
 		expect(errorMsg).toContain("videowright:");
 		expect(errorMsg).toContain("videowright.config.ts");
 		errorSpy.mockRestore();
-
-		vi.restoreAllMocks();
 	});
 
 	it("main_render_missing_config_exits_1", async () => {

@@ -8,7 +8,7 @@ You were routed here from the intent dispatch table because the user wants to wr
 
 Videowright projects are content-heavy. Not everything needs automated tests. Focus testing effort on things that break silently and are hard to catch by eye.
 
-The examples below are suggestions — pick what fits the project. Do not prescribe a rigid test suite. For context on the tools these tests exercise, see [dev_server.md](dev_server.md) (interactive preview) and [export.md](export.md) (record/render pipeline and advances validation).
+The examples below are suggestions -- pick what fits the project. Do not prescribe a rigid test suite. For context on the tools these tests exercise, see [dev_server.md](dev_server.md) (interactive preview) and [export.md](export.md) (render export pipeline and advances validation).
 
 ## Advances coherence
 
