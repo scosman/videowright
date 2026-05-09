@@ -23,7 +23,6 @@ export {
 	buildSegmentLoaderMap,
 	buildTransitionLoaderMap,
 	validateTimeline,
-	validateSegmentAdvances,
 	applyMetaDefaults,
 } from "./timeline/index.js";
 export type {
@@ -31,7 +30,6 @@ export type {
 	TransitionLoaderMap,
 	TimelineError,
 	TimelineValidationResult,
-	AdvancesValidationResult,
 } from "./timeline/index.js";
 
 // Built-in transitions

@@ -39,7 +39,6 @@ export interface TimelineMeta {
 export interface TimelineEntry {
   id: string;
   transition?: string | { type: string; duration?: number; [k: string]: unknown };
-  renderBeats?: number[];
 }
 
 export interface Timeline {
@@ -158,9 +157,27 @@ Iterates `timeline.segments`, accumulates errors:
 - For each entry with a `transition`: extract the name (string or object's `type`); must exist in `transitionLoaders`. If not → `missing-transition`.
 - `meta.title` must be a non-empty string. If not → `missing-title`.
 
-Render-mode-specific validation (every entry has `renderBeats`) lands when render mode lands; not implemented in v1.
-
 Returns aggregate result. Player surfaces errors in the load-time error overlay; CLI prints to stderr.
+
+### `validateSegmentAdvances`
+
+Validates that all segments referenced by a timeline have valid `advances` arrays. Accepts a `Record<string, number[]>` mapping segment id to its advances array (produced by the browser-side entry scripts, where segments are loaded via Vite and can import browser-only assets like CSS and images).
+
+```ts
+export type AdvancesValidationResult = { ok: true } | { ok: false; errors: string[] };
+
+export function validateSegmentAdvances(
+  timeline: Timeline,
+  advancesMap: Record<string, number[]>
+): AdvancesValidationResult;
+```
+
+Checks per segment:
+- `advances` is defined and non-empty.
+- All entries are positive finite numbers.
+- `advances` is monotonically increasing.
+
+This is an internal function used by the record/render drivers (not exported from the public barrel). The drivers call it after retrieving advances from the browser context via `window.__VW_SEGMENT_ADVANCES__`.
 
 ### `applyMetaDefaults`
 

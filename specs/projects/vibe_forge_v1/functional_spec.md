@@ -82,7 +82,7 @@ The runtime that loads a timeline and renders it. Single HTML page; vanilla Web 
 ### Modes
 
 - **Interactive** — keyboard + mouse driven. Used for development and review.
-- **Render** — scripted advance via `renderBeats`. Forward-only. Used by export tooling (later phase).
+- **Render** — scripted advance via each segment's `advances` array. Forward-only. Used by export tooling.
 
 ### Controls (interactive mode, v1)
 
@@ -113,8 +113,8 @@ These keybindings are locked for v1. No customization mechanism.
 ### Render mode
 
 - Forward only. `prev`, `pause`, `restart`, `jump-to`, mouse click, and HUD-toggle are not honored.
-- `renderBeats` on each timeline entry drives advancement; `ctx.waitForNext()` resolves on the scheduled beat.
-- If a segment's `play()` calls `waitForNext()` more or fewer times than `renderBeats.length` for that entry, the player errors at runtime with the segment id and the count mismatch.
+- Each segment's `advances` array drives advancement; the driver fires `triggerNext()` at the scheduled times. `ctx.waitForNext()` resolves on each scheduled advance.
+- Runtime coherence checks detect mismatches: if a segment transitions before all advances fired, or parks on `waitForNext` after all advances fired, the driver errors with the segment id and an actionable message.
 
 ### Dev-mode HUD
 
@@ -158,7 +158,7 @@ The interface is locked in the project overview. This section adds behavioral de
 
 ### Internal beats
 
-Calling `ctx.waitForNext()` N times in `play()` creates N internal beats. Each call corresponds to one user advance press (interactive) or one `renderBeats` entry (render).
+Calling `ctx.waitForNext()` N times in `play()` creates N internal beats. Each call corresponds to one user advance press (interactive) or one scheduled advance from the segment's `advances` array (render/record).
 
 Authors may override `next()` / `prev()` on the segment for custom logic:
 
@@ -194,7 +194,6 @@ export default {
   segments: Array<{
     id: string;
     transition?: string | { type: string; [k: string]: unknown };
-    renderBeats?: number[];   // ms per internal beat, render mode only
   }>,
 };
 ```
@@ -353,7 +352,7 @@ Published as ESM. The minimum-viable consumer path (drop an HTML file, open it d
 |---|---|
 | Timeline references missing segment id | Player errors at load with the id and timeline path. |
 | Segment's `mount()` or `play()` throws | Player surfaces the error in HUD and stops; does not advance. Stack trace in console. |
-| `renderBeats.length` ≠ `waitForNext()` calls | Render mode errors at the mismatch with segment id and counts. Interactive mode ignores `renderBeats`. |
+| `advances` count ≠ actual presses needed | Render/record drivers detect the mismatch at runtime via coherence checks and error with the segment id and an actionable message. Interactive mode ignores `advances`. |
 | User presses next at end of timeline | No-op. HUD shows "end of timeline". |
 | User presses prev at first segment | No-op. |
 | `setTimeout` / `setInterval` inside a segment | Works in interactive. Will desync from controlled clock in render mode (later phase). Documented footgun. |

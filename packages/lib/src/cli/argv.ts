@@ -87,21 +87,19 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 	const widthStr = values.width as string | undefined;
 	let width: number | undefined;
 	if (widthStr !== undefined) {
-		const parsed = Number.parseFloat(widthStr);
-		if (!Number.isInteger(parsed) || parsed < 1) {
+		width = Number.parseInt(widthStr, 10);
+		if (Number.isNaN(width) || width < 1 || width !== Number(widthStr)) {
 			throw new ArgvError(`Invalid width: ${widthStr} (must be a positive integer)`);
 		}
-		width = parsed;
 	}
 
 	const heightStr = values.height as string | undefined;
 	let height: number | undefined;
 	if (heightStr !== undefined) {
-		const parsed = Number.parseFloat(heightStr);
-		if (!Number.isInteger(parsed) || parsed < 1) {
+		height = Number.parseInt(heightStr, 10);
+		if (Number.isNaN(height) || height < 1 || height !== Number(heightStr)) {
 			throw new ArgvError(`Invalid height: ${heightStr} (must be a positive integer)`);
 		}
-		height = parsed;
 	}
 
 	const fpsStr = values.fps as string | undefined;

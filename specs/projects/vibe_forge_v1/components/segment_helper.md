@@ -28,6 +28,21 @@ export function defineSegment(spec: SegmentSpec): Segment;
 
 export interface SegmentSpec {
   id: string;
+  /**
+   * Segment-relative seconds at which to fire each 'next' advance during render/record.
+   * Must be a non-empty array of monotonically increasing positive numbers.
+   *
+   * Length = number of triggerNext() calls required to traverse this segment,
+   * INCLUDING the final press that transitions to the next segment.
+   *
+   * Press-counting examples:
+   * - `play() { await ctx.hold(3000); }` -> 1 press total -> `advances: [3.0]`
+   * - `play() { await ctx.waitForNext(); }` -> 2 presses -> `advances: [t1, t2]`
+   * - `play() { await ctx.waitForNext(); await ctx.waitForNext(); }` -> 3 presses -> `advances: [t1, t2, t3]`
+   *
+   * Ignored in dev (interactive) mode -- interactive presses drive timing.
+   */
+  advances: number[];
   voiceover?: string;
   notes?: string;
   mount?(el: HTMLElement, ctx: PlayerContext): void | Promise<void>;
@@ -56,7 +71,10 @@ export interface PlayerContext {
 
 - Missing `id`: throws `TypeError('defineSegment: id is required')`.
 - Missing `play`: throws `TypeError('defineSegment: play is required')`.
-- (TS strict catches both at compile time; the runtime throw is a defense for JS consumers.)
+- Missing or empty `advances`: throws `TypeError('defineSegment: advances is required and must be a non-empty array (segment "<id>")')`.
+- Non-positive `advances` value: throws `TypeError('defineSegment: advances[i] must be a positive number (segment "<id>", got <value>)')`.
+- Non-monotonic `advances`: throws `TypeError('defineSegment: advances must be monotonically increasing (segment "<id>", advances[i]=<v> <= advances[i-1]=<prev>)')`.
+- (TS strict catches the `id`, `play`, and `advances` shape at compile time; the runtime throws are defenses for JS consumers.)
 
 ## Internal Design
 
@@ -68,6 +86,18 @@ const SEGMENT_BRAND = Symbol.for('videowright.segment');
 export function defineSegment(spec: SegmentSpec): Segment {
   if (!spec.id) throw new TypeError('defineSegment: id is required');
   if (!spec.play) throw new TypeError('defineSegment: play is required');
+  if (!spec.advances || !Array.isArray(spec.advances) || spec.advances.length === 0) {
+    throw new TypeError(`defineSegment: advances is required and must be a non-empty array (segment "${spec.id}")`);
+  }
+  for (let i = 0; i < spec.advances.length; i++) {
+    const v = spec.advances[i];
+    if (typeof v !== 'number' || v <= 0 || !Number.isFinite(v)) {
+      throw new TypeError(`defineSegment: advances[${i}] must be a positive number (segment "${spec.id}", got ${v})`);
+    }
+    if (i > 0 && v <= spec.advances[i - 1]) {
+      throw new TypeError(`defineSegment: advances must be monotonically increasing (segment "${spec.id}", advances[${i}]=${v} <= advances[${i - 1}]=${spec.advances[i - 1]})`);
+    }
+  }
   return Object.freeze({ ...spec, [SEGMENT_BRAND]: true as const });
 }
 ```
@@ -75,6 +105,15 @@ export function defineSegment(spec: SegmentSpec): Segment {
 The helper does not manage state. Per-instance state lives in `SegmentRunner`, owned by the player.
 
 ### `SegmentRunner`
+
+```ts
+interface SegmentRunnerOptions {
+  mode: 'interactive' | 'render';
+  seekBeats?: number;
+  /** In render mode, ms per frame (e.g. 1000/60 for 60fps). Used for deterministic clock. */
+  frameDurationMs?: number;
+}
+```
 
 Per-mount instance:
 
@@ -90,11 +129,14 @@ class SegmentRunner {
   private mountedAt = 0;                      // performance.now() when mount() resolved
   private playPromise: Promise<void> | null = null;
   private state: 'created' | 'mounted' | 'playing' | 'done' | 'unmounted' = 'created';
+  private frameDurationMs: number;            // ms per frame for render-mode clock
+  private renderFrameCount = 0;               // monotonic frame counter for render mode
 
-  constructor(segment: Segment, opts: { mode: 'interactive' | 'render'; seekBeats?: number }) {
+  constructor(segment: Segment, opts: SegmentRunnerOptions) {
     this.segment = segment;
     this.mode = opts.mode;
     this.seekBeatsRemaining = opts.seekBeats ?? 0;
+    this.frameDurationMs = opts.frameDurationMs ?? 1000 / 60;
   }
 
   async mount(el: HTMLElement): Promise<void> {
@@ -151,6 +193,11 @@ class SegmentRunner {
 
   get currentBeat(): number { return this.beatCounter; }
 
+  /** In render mode, advance the deterministic frame counter. Called by Player.renderAdvance(). */
+  advanceRenderFrame(): void {
+    this.renderFrameCount++;
+  }
+
   // Internals
 
   private defaultNext(): boolean {
@@ -175,6 +222,9 @@ class SegmentRunner {
         });
       },
       hold: (ms: number) => {
+        // In render mode, hold resolves immediately -- no wall-clock delay.
+        // The deterministic clock advances based on frame count, not real time.
+        if (this.mode === 'render') return Promise.resolve();
         return new Promise<void>((resolve) => {
           if (this.abortCtrl.signal.aborted) { resolve(); return; }
           const t = setTimeout(resolve, ms);
@@ -186,15 +236,21 @@ class SegmentRunner {
       },
       signal: this.abortCtrl.signal,
       mode: this.mode,
-      clock: () => performance.now() - this.mountedAt,
+      clock: () => {
+        // In render mode, return deterministic time based on frame count
+        if (this.mode === 'render') return this.renderFrameCount * this.frameDurationMs;
+        return performance.now() - this.mountedAt;
+      },
     };
   }
 }
 ```
 
-### `hold(ms)` uses `setTimeout` internally — but that's fine
+### `hold(ms)` behavior varies by mode
 
-The functional spec calls out `setTimeout`/`setInterval` as a footgun **for authors**, because in render mode they won't honor the controlled clock. Inside the lib, we own the clock plumbing and can swap `hold`'s implementation when render mode is built (it'll use the controlled clock instead of `setTimeout`). The seam is `makeContext().hold` — in v1 it's `setTimeout`, in render mode it'll be driven by the render driver.
+In **interactive mode**, `hold(ms)` uses `setTimeout` internally. In **render mode**, `hold(ms)` resolves immediately -- no real-time delay. This ensures frames are byte-identical across runs and the render driver controls pacing entirely through `renderAdvance()`.
+
+The functional spec calls out `setTimeout`/`setInterval` as a footgun **for authors**, because in render mode they won't honor the controlled clock. Inside the lib, `hold`'s implementation branches on `mode` -- interactive uses `setTimeout`, render resolves immediately.
 
 ### Beat counter and the player
 

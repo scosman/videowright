@@ -51,21 +51,36 @@ Exit codes:
 src/cli/
 ├── bin.ts               # entry, parses argv, dispatches
 ├── argv.ts              # minimal argv parser
+├── index.ts             # main() dispatch: parses args, routes to subcommand, formats errors
 ├── dev.ts               # `videowright dev` flow
-├── script.ts            # `videowright script` flow
+├── script_cmd.ts        # `videowright script` flow
 ├── record.ts            # `videowright record` flow (Playwright + ffmpeg screenshot capture)
 ├── render.ts            # `videowright render` flow (CDP-driven deterministic frame export)
-├── ffmpeg.ts            # ffmpeg detection and process spawning
+├── ffmpeg.ts            # ffmpeg detection, process spawning, and writeWithBackpressure
 ├── playwright_check.ts  # dynamic Playwright import with user-friendly error
-├── discover.ts          # config + timeline discovery
+├── discover.ts          # config + timeline file discovery (findConfig, findTimeline)
+├── discover_project.ts  # high-level project discovery: calls discover.ts, throws UserError on missing
+├── vite_helpers.ts      # shared Vite plugins (fullReloadPlugin, segmentDiscoveryPlugin) and findPackageRoot
 ├── ts_loader.ts         # tsx-based loader for .ts config and timelines in Node
 ├── errors.ts            # UserError class
 └── entry/
     ├── index.html       # interactive player entry
-    ├── entry_client.ts  # interactive player boot script
+    ├── entry_client.ts  # interactive player boot script (exposes __VW_SEGMENT_ADVANCES__)
     ├── render.html      # render-mode player entry
-    └── render_entry.ts  # render-mode boot script (exposes CDP globals)
+    └── render_entry.ts  # render-mode boot script (exposes CDP globals + __VW_SEGMENT_ADVANCES__)
 ```
+
+### `discover_project.ts`
+
+High-level wrapper around `discover.ts`. Calls `findConfig` and `findTimeline`, converts null returns into `UserError` with actionable hints. Used by all four subcommands.
+
+### `vite_helpers.ts`
+
+Shared Vite infrastructure extracted from `dev.ts` so `render.ts` can reuse it without coupling to dev internals:
+
+- `findPackageRoot()` — walks up from `__dirname` to locate the videowright package root (where `package.json` with `name: "videowright"` lives). Needed to find the entry HTML.
+- `fullReloadPlugin()` — Vite plugin that forces a full page reload on every file change, bypassing HMR. The player's hash routing restores position after reload.
+- `segmentDiscoveryPlugin(consumerRoot)` — Vite plugin providing the `virtual:vw-segments` module. Scans `consumerRoot/segments/*/index.ts` and generates explicit dynamic imports, avoiding alias-in-glob issues with `import.meta.glob`.
 
 ### argv parser (`argv.ts`)
 
