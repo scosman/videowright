@@ -98,8 +98,8 @@ The intent of having four "feature-*" segments back-to-back is breadth, not narr
 CSS-animated title. Uses an `<animated-title>` web component (in `components/animated-title/`) that staggers letter reveals using CSS keyframes.
 
 - Voiceover: "Videowright — videos in the same HTML and CSS you build apps in."
-- Internal beats: 0 (auto-advances after a 1s `hold()`).
-- Timing: ~3 seconds.
+- Internal beats: 0 (auto-advances after a 3s `hold()`).
+- Timing: ~3 seconds (gives the staggered letter animation time to complete).
 
 ### Segment 2: `feature-svg`
 

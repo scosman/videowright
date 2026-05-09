@@ -10,7 +10,7 @@ import * as hashRouter from "./hash_router.js";
 import type { HashState } from "./hash_router.js";
 import { type Hud, type HudState, createHud } from "./hud.js";
 import { type PlayerCommand, attachInput } from "./input.js";
-import { createSlot } from "./slot.js";
+import { clearSlotAnimations, createSlot, getSlotContent } from "./slot.js";
 
 export interface PlayerOptions {
 	hud?: boolean; // default: true
@@ -312,9 +312,13 @@ export class Player {
 			incomingSlot.runner = runner;
 			incomingSlot.timelineIndex = targetIndex;
 
-			incomingSlot.el.innerHTML = "";
+			// Clear stale WAAPI transition animations before reuse
+			clearSlotAnimations(incomingSlot.el);
+
+			const incomingContent = getSlotContent(incomingSlot.el);
+			incomingContent.innerHTML = "";
 			incomingSlot.el.style.visibility = "visible";
-			await runner.mount(incomingSlot.el);
+			await runner.mount(incomingContent);
 
 			// Start play on incoming (don't await -- it resolves when segment finishes)
 			const incomingPlayPromise = runner.startPlay();
@@ -339,8 +343,14 @@ export class Player {
 					duration: this.getTransitionDuration(entry),
 				});
 			}
+
+			// Clear transition animations on both slots after transition completes.
+			// Slide transitions use fill:"forwards" which persists transforms.
+			clearSlotAnimations(outgoingSlot.el);
+			clearSlotAnimations(incomingSlot.el);
+
 			outgoingSlot.el.style.visibility = "hidden";
-			outgoingSlot.el.innerHTML = "";
+			getSlotContent(outgoingSlot.el).innerHTML = "";
 
 			// Swap slots
 			this.currentSlot = this.currentSlot === "a" ? "b" : "a";
@@ -378,10 +388,11 @@ export class Player {
 		const slot = this.getCurrentSlot();
 		slot.runner = runner;
 		slot.timelineIndex = index;
-		slot.el.innerHTML = "";
+		const slotContent = getSlotContent(slot.el);
+		slotContent.innerHTML = "";
 		slot.el.style.visibility = "visible";
 
-		await runner.mount(slot.el);
+		await runner.mount(slotContent);
 
 		// Start play (don't await -- segment controls its own duration)
 		const playPromise = runner.startPlay();
@@ -486,12 +497,16 @@ export class Player {
 				seekBeats: beat,
 			});
 
+			// Clear stale WAAPI transition animations before reuse
+			clearSlotAnimations(incomingSlot.el);
+
 			incomingSlot.runner = runner;
 			incomingSlot.timelineIndex = index;
-			incomingSlot.el.innerHTML = "";
+			const incomingContent = getSlotContent(incomingSlot.el);
+			incomingContent.innerHTML = "";
 			incomingSlot.el.style.visibility = "visible";
 
-			await runner.mount(incomingSlot.el);
+			await runner.mount(incomingContent);
 			const playPromise = runner.startPlay();
 
 			// Unmount outgoing
@@ -499,8 +514,9 @@ export class Player {
 				outgoingSlot.runner.unmount();
 				outgoingSlot.runner = null;
 			}
+			clearSlotAnimations(outgoingSlot.el);
 			outgoingSlot.el.style.visibility = "hidden";
-			outgoingSlot.el.innerHTML = "";
+			getSlotContent(outgoingSlot.el).innerHTML = "";
 
 			this.currentSlot = this.currentSlot === "a" ? "b" : "a";
 			this.state = "playing";

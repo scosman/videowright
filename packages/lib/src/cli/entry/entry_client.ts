@@ -1,12 +1,18 @@
 /**
  * Internal entry client for `videowright dev`.
- * Loaded by the dev server's index.html. Uses Vite's import.meta.glob to discover
- * consumer segments, loads the timeline, and boots the Player.
+ * Loaded by the dev server's index.html. Imports segments via a virtual module
+ * provided by the segment discovery plugin, loads the timeline, and boots the Player.
  */
 
 // These globals are injected by Vite's define config in dev.ts
 declare const __VW_TIMELINE_PATH__: string;
 declare const __VW_CONSUMER_ROOT__: string;
+
+// Virtual module provided by segmentDiscoveryPlugin in dev.ts.
+// It exports a Record<string, () => Promise<Module>> with explicit dynamic imports
+// for each segment discovered at server start time.
+// @ts-expect-error -- virtual module, no type declarations
+import segmentGlobRaw from "virtual:vw-segments";
 
 import {
 	Player,
@@ -18,13 +24,7 @@ import {
 import type { Config, Timeline } from "../../index.js";
 
 async function boot() {
-	// Discover segment modules via Vite glob.
-	// Alias-based globs (@consumer/...) can be fragile in some Vite versions.
-	// If the glob resolves empty, we log a diagnostic below.
-	const segmentGlob = import.meta.glob("@consumer/segments/*/index.ts") as Record<
-		string,
-		() => Promise<unknown>
-	>;
+	const segmentGlob = segmentGlobRaw as Record<string, () => Promise<unknown>>;
 
 	if (Object.keys(segmentGlob).length === 0) {
 		console.warn(
@@ -32,15 +32,7 @@ async function boot() {
 		);
 	}
 
-	const segmentLoaders = buildSegmentLoaderMap(
-		// Normalize glob keys to /segments/... format expected by buildSegmentLoaderMap
-		Object.fromEntries(
-			Object.entries(segmentGlob).map(([key, loader]) => {
-				const normalized = key.replace(/^@consumer/, "");
-				return [normalized, loader];
-			}),
-		),
-	);
+	const segmentLoaders = buildSegmentLoaderMap(segmentGlob);
 
 	// Load timeline
 	const timelineMod = (await import(/* @vite-ignore */ __VW_TIMELINE_PATH__)) as {

@@ -2,9 +2,10 @@
 	"name": "videowright-monorepo",
 	"private": true,
 	"type": "module",
-	"workspaces": ["packages/lib"],
+	"workspaces": ["packages/lib", "examples/*"],
 	"scripts": {
-		"typecheck": "tsc --build",
+		"dev:demo": "npm run dev --workspace=examples/demo_example",
+		"typecheck": "tsc --build && tsc --noEmit --project examples/demo_example/tsconfig.json",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"test": "npm test --workspace=packages/lib"

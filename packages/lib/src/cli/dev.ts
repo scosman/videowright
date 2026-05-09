@@ -3,10 +3,10 @@
  * the consumer's timeline.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Plugin } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
 import { findConfig, findTimeline } from "./discover.js";
 import { UserError } from "./errors.js";
 import { loadModule } from "./ts_loader.js";
@@ -46,6 +46,95 @@ function fullReloadPlugin(): Plugin {
 		handleHotUpdate({ server }) {
 			server.ws.send({ type: "full-reload" });
 			return [];
+		},
+	};
+}
+
+const VIRTUAL_SEGMENTS_ID = "virtual:vw-segments";
+const RESOLVED_VIRTUAL_SEGMENTS_ID = `\0${VIRTUAL_SEGMENTS_ID}`;
+
+/**
+ * Scan the consumer's segments/ directory and return segment ids.
+ * Each segments/<id>/index.ts becomes a discovered segment.
+ */
+function discoverSegmentIds(consumerRoot: string): string[] {
+	const segmentsDir = join(consumerRoot, "segments");
+	if (!existsSync(segmentsDir)) return [];
+
+	const ids: string[] = [];
+	let entries: string[];
+	try {
+		entries = readdirSync(segmentsDir);
+	} catch {
+		return [];
+	}
+
+	for (const entry of entries) {
+		const entryPath = join(segmentsDir, entry);
+		try {
+			if (!statSync(entryPath).isDirectory()) continue;
+		} catch {
+			continue;
+		}
+		if (existsSync(join(entryPath, "index.ts"))) {
+			ids.push(entry);
+		}
+	}
+
+	return ids.sort();
+}
+
+/**
+ * Vite plugin that provides a virtual module `virtual:vw-segments`.
+ * The module exports a glob-style Record<string, () => Promise<Module>>
+ * with explicit dynamic imports for each discovered segment, avoiding
+ * the alias-in-glob issue with import.meta.glob.
+ */
+function segmentDiscoveryPlugin(consumerRoot: string): Plugin {
+	return {
+		name: "videowright-segment-discovery",
+		resolveId(id) {
+			if (id === VIRTUAL_SEGMENTS_ID) return RESOLVED_VIRTUAL_SEGMENTS_ID;
+		},
+		load(id) {
+			if (id !== RESOLVED_VIRTUAL_SEGMENTS_ID) return;
+
+			const segmentIds = discoverSegmentIds(consumerRoot);
+			const imports = segmentIds
+				.map(
+					(segId) =>
+						`  "/segments/${segId}/index.ts": () => import("@consumer/segments/${segId}/index.ts")`,
+				)
+				.join(",\n");
+
+			return `export default {\n${imports}\n};\n`;
+		},
+		configureServer(server: ViteDevServer) {
+			const segmentsDir = join(consumerRoot, "segments");
+
+			// Watch for added/removed segment directories.
+			// On change, invalidate the virtual module so Vite re-runs load().
+			const invalidate = () => {
+				const mod = server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_SEGMENTS_ID);
+				if (mod) {
+					server.moduleGraph.invalidateModule(mod);
+					server.ws.send({ type: "full-reload" });
+				}
+			};
+
+			// Chokidar is available via server.watcher (Vite's built-in watcher).
+			// Watch for index.ts files being added/removed in segment subdirectories.
+			server.watcher.add(segmentsDir);
+			server.watcher.on("add", (path) => {
+				if (path.endsWith("/index.ts") && path.includes(`${segmentsDir}/`)) {
+					invalidate();
+				}
+			});
+			server.watcher.on("unlink", (path) => {
+				if (path.endsWith("/index.ts") && path.includes(`${segmentsDir}/`)) {
+					invalidate();
+				}
+			});
 		},
 	};
 }
@@ -114,7 +203,7 @@ export async function runDev(opts: DevOptions): Promise<DevResult> {
 	const server = await createServer({
 		configFile: false,
 		root: entryDir,
-		plugins: [fullReloadPlugin()],
+		plugins: [fullReloadPlugin(), segmentDiscoveryPlugin(cwd)],
 		server: {
 			port: serverPort,
 			strictPort: false,
