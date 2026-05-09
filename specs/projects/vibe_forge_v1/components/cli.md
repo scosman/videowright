@@ -23,15 +23,17 @@ status: complete
 
 - Player runtime → `player.md`.
 - Timeline parsing → `timeline_loader.md`.
-- `record` / `render` commands → later phase, out of scope for v1.
+- `record` / `render` orchestration internals (ffmpeg, Playwright) → `record.ts`, `render.ts`.
 
 ## Public Interface
 
-The user-facing surface is the `videowright` binary. Two subcommands:
+The user-facing surface is the `videowright` binary. Four subcommands:
 
 ```
 videowright dev [path-to-timeline] [--port <n>] [--verbose]
 videowright script [path-to-timeline] [--write] [--verbose]
+videowright record [path-to-timeline] [--width <n>] [--height <n>] [--fps <n>] [--output <path>] [--verbose]
+videowright render [path-to-timeline] [--width <n>] [--height <n>] [--fps <n>] [--output <path>] [--verbose]
 videowright --help
 videowright --version
 ```
@@ -51,8 +53,18 @@ src/cli/
 ├── argv.ts              # minimal argv parser
 ├── dev.ts               # `videowright dev` flow
 ├── script.ts            # `videowright script` flow
+├── record.ts            # `videowright record` flow (Playwright + ffmpeg screenshot capture)
+├── render.ts            # `videowright render` flow (CDP-driven deterministic frame export)
+├── ffmpeg.ts            # ffmpeg detection and process spawning
+├── playwright_check.ts  # dynamic Playwright import with user-friendly error
 ├── discover.ts          # config + timeline discovery
-└── ts_loader.ts         # tsx-based loader for .ts config and timelines in Node
+├── ts_loader.ts         # tsx-based loader for .ts config and timelines in Node
+├── errors.ts            # UserError class
+└── entry/
+    ├── index.html       # interactive player entry
+    ├── entry_client.ts  # interactive player boot script
+    ├── render.html      # render-mode player entry
+    └── render_entry.ts  # render-mode boot script (exposes CDP globals)
 ```
 
 ### argv parser (`argv.ts`)
@@ -133,6 +145,39 @@ The CLI process is short-lived in `script` mode; in `dev` mode, Vite handles HMR
 8. Without `--write`: print to stdout.
 
 The Node-side segment loader is a different code path from the browser's Vite glob. Both need to produce the same `SegmentLoaderMap` shape so `script()` and `validateTimeline` work identically.
+
+### `videowright record` flow (`record.ts`)
+
+Screenshot-based capture. The player runs in interactive mode, auto-advancing using each segment's `advances` array.
+
+1. Validate ffmpeg on PATH. Missing → UserError with platform-specific install instructions.
+2. Dynamic-import Playwright. Missing → UserError with `npm install playwright` hint.
+3. Find config + timeline (same discovery as dev/script).
+4. Load all segment modules to extract their `advances` arrays. Validate monotonicity and positivity.
+5. Boot Vite dev server (reuses `runDev` from dev.ts) with `?hideHud=1` to suppress HUD overlay.
+6. Launch headless Chromium via Playwright with configured viewport.
+7. Start ffmpeg process (image2pipe format, PNG on stdin, libx264 output).
+8. Per-segment loop: for each advance time in the segment's `advances` array, capture frames until wall-clock reaches `segmentMountTime + advances[i]`, then fire a keyboard Space press. Wait for `document.body.dataset.vwState === "playing"` after each press.
+9. Runtime coherence checks: if the segment transitions before all advances fired, or parks on waitForNext after all advances fired, error with actionable message.
+10. Close ffmpeg stdin, wait for encoding to finish.
+11. Report output path, frame count, duration.
+
+### `videowright render` flow (`render.ts`)
+
+Deterministic frame-by-frame export. The player runs in render mode with a controlled clock.
+
+1. Same dependency checks as record.
+2. Find config + timeline.
+3. Load all segment modules to extract `advances` arrays. Build a frame schedule mapping each advance to a global frame number.
+4. Boot Vite dev server using `render.html` entry (render-mode player).
+5. Launch headless Chromium, navigate to render URL.
+6. Wait for `window.__VW_RENDER_READY__` signal via CDP.
+7. Start ffmpeg process (same image2pipe approach).
+8. Frame-by-frame loop driven by the advances schedule: at each scheduled frame, call `window.__VW_RENDER_ADVANCE__()`, then capture screenshot and pipe to ffmpeg. Total frame count is computed from the sum of each segment's last advance value.
+9. Runtime coherence checks via `document.body.dataset.vwSegment`.
+10. Finalize ffmpeg, report results.
+
+Determinism guarantees: `hold()` resolves immediately (no real timers), `clock()` returns values based on frame count rather than wall time, the render driver controls advancement not real time.
 
 ### Error formatting
 

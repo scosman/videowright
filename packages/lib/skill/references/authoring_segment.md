@@ -13,6 +13,7 @@ let host: HTMLElement | null = null;
 
 export default defineSegment({
   id: 'feature-overview',
+  advances: [0.6, 2.0, 4.0],
   voiceover: 'Here we showcase the three main features of the product.',
 
   mount(el, ctx) {
@@ -50,6 +51,7 @@ export default defineSegment({
 
 - **`id`** -- must match the folder name under `segments/` (e.g., `segments/feature-overview/index.ts` has `id: 'feature-overview'`).
 - **`play(ctx)`** -- the main animation/content logic. Must return a Promise.
+- **`advances`** -- array of segment-relative seconds at which to fire each 'next' advance during render/record. Must be monotonically increasing positive numbers. REQUIRED on every segment. See "The `advances` array" below.
 
 ### Optional fields
 
@@ -84,6 +86,44 @@ These work in interactive mode but break render-mode clock control (a later feat
 | CSS animation | CSS `@keyframes` or `element.animate()` (Web Animations API) -- these are fine |
 | Complex timeline | GSAP with `ctx.signal` to abort on unmount |
 | Frame-synced loop | `requestAnimationFrame` -- fine for visual updates |
+
+## The `advances` array
+
+Every segment must declare an `advances` array. This tells the render/record driver when to fire each "next" press. In interactive (dev) mode, `advances` is ignored -- the user presses keys manually.
+
+**The press-counting rule:** each entry in `advances` corresponds to one `triggerNext()` call. Count the total number of presses needed to traverse the segment AND transition out.
+
+| `play()` body | Total presses | `advances` |
+|---|---|---|
+| `await ctx.hold(3000)` | 1 (transition out) | `[3.0]` |
+| `await ctx.waitForNext()` | 2 (resolve wait + transition out) | `[2.0, 4.0]` |
+| `await ctx.waitForNext(); await ctx.waitForNext()` | 3 | `[1.5, 3.0, 5.0]` |
+| Three `waitForNext()` calls | 4 | `[1.5, 3.0, 4.5, 6.0]` |
+
+The last entry's value is the total segment duration in seconds. The values must be monotonically increasing.
+
+For the last segment in the timeline, the final advance ends the video.
+
+```ts
+export default defineSegment({
+  id: 'feature-overview',
+  advances: [2.0, 4.0, 6.0],  // 3 presses at 2s, 4s, 6s
+  voiceover: 'Here we showcase the three main features.',
+
+  async play(ctx) {
+    showFeature1();
+    await ctx.waitForNext();  // press 1 at 2s
+    showFeature2();
+    await ctx.waitForNext();  // press 2 at 4s
+    showFeature3();
+    // play() resolves -> press 3 at 6s transitions out
+  },
+});
+```
+
+**Runtime validation:** the render/record driver detects mismatches between the `advances` array and the segment's actual behavior:
+- If the segment parks on `waitForNext` after all advances fired, the driver errors: "Add more entries to the advances array."
+- If the segment transitions before all advances fired, the driver errors: "Remove unused entries from the advances array."
 
 ## The `ctx.signal` abort signal
 
@@ -130,6 +170,7 @@ let host: HTMLElement | null = null;
 
 export default defineSegment({
   id: 'feature-cards',
+  advances: [1.5, 3.0, 4.5, 6.0],
   voiceover: 'Let me walk you through our three key features.',
 
   mount(el) {
@@ -180,7 +221,7 @@ export default defineSegment({
 });
 ```
 
-This segment has 2 internal beats (2 `waitForNext()` calls). The user presses next 3 times total: once for each card reveal, then once more to advance to the next segment.
+This segment has 2 internal beats (2 `waitForNext()` calls). The user presses next 3 times total: once for each card reveal, then once more to advance to the next segment. The `advances` array has 4 entries (3 internal + 1 transition), firing at 1.5s, 3s, 4.5s, and 6s.
 
 ## Any web tech is welcome
 
@@ -227,6 +268,8 @@ function render() {
 
 export default defineSegment({
   id: 'carousel',
+  // next() consumes presses for internal slides; each slide = 1 press + final transition = 4 presses total
+  advances: [2.0, 4.0, 6.0, 8.0],
 
   mount(el) {
     host = el;

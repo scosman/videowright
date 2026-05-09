@@ -67,7 +67,6 @@ Each entry in the `segments` array has:
 |---|---|---|
 | `id` | Yes | Matches a folder name under `segments/` (resolves to `segments/<id>/index.ts`) |
 | `transition` | No | Built-in name (`'fade'`, `'cut'`, `'slideLeft'`, `'slideRight'`, `'slideUp'`, `'slideDown'`) or a configured object `{ type: 'name', ...options }`. Default is `'cut'`. |
-| `renderBeats` | No | Array of durations in ms for render mode. One entry per `waitForNext()` call in the segment's `play()`. |
 
 ### Built-in transitions
 

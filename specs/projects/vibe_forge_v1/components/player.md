@@ -203,7 +203,23 @@ Emits player commands. The player's command handler asks the current segment fir
 
 Pause is not implemented (per functional spec).
 
-Render mode is not implemented in v1. `PlayerContext.mode` is always `'interactive'`. The render-mode driver, render-beat validation, and clock control land in the later export phase.
+### Render mode
+
+Render mode is activated via `PlayerOptions.renderMode: true`. In render mode:
+
+- **No interactive input.** Input listeners are not attached. The player is controlled entirely via `player.renderAdvance()`.
+- **HUD off by default.** The HUD is hidden unless explicitly enabled.
+- **Deterministic clock.** `SegmentRunner` in render mode returns `frameCount * frameDurationMs` from `clock()` instead of `performance.now()`.
+- **Instant hold.** `ctx.hold(ms)` resolves immediately -- no wall-clock delay. This ensures frames are byte-identical across runs.
+- **Beat advancement.** `waitForNext()` still requires explicit resolution via `triggerNext()`, which `renderAdvance()` calls.
+- **Frame advancement.** `renderAdvance()` calls `slot.runner.advanceRenderFrame()` before each `triggerNext()`, ensuring the frame counter (and thus `clock()`) increments monotonically. The render driver (render.ts) does NOT call `advanceRenderFrame()` directly -- `renderAdvance()` owns that responsibility.
+- **`renderAdvance()` API.** Returns `Promise<boolean>` -- `true` if more frames remain, `false` when the timeline is exhausted. Each call advances one beat (or transitions to the next segment if the current segment has no pending waits). Transitions are fully awaited before returning, so the caller never captures a mid-transition frame.
+
+The render-mode entry (`render_entry.ts`) exposes globals for CDP control:
+- `window.__VW_RENDER__` -- boolean flag signaling render mode.
+- `window.__VW_RENDER_READY__` -- set to `true` once the player is booted and ready.
+- `window.__VW_RENDER_ADVANCE__()` -- calls `player.renderAdvance()`, returns the boolean result.
+- `window.__VW_RENDER_ERROR__` -- set if an error occurs during boot or rendering.
 
 ### Error overlay
 

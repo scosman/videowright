@@ -132,6 +132,59 @@ export function validateTimeline(
 	return { ok: true, timeline };
 }
 
+// ---- Segment advances validation ----
+
+export type AdvancesValidationResult = { ok: true } | { ok: false; errors: string[] };
+
+/**
+ * Validate that all segments referenced by a timeline have valid `advances` arrays.
+ *
+ * Accepts a `Record<string, number[]>` mapping segment id to its advances array.
+ * This map is produced in the browser context (entry_client.ts / render_entry.ts)
+ * where segment modules are loaded via Vite and can import browser-only assets
+ * (CSS, JSON, images) that Node's tsImport cannot handle.
+ *
+ * Checks per segment:
+ * - `advances` is defined and non-empty.
+ * - `advances` is monotonically increasing.
+ * - All entries are positive numbers.
+ */
+export function validateSegmentAdvances(
+	timeline: Timeline,
+	advancesMap: Record<string, number[]>,
+): AdvancesValidationResult {
+	const errors: string[] = [];
+
+	for (const entry of timeline.segments) {
+		const advances = advancesMap[entry.id];
+
+		if (!advances || !Array.isArray(advances) || advances.length === 0) {
+			errors.push(
+				`Segment "${entry.id}": missing or empty 'advances' array. Every segment must declare advances for render/record timing.`,
+			);
+			continue;
+		}
+
+		for (let i = 0; i < advances.length; i++) {
+			const v = advances[i];
+			if (typeof v !== "number" || v <= 0 || !Number.isFinite(v)) {
+				errors.push(`Segment "${entry.id}": advances[${i}] must be a positive number (got ${v})`);
+			}
+			if (i > 0 && v <= advances[i - 1]) {
+				errors.push(
+					`Segment "${entry.id}": advances must be monotonically increasing ` +
+						`(advances[${i}]=${v} <= advances[${i - 1}]=${advances[i - 1]})`,
+				);
+			}
+		}
+	}
+
+	if (errors.length > 0) {
+		return { ok: false, errors };
+	}
+	return { ok: true };
+}
+
 /**
  * Apply config defaults to timeline meta. Returns a new Timeline without mutating.
  * Priority: timeline meta > config.defaults > hardcoded fallbacks.

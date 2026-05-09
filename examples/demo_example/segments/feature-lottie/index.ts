@@ -8,6 +8,7 @@ let animation: AnimationItem | null = null;
 
 export default defineSegment({
 	id: "feature-lottie",
+	advances: [3.0],
 	voiceover: "Lottie for designer-made motion. Export from After Effects, play inside a segment.",
 
 	mount(el) {

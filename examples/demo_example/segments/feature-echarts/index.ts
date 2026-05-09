@@ -11,6 +11,7 @@ const categories = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
 
 export default defineSegment({
 	id: "feature-echarts",
+	advances: [2.5, 5.0],
 	voiceover: "Real product data. ECharts, your charting library, your component library, your UI.",
 
 	mount(el) {

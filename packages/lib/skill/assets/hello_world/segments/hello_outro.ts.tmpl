@@ -4,6 +4,8 @@ let host: HTMLElement | null = null;
 
 export default defineSegment({
   id: 'hello-outro',
+  // 1 advance: ends the video at 3s
+  advances: [3.0],
   voiceover: 'Thanks for watching. Start building your video by editing the segments.',
 
   mount(el) {

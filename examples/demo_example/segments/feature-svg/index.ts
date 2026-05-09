@@ -46,6 +46,7 @@ function animateText(text: SVGTextElement, delay: number): void {
 
 export default defineSegment({
 	id: "feature-svg",
+	advances: [3.0],
 	voiceover:
 		"Animated SVG, drawn with web standards. Lines stroke in, nodes appear — zero dependencies.",
 

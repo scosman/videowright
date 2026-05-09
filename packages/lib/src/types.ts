@@ -28,6 +28,22 @@ export interface PlayerContext {
 export interface SegmentSpec {
 	/** Unique id matching the segment's folder name under segments/. */
 	id: string;
+	/**
+	 * Segment-relative seconds at which to fire each 'next' advance during render/record.
+	 * Must be monotonically increasing. All values must be positive numbers.
+	 *
+	 * Length = number of triggerNext() calls required to traverse this segment, INCLUDING
+	 * the final press that transitions to the next segment.
+	 *
+	 * Examples:
+	 * - `play() { await ctx.hold(3000); }` -> 1 press total -> `advances: [3.0]`
+	 * - `play() { await ctx.waitForNext(); }` -> 2 presses -> `advances: [t1, t2]`
+	 * - `play() { await ctx.waitForNext(); await ctx.waitForNext(); }` -> 3 presses -> `advances: [t1, t2, t3]`
+	 *
+	 * Ignored in dev (interactive) mode -- interactive presses drive timing.
+	 * REQUIRED on every segment.
+	 */
+	advances: number[];
 	/** Voiceover text for this segment (used by script() helper and HUD). */
 	voiceover?: string;
 	/** Freeform notes (not rendered). */
@@ -57,8 +73,6 @@ export interface TimelineEntry {
 	id: string;
 	/** Transition to use when entering this segment. String name or configured object. */
 	transition?: string | { type: string; [k: string]: unknown };
-	/** Beat durations in ms for render mode. */
-	renderBeats?: number[];
 }
 
 /** Timeline-level metadata. */

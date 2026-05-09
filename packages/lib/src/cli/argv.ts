@@ -5,7 +5,7 @@
 
 import { parseArgs } from "node:util";
 
-export type Command = "dev" | "script" | "help" | "version";
+export type Command = "dev" | "script" | "record" | "render" | "help" | "version";
 
 export interface ParsedArgs {
 	command: Command;
@@ -14,10 +14,14 @@ export interface ParsedArgs {
 		port?: number;
 		write?: boolean;
 		verbose?: boolean;
+		width?: number;
+		height?: number;
+		fps?: number;
+		output?: string;
 	};
 }
 
-const KNOWN_COMMANDS = new Set<string>(["dev", "script"]);
+const KNOWN_COMMANDS = new Set<string>(["dev", "script", "record", "render"]);
 
 export class ArgvError extends Error {
 	override name = "ArgvError";
@@ -56,6 +60,10 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 			port: { type: "string" },
 			write: { type: "boolean", default: false },
 			verbose: { type: "boolean", default: false },
+			width: { type: "string" },
+			height: { type: "string" },
+			fps: { type: "string" },
+			output: { type: "string" },
 		},
 		allowPositionals: true,
 		strict: true,
@@ -76,6 +84,35 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 		}
 	}
 
+	const widthStr = values.width as string | undefined;
+	let width: number | undefined;
+	if (widthStr !== undefined) {
+		const parsed = Number.parseFloat(widthStr);
+		if (!Number.isInteger(parsed) || parsed < 1) {
+			throw new ArgvError(`Invalid width: ${widthStr} (must be a positive integer)`);
+		}
+		width = parsed;
+	}
+
+	const heightStr = values.height as string | undefined;
+	let height: number | undefined;
+	if (heightStr !== undefined) {
+		const parsed = Number.parseFloat(heightStr);
+		if (!Number.isInteger(parsed) || parsed < 1) {
+			throw new ArgvError(`Invalid height: ${heightStr} (must be a positive integer)`);
+		}
+		height = parsed;
+	}
+
+	const fpsStr = values.fps as string | undefined;
+	let fps: number | undefined;
+	if (fpsStr !== undefined) {
+		fps = Number.parseInt(fpsStr, 10);
+		if (Number.isNaN(fps) || fps < 1 || fps > 120) {
+			throw new ArgvError(`Invalid fps: ${fpsStr}`);
+		}
+	}
+
 	return {
 		command: subcommand as Command,
 		positional: positionals[0],
@@ -83,6 +120,10 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 			port,
 			write: values.write as boolean,
 			verbose: values.verbose as boolean,
+			width,
+			height,
+			fps,
+			output: values.output as string | undefined,
 		},
 	};
 }

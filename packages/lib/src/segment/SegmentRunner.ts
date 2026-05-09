@@ -5,6 +5,8 @@ type RunnerState = "created" | "mounted" | "playing" | "done" | "unmounted";
 export interface SegmentRunnerOptions {
 	mode: "interactive" | "render";
 	seekBeats?: number;
+	/** In render mode, the duration per frame in ms (e.g. 1000/60 for 60fps). Used for deterministic clock. */
+	frameDurationMs?: number;
 }
 
 /**
@@ -24,11 +26,14 @@ export class SegmentRunner {
 	private mountedAt = 0;
 	private _playPromise: Promise<void> | null = null;
 	private state: RunnerState = "created";
+	private frameDurationMs: number;
+	private renderFrameCount = 0;
 
 	constructor(segment: Segment, opts: SegmentRunnerOptions) {
 		this.segment = segment;
 		this.mode = opts.mode;
 		this.seekBeatsRemaining = opts.seekBeats ?? 0;
+		this.frameDurationMs = opts.frameDurationMs ?? 1000 / 60;
 	}
 
 	async mount(el: HTMLElement): Promise<void> {
@@ -124,6 +129,14 @@ export class SegmentRunner {
 		return true;
 	}
 
+	/**
+	 * In render mode, advance the deterministic frame counter.
+	 * Called by the render driver after each frame capture.
+	 */
+	advanceRenderFrame(): void {
+		this.renderFrameCount++;
+	}
+
 	private makeContext(): PlayerContext {
 		return {
 			waitForNext: () => {
@@ -141,6 +154,11 @@ export class SegmentRunner {
 				});
 			},
 			hold: (ms: number) => {
+				// In render mode, hold resolves immediately -- no wall-clock delay.
+				// The deterministic clock advances based on frame count, not real time.
+				if (this.mode === "render") {
+					return Promise.resolve();
+				}
 				return new Promise<void>((resolve) => {
 					if (this.abortCtrl.signal.aborted) {
 						resolve();
@@ -159,7 +177,13 @@ export class SegmentRunner {
 			},
 			signal: this.abortCtrl.signal,
 			mode: this.mode,
-			clock: () => performance.now() - this.mountedAt,
+			clock: () => {
+				// In render mode, return deterministic time based on frame count
+				if (this.mode === "render") {
+					return this.renderFrameCount * this.frameDurationMs;
+				}
+				return performance.now() - this.mountedAt;
+			},
 		};
 	}
 }

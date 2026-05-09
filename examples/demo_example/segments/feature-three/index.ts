@@ -7,6 +7,7 @@ let renderer: THREE.WebGLRenderer | null = null;
 
 export default defineSegment({
 	id: "feature-three",
+	advances: [2.0, 4.0, 6.0],
 	voiceover: "Three.js for 3D. A full WebGL scene, right inside a segment.",
 
 	mount(el) {

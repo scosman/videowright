@@ -11,6 +11,7 @@ import { SEGMENT_BRAND, type Segment, type SegmentSpec, type Transition } from "
 
 function makeSegment(overrides: Partial<SegmentSpec> & { id: string }): Segment {
 	return Object.freeze({
+		advances: [1],
 		async play() {},
 		[SEGMENT_BRAND]: true as const,
 		...overrides,

@@ -8,8 +8,7 @@ import { dirname, join, resolve } from "node:path";
 import { script } from "../script/script.js";
 import type { SegmentLoaderMap } from "../timeline/index.js";
 import type { Segment, Timeline } from "../types.js";
-import { findConfig, findTimeline } from "./discover.js";
-import { UserError } from "./errors.js";
+import { discoverProject } from "./discover_project.js";
 import { loadModule } from "./ts_loader.js";
 
 export interface ScriptOptions {
@@ -80,23 +79,7 @@ export function buildNodeSegmentLoaderMap(cwd: string): SegmentLoaderMap {
 export async function runScript(opts: ScriptOptions): Promise<ScriptResult> {
 	const { cwd, positional, write, verbose } = opts;
 
-	// 1. Find config
-	const configPath = findConfig(cwd);
-	if (!configPath) {
-		throw new UserError(
-			`No videowright.config.ts found at ${cwd}`,
-			"The Videowright skill can scaffold one. Run setup first.",
-		);
-	}
-
-	// 2. Find timeline (findTimeline throws UserError if explicit hint missing)
-	const timelinePath = findTimeline(cwd, positional);
-	if (!timelinePath) {
-		throw new UserError(
-			`No videos found at ${cwd}/videos/`,
-			"Create one or pass a path: videowright script <path-to-timeline>",
-		);
-	}
+	const { configPath, timelinePath } = discoverProject(cwd, positional, "script");
 
 	if (verbose) {
 		console.log(`config: ${configPath}`);

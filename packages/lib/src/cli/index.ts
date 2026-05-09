@@ -37,10 +37,16 @@ const HELP_TEXT = `Usage: videowright <command> [options]
 Commands:
   dev [path]      Start the dev server
   script [path]   Generate voiceover script
+  record [path]   Record video via Playwright + ffmpeg (screenshot-based)
+  render [path]   Deterministic frame-by-frame export via CDP + ffmpeg
 
 Options:
   --port <n>      Dev server port (default: 5173)
   --write         Write script to file instead of stdout
+  --width <n>     Video width in pixels (default: 1920)
+  --height <n>    Video height in pixels (default: 1080)
+  --fps <n>       Frames per second (default: 30 for record, 60 for render)
+  --output <path> Output file path (default: output.mp4)
   --verbose       Show extra detail
   --help          Show this help
   --version       Show version
@@ -117,6 +123,40 @@ export async function main(argv?: string[]): Promise<number> {
 			} else {
 				process.stdout.write(result.markdown);
 			}
+			return 0;
+		}
+
+		if (command === "record") {
+			const { runRecord } = await import("./record.js");
+			const result = await runRecord({
+				cwd,
+				positional,
+				width: flags.width,
+				height: flags.height,
+				fps: flags.fps,
+				output: flags.output,
+				verbose: flags.verbose,
+			});
+			console.log(
+				`\n  Recorded ${result.frames} frames (${result.duration.toFixed(1)}s) to ${result.outputPath}\n`,
+			);
+			return 0;
+		}
+
+		if (command === "render") {
+			const { runRender } = await import("./render.js");
+			const result = await runRender({
+				cwd,
+				positional,
+				width: flags.width,
+				height: flags.height,
+				fps: flags.fps,
+				output: flags.output,
+				verbose: flags.verbose,
+			});
+			console.log(
+				`\n  Rendered ${result.frames} frames (${result.duration.toFixed(1)}s) to ${result.outputPath}\n`,
+			);
 			return 0;
 		}
 	} catch (e) {

@@ -9,6 +9,7 @@ import type { Timeline } from "../../src/types.js";
 function makeLoader(id: string, voiceover?: string) {
 	const seg = defineSegment({
 		id,
+		advances: [1],
 		voiceover,
 		async play() {},
 	});

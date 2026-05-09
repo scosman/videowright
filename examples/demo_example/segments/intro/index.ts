@@ -6,6 +6,7 @@ import "../../styles/tokens.css";
 
 export default defineSegment({
 	id: "intro",
+	advances: [3.0],
 	voiceover: "Videowright. Build videos in the same HTML, CSS, and JavaScript you build apps with.",
 
 	mount(el) {

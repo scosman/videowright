@@ -10,6 +10,7 @@ import {
 function makeSegment(overrides: Partial<SegmentSpec> = {}): Segment {
 	return Object.freeze({
 		id: "test",
+		advances: [1],
 		async play() {},
 		[SEGMENT_BRAND]: true as const,
 		...overrides,

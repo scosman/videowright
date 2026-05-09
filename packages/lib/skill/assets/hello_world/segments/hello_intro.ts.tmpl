@@ -4,6 +4,8 @@ let host: HTMLElement | null = null;
 
 export default defineSegment({
   id: 'hello-intro',
+  // 2 advances: one resolves waitForNext at 2s, one transitions out at 4s
+  advances: [2.0, 4.0],
   voiceover: 'Welcome to {{title}}.',
 
   mount(el) {

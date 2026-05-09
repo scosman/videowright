@@ -23,6 +23,18 @@ import {
 } from "../../index.js";
 import type { Config, Timeline } from "../../index.js";
 
+// Extend window for ready signal used by record command
+declare global {
+	interface Window {
+		__VW_PLAYER_READY__: boolean;
+		__VW_SEGMENT_ADVANCES__: Record<string, number[]>;
+		__VW_SEGMENTS_LOADED__: boolean;
+	}
+}
+
+window.__VW_PLAYER_READY__ = false;
+window.__VW_SEGMENTS_LOADED__ = false;
+
 async function boot() {
 	const segmentGlob = segmentGlobRaw as Record<string, () => Promise<unknown>>;
 
@@ -67,13 +79,33 @@ async function boot() {
 		throw new Error(`Timeline validation failed:\n${messages.join("\n")}`);
 	}
 
+	// Extract advances from each segment so drivers can read them from the browser
+	const advancesMap: Record<string, number[]> = {};
+	for (const entry of finalTimeline.segments) {
+		const loader = segmentLoaders.get(entry.id);
+		if (loader) {
+			const mod = await loader();
+			const seg = mod.default;
+			if (seg && Array.isArray(seg.advances)) {
+				advancesMap[entry.id] = seg.advances;
+			}
+		}
+	}
+	window.__VW_SEGMENT_ADVANCES__ = advancesMap;
+	window.__VW_SEGMENTS_LOADED__ = true;
+
 	// Mount player
 	const host = document.getElementById("player-host");
 	if (!host) throw new Error("No #player-host element found");
 
-	const player = new Player(host);
+	// Support ?hideHud=1 for record mode (HUD must not appear in recordings)
+	const hideHud = new URLSearchParams(window.location.search).has("hideHud");
+	const player = new Player(host, hideHud ? { hud: false } : undefined);
 	await player.load(finalTimeline, segmentLoaders, transitionLoaders);
 	await player.start();
+
+	// Signal that the player is ready for external drivers (e.g. record command)
+	window.__VW_PLAYER_READY__ = true;
 }
 
 boot().catch((e) => {

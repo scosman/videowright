@@ -6,6 +6,7 @@ let host: HTMLElement | null = null;
 
 export default defineSegment({
 	id: "feature-cards",
+	advances: [1.5, 3.0, 4.5, 6.0],
 	voiceover:
 		"Videos compound. Segments, components, transitions, styles — all top-level, all reusable.",
 

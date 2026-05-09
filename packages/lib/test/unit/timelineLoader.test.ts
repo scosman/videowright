@@ -14,7 +14,7 @@ import type { Config, Timeline, Transition } from "../../src/types.js";
 function makeSegmentLoaders(...ids: string[]): SegmentLoaderMap {
 	const map: SegmentLoaderMap = new Map();
 	for (const id of ids) {
-		const seg = defineSegment({ id, async play() {} });
+		const seg = defineSegment({ id, advances: [1], async play() {} });
 		map.set(id, async () => ({ default: seg }));
 	}
 	return map;

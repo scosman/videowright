@@ -14,6 +14,10 @@ import { clearSlotAnimations, createSlot, getSlotContent } from "./slot.js";
 
 export interface PlayerOptions {
 	hud?: boolean; // default: true
+	/** Enable render mode: deterministic frame-by-frame advance, no interactive input. */
+	renderMode?: boolean;
+	/** Frames per second for render mode clock. Default 60. */
+	fps?: number;
 }
 
 type PlayerState = "idle" | "loading" | "playing" | "transitioning" | "ended" | "errored";
@@ -27,7 +31,7 @@ interface SlotEntry {
 export class Player {
 	private host: HTMLElement;
 	private hostWrapper: HTMLDivElement;
-	private options: Required<PlayerOptions>;
+	private options: { hud: boolean; renderMode: boolean; fps: number };
 	private state: PlayerState = "idle";
 
 	private timeline: Timeline | null = null;
@@ -48,7 +52,11 @@ export class Player {
 
 	constructor(host: HTMLElement, options?: PlayerOptions) {
 		this.host = host;
-		this.options = { hud: options?.hud ?? true };
+		this.options = {
+			hud: options?.hud ?? !options?.renderMode,
+			renderMode: options?.renderMode ?? false,
+			fps: options?.fps ?? 60,
+		};
 
 		this.hostWrapper = document.createElement("div");
 		this.hostWrapper.className = "vw-host";
@@ -76,7 +84,10 @@ export class Player {
 			this.hud.hide();
 		}
 
-		this.cleanupInput = attachInput(this.hostWrapper, (cmd) => this.handleCommand(cmd));
+		// In render mode, suppress all interactive input
+		if (!this.options.renderMode) {
+			this.cleanupInput = attachInput(this.hostWrapper, (cmd) => this.handleCommand(cmd));
+		}
 	}
 
 	async load(
@@ -137,6 +148,7 @@ export class Player {
 		try {
 			await this.mountSegmentAt(targetIndex, targetBeat);
 			this.state = "playing";
+			this.broadcastState();
 		} catch (e) {
 			this.handleLifecycleError(this.timeline.segments[targetIndex]?.id ?? "unknown", e);
 		}
@@ -167,6 +179,7 @@ export class Player {
 		this.hud.destroy();
 		this.hostWrapper.remove();
 		this.state = "idle";
+		this.broadcastState();
 	}
 
 	// --- Accessors for testing ---
@@ -182,6 +195,60 @@ export class Player {
 
 	get currentTimelineIndex(): number {
 		return this.getCurrentSlot().timelineIndex;
+	}
+
+	get isEnded(): boolean {
+		return this.state === "ended";
+	}
+
+	get isTransitioning(): boolean {
+		return this.transitioning;
+	}
+
+	/**
+	 * Advance one beat in render mode. Returns false when the timeline is exhausted.
+	 * Only valid when the player was constructed with renderMode: true.
+	 *
+	 * This method:
+	 * 1. Advances the active runner's render frame counter (for deterministic clock).
+	 * 2. Tries to advance a beat within the current segment.
+	 * 3. If the segment is exhausted, transitions to the next segment (awaiting completion).
+	 * 4. Returns false when the timeline is fully exhausted.
+	 */
+	async renderAdvance(): Promise<boolean> {
+		if (!this.options.renderMode) {
+			throw new Error("renderAdvance() is only valid in render mode");
+		}
+		if (this.state === "ended" || this.state === "errored") {
+			return false;
+		}
+
+		const slot = this.getCurrentSlot();
+		if (!slot.runner) return false;
+
+		// Advance the deterministic frame counter on the active runner.
+		// This makes clock() return incrementing values between beats.
+		slot.runner.advanceRenderFrame();
+
+		// Try to advance a beat within the current segment
+		const consumed = slot.runner.triggerNext();
+		if (consumed) {
+			return true;
+		}
+
+		// Segment didn't consume -- advance to next segment
+		const nextIndex = slot.timelineIndex + 1;
+		if (!this.timeline || nextIndex >= this.timeline.segments.length) {
+			this.state = "ended";
+			this.broadcastState();
+			return false;
+		}
+
+		// transitionTo is fully async -- we await it so the caller only gets
+		// control back once the transition animation is complete and the new
+		// segment is mounted and playing.
+		await this.transitionTo(nextIndex, "forward");
+		return this.currentState === "playing";
 	}
 
 	// --- Private: navigation ---
@@ -231,6 +298,7 @@ export class Player {
 		if (!this.timeline || nextIndex >= this.timeline.segments.length) {
 			this.state = "ended";
 			this.updateHud();
+			this.broadcastState();
 			return;
 		}
 
@@ -295,6 +363,7 @@ export class Player {
 
 		this.transitioning = true;
 		this.state = "transitioning";
+		this.broadcastState();
 
 		const outgoingSlot = this.getCurrentSlot();
 		const incomingSlot = this.getOtherSlot();
@@ -308,7 +377,11 @@ export class Player {
 			const segment = mod.default;
 
 			// Create runner and mount
-			const runner = new SegmentRunner(segment, { mode: "interactive" });
+			const runnerMode = this.options.renderMode ? "render" : "interactive";
+			const runner = new SegmentRunner(segment, {
+				mode: runnerMode,
+				frameDurationMs: this.options.renderMode ? 1000 / this.options.fps : undefined,
+			});
 			incomingSlot.runner = runner;
 			incomingSlot.timelineIndex = targetIndex;
 
@@ -359,6 +432,7 @@ export class Player {
 			this.state = "playing";
 			this.transitioning = false;
 			this.updateHud();
+			this.broadcastState();
 
 			// Monitor play promise for errors
 			incomingPlayPromise.catch((e) => {
@@ -380,9 +454,11 @@ export class Player {
 		const mod = await loader();
 		const segment = mod.default;
 
+		const runnerMode = this.options.renderMode ? "render" : "interactive";
 		const runner = new SegmentRunner(segment, {
-			mode: "interactive",
+			mode: runnerMode,
 			seekBeats: seekBeat,
+			frameDurationMs: this.options.renderMode ? 1000 / this.options.fps : undefined,
 		});
 
 		const slot = this.getCurrentSlot();
@@ -481,6 +557,7 @@ export class Player {
 
 		this.transitioning = true;
 		this.state = "transitioning";
+		this.broadcastState();
 
 		const entry = this.timeline.segments[index];
 		const outgoingSlot = this.getCurrentSlot();
@@ -492,9 +569,11 @@ export class Player {
 			const mod = await loader();
 			const segment = mod.default;
 
+			const runnerMode = this.options.renderMode ? "render" : "interactive";
 			const runner = new SegmentRunner(segment, {
-				mode: "interactive",
+				mode: runnerMode,
 				seekBeats: beat,
+				frameDurationMs: this.options.renderMode ? 1000 / this.options.fps : undefined,
 			});
 
 			// Clear stale WAAPI transition animations before reuse
@@ -522,6 +601,7 @@ export class Player {
 			this.state = "playing";
 			this.transitioning = false;
 			this.updateHud();
+			this.broadcastState();
 
 			playPromise.catch((e) => {
 				this.handleLifecycleError(entry.id, e);
@@ -540,6 +620,7 @@ export class Player {
 		this.state = "errored";
 		this.transitioning = false;
 		this.setError(segmentId, error);
+		this.broadcastState();
 	}
 
 	private setError(segmentId: string, error: Error): void {
@@ -549,7 +630,7 @@ export class Player {
 			beat: 0,
 			segmentTime: 0,
 			totalTime: this.totalElapsed(),
-			mode: "interactive",
+			mode: this.options.renderMode ? "render" : "interactive",
 			ended: false,
 			error: {
 				segmentId,
@@ -576,7 +657,7 @@ export class Player {
 			segmentTime: runner ? runner.elapsedSinceMount : 0,
 			totalTime: this.totalElapsed(),
 			voiceover,
-			mode: "interactive",
+			mode: this.options.renderMode ? "render" : "interactive",
 			ended: this.state === "ended",
 		};
 
@@ -585,6 +666,29 @@ export class Player {
 
 	private totalElapsed(): number {
 		return this.started ? performance.now() - this.startedAt : 0;
+	}
+
+	// --- State broadcast ---
+
+	/**
+	 * Set document.body.dataset.vwState to the current player state.
+	 * Used by record/render drivers to detect when the player is idle (not transitioning)
+	 * and ready for the next action.
+	 *
+	 * States: "idle" | "loading" | "playing" | "transitioning" | "ended" | "errored"
+	 */
+	private broadcastState(): void {
+		try {
+			if (typeof document !== "undefined" && document.body) {
+				document.body.dataset.vwState = this.state;
+				// Also broadcast current segment id for driver synchronization
+				const slot = this.getCurrentSlot();
+				const segId = slot.runner?.segment.id ?? "";
+				document.body.dataset.vwSegment = segId;
+			}
+		} catch {
+			// Ignore in non-browser environments (jsdom may throw)
+		}
 	}
 
 	// --- Slot helpers ---

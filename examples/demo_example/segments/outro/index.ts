@@ -5,6 +5,7 @@ let host: HTMLElement | null = null;
 
 export default defineSegment({
 	id: "outro",
+	advances: [3.0],
 	voiceover: "Get started. Install Videowright, and let the agent build your first video.",
 
 	mount(el) {
