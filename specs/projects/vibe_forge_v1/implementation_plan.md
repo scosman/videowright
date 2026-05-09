@@ -22,7 +22,7 @@ Phased build order. Each phase is one coherent CR. Test, lint, and typecheck sta
 
 - [x] **Phase 7: Demo example.** `examples/demo_example/` complete consumer-style repo: 7 segments (`intro`, `feature-svg`, `feature-three`, `feature-lottie`, `feature-echarts`, `feature-cards`, `outro`), `logo-morph` custom transition, components, design tokens, `STYLE.md`, voiceover script. Stylish — spend the time. `npm run dev:demo` works end-to-end.
 
-- [ ] **Phase 8: CI.** `.github/workflows/ci.yml` (typecheck, lint, unit + integration). `.github/workflows/e2e.yml` (Playwright against built demo). Both run on push/PR. Verify on a test branch before merging.
+- [x] **Phase 8: CI.** `.github/workflows/ci.yml` (typecheck, lint, unit + integration). `.github/workflows/e2e.yml` (Playwright against built demo). Both run on push/PR. Verify on a test branch before merging.
 
 - [ ] **Phase 9: README + project polish.** Write the project README from `notes_for_readme.md`, the specs, and the now-complete code. Manually screen-record the demo and embed the MP4 in the README. Pre-publish checks (`npm pack` smoke). License-bundling sanity (no copyleft / BUSL transitively).
 

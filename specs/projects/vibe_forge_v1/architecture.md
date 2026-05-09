@@ -309,13 +309,13 @@ No hard percentage target. **Required:** every public lib export has at least on
 Two GitHub Actions workflows:
 
 **`.github/workflows/ci.yml`** — fast path, runs on every push/PR:
-- Setup Node 20, npm ci.
+- Setup Node 22 (LTS), npm ci.
 - Typecheck: `npm run typecheck` (root tsc --noEmit across workspaces).
 - Lint: `npm run lint` (ESLint or Biome — pick during implementation).
 - Unit + integration: `npm test` (Vitest, all workspaces).
 
 **`.github/workflows/e2e.yml`** — heavier, also on push/PR but separate job:
-- Setup Node 20, npm ci.
+- Setup Node 22 (LTS), npm ci.
 - Install Playwright browsers.
 - Build demo_example.
 - Run Playwright smoke: `npm run test:e2e`.
