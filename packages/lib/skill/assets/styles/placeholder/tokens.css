@@ -1,0 +1,34 @@
+/*
+ * Placeholder Style — Design Tokens
+ *
+ * Neutral baseline. System fonts, flat design, single accent.
+ * See STYLE.md for aesthetic rules.
+ */
+
+:root {
+	/* ---- Core palette ---- */
+	--color-bg: #ffffff;
+	--color-fg: #1a1a1a;
+	--color-accent: #2563eb;
+
+	/* ---- Typography ---- */
+	--font-display: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+	/* ---- Extended palette ---- */
+	--color-muted: #6b7280;
+	--color-border: #e5e7eb;
+	--color-surface: #f9fafb;
+
+	/* ---- Spacing ---- */
+	--space-sm: 0.5rem;
+	--space-md: 1rem;
+	--space-lg: 2rem;
+	--space-xl: 4rem;
+
+	/* ---- Motion ---- */
+	--duration-fast: 200ms;
+	--duration-normal: 400ms;
+	--duration-slow: 600ms;
+}

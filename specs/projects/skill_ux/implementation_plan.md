@@ -16,7 +16,7 @@ Ten phases. Phases 1–5 build the skill structure and reference content; phases
 
 - [x] **Phase 4: Supporting references.** Write `references/authoring_segment.md`, `voiceover.md`, `project_structure.md`, `types.md`, `dev_server.md`, `export.md`, `testing.md`. Salvage existing prose where it fits; rewrite where it doesn't.
 
-- [ ] **Phase 5: Hello-world reference example.** Replace `skill/assets/hello_world/` with the new shape (no `.tmpl`, plain reference files). Verify the timeline.ts top-of-file style import convention works end-to-end against a placeholder style.
+- [x] **Phase 5: Hello-world reference example.** Replace `skill/assets/hello_world/` with the new shape (no `.tmpl`, plain reference files). Verify the timeline.ts top-of-file style import convention works end-to-end against a placeholder style.
 
 - [ ] **Phase 6: Style pack — Modern.** Design and ship `skill/assets/styles/modern/` (STYLE.md + tokens.css + sample-segment). Visual design polish to 2026 standards.
 

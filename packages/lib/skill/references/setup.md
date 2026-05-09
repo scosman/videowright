@@ -88,7 +88,7 @@ Wait for the style creation flow to complete before continuing.
    - `PLAN.md` — a populated plan for the hello-world video.
    - `voiceover/script.md` — starter VO script. The hello-world defaults to voiceover audio intent as a teaching example, so the starter segments include `voiceover` fields and the script file is populated.
 
-   Use the reference examples in `node_modules/videowright/skill/assets/hello_world/` as guidance for structure. The agent writes each file from scratch per the conventions in this skill — adapt content to reference the chosen style (import path, token usage, style slug in meta).
+   Use the reference examples in `node_modules/videowright/skill/assets/hello_world/` as guidance for structure and content. These are plain files (not templates) — the agent reads them and writes adapted versions into the consumer repo, adjusting the style import path, token usage, style slug, video name, and title to match the user's choices.
 
 3. **Scaffold starter segments** in `segments/`:
    - The style pack's sample segment was already installed at `segments/<slug>-sample/index.ts` via step 4 (`copySample: true`). The hello-world timeline should reference this segment.
