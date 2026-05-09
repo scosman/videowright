@@ -24,6 +24,6 @@ Phased build order. Each phase is one coherent CR. Test, lint, and typecheck sta
 
 - [x] **Phase 8: CI.** `.github/workflows/ci.yml` (typecheck, lint, unit + integration). `.github/workflows/e2e.yml` (Playwright against built demo). Both run on push/PR. Verify on a test branch before merging.
 
-- [ ] **Phase 9: README + project polish.** Write the project README from `notes_for_readme.md`, the specs, and the now-complete code. Manually screen-record the demo and embed the MP4 in the README. Pre-publish checks (`npm pack` smoke). License-bundling sanity (no copyleft / BUSL transitively).
+- [x] **Phase 9: README + project polish.** Write the project README from `notes_for_readme.md`, the specs, and the now-complete code. Manually screen-record the demo and embed the MP4 in the README. Pre-publish checks (`npm pack` smoke). License-bundling sanity (no copyleft / BUSL transitively).
 
 - [ ] **Phase 10 (may not ship): Export commands.** `videowright record` (Playwright drives full-screen player, ffmpeg captures the window). Then `videowright render` (CDP-driven deterministic frame export, ffmpeg stitches). Audio plumbing if scope permits. May be split into two separate phases during execution. May be skipped entirely if v1 ships before reaching here — that's intentional.
