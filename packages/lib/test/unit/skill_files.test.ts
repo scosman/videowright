@@ -15,16 +15,24 @@ describe("skill file structure", () => {
 		expect(content).toMatch(/description:/);
 	});
 
-	it("references/ has the 4 expected files", () => {
+	it("references/ has the expected files", () => {
 		const refsDir = resolve(SKILL_ROOT, "references");
 		expect(existsSync(refsDir)).toBe(true);
 
 		const files = readdirSync(refsDir).sort();
 		expect(files).toEqual([
 			"authoring_segment.md",
-			"authoring_video.md",
+			"create_or_edit_video.md",
+			"dev_server.md",
+			"export.md",
+			"new_video.md",
+			"project_structure.md",
 			"setup.md",
-			"style_matching.md",
+			"setup_new_style.md",
+			"styles.md",
+			"testing.md",
+			"types.md",
+			"voiceover.md",
 		]);
 	});
 
@@ -108,7 +116,7 @@ describe("skill file structure", () => {
 		const refPattern = /references\/[\w_]+\.md/g;
 		const matches = skillMd.match(refPattern) ?? [];
 
-		expect(matches.length).toBeGreaterThanOrEqual(4);
+		expect(matches.length).toBeGreaterThanOrEqual(10);
 
 		for (const ref of matches) {
 			const fullPath = resolve(SKILL_ROOT, ref);

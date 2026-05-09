@@ -1,3 +1,3 @@
-# Setup
+# Types
 
 <!-- Stub: content pending -->

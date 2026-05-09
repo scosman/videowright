@@ -79,6 +79,8 @@ export interface TimelineEntry {
 export interface TimelineMeta {
 	/** Video title (required). */
 	title: string;
+	/** Style slug for this video. Falls back to config defaultStyle. */
+	style?: string;
 	/** Aspect ratio string, e.g. '16:9'. Falls back to config default. */
 	aspectRatio?: string;
 	/** Resolution as [width, height]. Falls back to config default. */
@@ -114,6 +116,8 @@ export type Transition = (
 export interface Config {
 	/** Setup marker; bumped when layout changes. */
 	projectStructure: "v1";
+	/** Slug of the default style in styles/<slug>/. Required after setup. */
+	defaultStyle?: string;
 	/** Default values for timeline meta fields. */
 	defaults?: {
 		resolution?: [number, number];
