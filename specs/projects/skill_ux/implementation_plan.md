@@ -12,7 +12,7 @@ Ten phases. Phases 1–5 build the skill structure and reference content; phases
 
 - [x] **Phase 2: Style architecture references.** Write `references/styles.md` (folder layout, timeline.ts import convention, swap workflow, style-matching) and `references/setup_new_style.md` (modes 1–3, caller flags). Mode 3 picker reads `skill/assets/styles/*/STYLE.md` frontmatter — the picker mechanic is wired even though the 4 packs come later.
 
-- [ ] **Phase 3: Core workflow references.** Write `references/setup.md` (gate semantics, scaffold steps, dispatch to setup_new_style for first style), `references/new_video.md` (intent capture, PLAN.md skeleton embedded inline, one-shot heuristic, dispatch to create_or_edit_video), `references/create_or_edit_video.md` (translate PLAN.md → segments + timeline, edit-mode for existing videos, verify with `videowright dev`).
+- [x] **Phase 3: Core workflow references.** Write `references/setup.md` (gate semantics, scaffold steps, dispatch to setup_new_style for first style), `references/new_video.md` (intent capture, PLAN.md skeleton embedded inline, one-shot heuristic, dispatch to create_or_edit_video), `references/create_or_edit_video.md` (translate PLAN.md → segments + timeline, edit-mode for existing videos, verify with `videowright dev`).
 
 - [ ] **Phase 4: Supporting references.** Write `references/authoring_segment.md`, `voiceover.md`, `project_structure.md`, `types.md`, `dev_server.md`, `export.md`, `testing.md`. Salvage existing prose where it fits; rewrite where it doesn't.
 
