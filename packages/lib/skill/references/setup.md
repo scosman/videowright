@@ -6,12 +6,19 @@ You were routed here because the setup gate in SKILL.md is open: `videowright.co
 
 This flow runs once per project. After it completes, the setup gate closes and SKILL.md skips this file on future invocations.
 
-## Preconditions
+## Preconditions: Verify install
 
-Check `package.json` for `videowright` in `dependencies` or `devDependencies`.
+Before any setup work, verify that the Videowright installer was run successfully. Check all three of these conditions:
 
-- If **missing**: tell the user "Videowright is not installed. Run `npm install videowright` (or your package manager equivalent) and make sure the agent instruction file points to the skill. Then try again." Stop here — do not proceed with setup.
-- If **present**: continue.
+1. `videowright` is in the project's `package.json` `dependencies` or `devDependencies`.
+2. `node_modules/videowright/` exists as a directory (i.e., `npm install` or equivalent was actually run).
+3. An instruction file contains a `<!-- videowright:start -->` marked region. Check `CLAUDE.md` if it exists; otherwise check `AGENTS.md`.
+
+If **any** of these checks fail, stop and tell the user exactly:
+
+> Videowright is not fully installed in this project. Visit https://github.com/scosman/videowright for install instructions.
+
+Do not attempt repair. Do not proceed with setup. The user should re-run the installer.
 
 ## Gate semantics
 

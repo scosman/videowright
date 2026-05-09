@@ -29,30 +29,22 @@ Videowright operates at the **composition** layer -- sequencing segments, handli
 
 ### Install
 
+Paste this into your coding agent (Claude Code, Codex, or opencode):
+
+> Install Videowright using these instructions:
+> https://github.com/scosman/videowright/blob/main/packages/lib/skill/install/INSTALL.md
+
+The agent reads the install script and walks you through setup -- package install, skill symlinks, and project scaffolding.
+
+### Manual install
+
+If you prefer to set things up by hand, the paste-driven install above is still recommended -- it handles skill symlinks, instruction files, and dev toolchain setup automatically. But for the package alone:
+
 ```bash
 npm install videowright
 ```
 
-### Scaffold via the agent skill (recommended)
-
-Videowright ships a Claude Code agent skill. When you ask Claude to create a video, the skill checks for a `videowright.config.ts` and scaffolds a project if one does not exist:
-
-1. Install Videowright (`npm install videowright`)
-2. Add to your `.claude/CLAUDE.md`:
-   ```
-   Read `node_modules/videowright/skill/SKILL.md` for the Videowright agent skill.
-   ```
-3. Ask: *"Make me a 60-second launch video with a logo intro, three feature highlights, and a CTA outro."*
-
-The agent scaffolds a project, writes segments, and tells you to run `videowright dev`.
-
-### Scaffold manually
-
-```bash
-npx videowright dev videos/my-video/timeline.ts
-```
-
-See [the skill's setup reference](packages/lib/skill/references/setup.md) for the full directory layout.
+You will also need to set up the [skill symlinks and instruction files](https://github.com/scosman/videowright/blob/main/packages/lib/skill/install/INSTALL.md) (Steps 5-6) for your coding agent to use Videowright's skill.
 
 ### Preview
 
