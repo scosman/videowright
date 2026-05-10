@@ -38,11 +38,11 @@ The user needs per-word timing data for the sync algorithm. Guide them through E
 >
 > Follow these steps:
 >
-> 1. Open [elevenlabs.io](https://elevenlabs.io) and sign in (or create a free account).
+> 1. Open https://elevenlabs.io/app and sign in (or create a free account).
 > 2. Navigate to **Speech to Text** in the sidebar.
 > 3. Upload your audio file (`<filename>`).
 > 4. Wait for transcription to complete.
-> 5. Download the output with per-word timestamps as JSON.
+> 5. **Export as JSON.** Select the JSON export option -- **do not use plain text export**, which does not include per-word timing data.
 > 6. Save the JSON file as `provider_timing.json` in `voiceovers/<slug>/`.
 
 See [elevenlabs.md](elevenlabs.md) for the detailed STT portal walkthrough and expected JSON format.

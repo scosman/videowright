@@ -35,7 +35,7 @@ Each value array has the same length as the segment's `advances` array. Values a
 
 ### ElevenLabs TTS timing
 
-ElevenLabs v3 TTS can output per-word timing. The JSON format contains an array of word entries with start and end timestamps:
+ElevenLabs TTS can output per-word timing (via the API's with-timestamps endpoint, or extracted via STT after portal generation). The JSON format contains an array of word entries with start and end timestamps:
 
 ```json
 {

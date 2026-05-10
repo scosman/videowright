@@ -2,63 +2,52 @@
 
 ## When this is loaded
 
-You are preparing to generate a voiceover and need to understand the user's voice and tone preferences before creating the provider script.
+You are preparing to generate a voiceover and need to understand the user's tone and pacing preferences before creating the provider script.
 
 ## Purpose
 
-Style intake captures the user's preferences for the voiceover's delivery. The answers inform two things:
-
-1. **Voice selection guidance** -- what to tell the user when they pick a voice in the ElevenLabs portal.
-2. **Provider script annotations** -- which audio tags and delivery directions to include in `provider_script.md`.
+Style intake captures preferences that the agent **directly uses** when writing the provider script. It does NOT ask about attributes the user controls independently in the ElevenLabs portal or API (voice gender, accent, age, BPM, etc.) -- those are chosen by the user during voice selection, and the agent has no lever on them.
 
 ## Questions to ask
 
-Ask these questions before generating the provider script. Group them into a single round -- do not ask one at a time. Skip any question whose answer is already clear from the user's input.
-
-### Required
+Ask these questions before generating the provider script. Group them into a single message -- do not ask one at a time. Skip any question whose answer is already clear from the user's input.
 
 1. **Tone.** What overall tone should the narration have?
    - Examples: conversational, professional, enthusiastic, calm, authoritative, playful, serious, warm
    - If the user is unsure, default to "conversational and warm" -- it works for most explainer videos.
 
-2. **Pace.** How fast should the narration feel?
-   - Options: slow and deliberate, moderate, brisk and energetic
-   - Default: moderate (~150 WPM). Slow works for technical content; brisk works for marketing.
-
-### Optional (ask only if relevant)
-
-3. **Gender preference.** Does the user have a preference for the voice's gender?
-   - This affects which voice they select in the ElevenLabs portal. Videowright does not store voice IDs.
-
-4. **Accent or language notes.** Any preference for accent (American, British, Australian) or pronunciation notes for technical terms?
-
-5. **Emotional arc.** Should the tone shift across the video? For example:
+2. **Emotional arc.** Should the tone shift across the video? For example:
    - Start serious, build to excited
    - Maintain a steady calm throughout
    - Start warm, shift to urgent for the call to action
+   - If the user has no preference, a steady tone is fine.
 
-6. **Reference.** Is there a narrator or video style they want to emulate?
+3. **Reference** (optional). Is there a narrator or video style they want to emulate?
    - "Like a TED talk", "like a product launch keynote", "like a podcast host"
 
 ## How answers map to provider script
 
+The agent targets ElevenLabs v2, which does not have v3-style emotion tags (`[excited]`, `[calm]`, etc.). Instead, tone is conveyed through punctuation, sentence structure, and pacing cues:
+
 | Preference | Provider script effect |
 |---|---|
-| Tone: enthusiastic | Add `[excited]` tags around high-energy sections |
-| Tone: calm/serious | Add `[serious]` or `[calm]` tags where appropriate |
-| Tone: warm | Default delivery -- no special tags needed in most cases |
-| Pace: slow | Add more pauses (ellipses, em-dashes) between sentences |
-| Pace: brisk | Fewer pauses, shorter sentences |
-| Emotional arc | Apply different tags to different sections of the script |
-| Accent | Note in the portal voice selection guidance, not in the script |
+| Tone: enthusiastic | Exclamation marks, short punchy sentences, emphatic word choice |
+| Tone: calm/serious | Longer sentences, measured pacing, more pauses between phrases |
+| Tone: warm | Natural conversational phrasing -- the default for most v2 voices |
+| Emotional arc | Vary sentence structure and punctuation across sections of the script |
 
-## Voice selection guidance
+See [provider_script.md](provider_script.md) for the full v2 writing toolkit.
 
-After style intake, provide the user with voice selection advice for the ElevenLabs portal:
+## What NOT to ask
 
-> When you open the ElevenLabs portal to generate audio, select a voice that matches: **[tone summary]**. Look for voices tagged as [relevant descriptors]. You can preview voices in the portal before generating.
+The following are controlled by the user in the ElevenLabs portal or API, not by the provider script. Do not ask about them during style intake:
 
-Do not store voice IDs or settings in `voiceover.ts` -- the user makes this choice in the portal each time.
+- **Voice gender** -- the user picks a voice directly.
+- **Accent or language** -- the user picks a voice with the desired accent.
+- **Age / warmth / breathiness** -- ElevenLabs voice characteristics, not script attributes.
+- **BPM / speaking rate** -- set via the speed slider in the portal or the `speed` parameter in the API, not via the script text.
+
+If the user volunteers any of these, acknowledge the preference and remind them to apply it when selecting a voice or adjusting settings.
 
 ## When to skip style intake
 

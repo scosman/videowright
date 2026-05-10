@@ -10,7 +10,7 @@ Videowright supports voiceover audio integrated into video playback. A voiceover
 
 Two production flows are supported:
 
-- **AI-generated** -- write a script, transform it with provider-specific tags, generate audio via ElevenLabs v3 TTS through their web portal, import the audio and per-word timing JSON.
+- **AI-generated** -- write a script, transform it with v2-targeted provider annotations, generate audio via ElevenLabs (API key or web portal), and import the audio and per-word timing JSON.
 - **Manual** -- user provides their own audio file, then runs it through ElevenLabs Speech-to-Text to get per-word timing data for sync.
 
 Both flows produce the same output: a `voiceover.ts` file with a `Voiceover` object that includes the audio path and a `Timing` object.
@@ -26,10 +26,12 @@ When the user asks to "add a voiceover" or "generate a voiceover", ask:
 
 ### Flow A: AI generation (ElevenLabs)
 
-1. **Style intake.** Ask the user about voice, tone, and style preferences. See [voiceover/style_intake.md](voiceover/style_intake.md).
+1. **Style intake.** Ask the user about tone and emotional arc preferences. See [voiceover/style_intake.md](voiceover/style_intake.md).
 2. **Script.** Write or integrate the VO script into PLAN.md. See [voiceover/script_writing.md](voiceover/script_writing.md).
-3. **Provider script.** Transform the PLAN script into `provider_script.md` with provider-specific annotations. See [voiceover/provider_script.md](voiceover/provider_script.md).
-4. **Generate audio.** Walk the user through the ElevenLabs portal to generate audio and download timing data. See [voiceover/providers/elevenlabs.md](voiceover/providers/elevenlabs.md).
+3. **Provider script.** Transform the PLAN script into `provider_script.md` with v2-targeted annotations (SSML `<break>` tags, punctuation-driven prosody -- no v3 emotion tags). See [voiceover/provider_script.md](voiceover/provider_script.md).
+4. **Mode selection & audio generation.** Present the user with API key vs. portal options. See [voiceover/providers/elevenlabs.md](voiceover/providers/elevenlabs.md).
+   - **API key path:** Agent runs a curl call that generates audio and returns per-word timing in one request.
+   - **Portal path:** User generates audio via TTS in the web UI, then runs it through STT to extract per-word timing as JSON.
 5. **Sync timing.** Read the provider timing JSON and compute a `Timing` object. See [voiceover/sync_algorithm.md](voiceover/sync_algorithm.md).
 6. **Default voiceover?** Ask whether to set this as the default. If yes, update `timeline.ts` and run a one-time animation sync. See [voiceover/animation_sync.md](voiceover/animation_sync.md).
 7. **Write `voiceover.ts`.** Create the typed module exporting a `Voiceover` object.
