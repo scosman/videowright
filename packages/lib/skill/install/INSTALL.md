@@ -101,11 +101,35 @@ Record the chosen package manager as `<pm>` for the remaining steps.
 
 ### 4a: Ensure package.json exists
 
-If `package.json` does not exist in the current directory, initialize one:
+If `package.json` does **not** exist in the current directory, write one with these fields:
 
-```bash
-<pm> init -y
+```json
+{
+  "name": "my-videowright-project",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx videowright dev",
+    "render": "npx videowright render",
+    "record": "npx videowright record"
+  }
+}
 ```
+
+Optionally rename the `"name"` field to match the current directory name (kebab-case).
+
+The canonical source for this shape is `node_modules/videowright/skill/assets/install/package.json` (available after step 4b).
+
+If `package.json` **does** exist:
+
+1. Read the file and check for the `"type"` field.
+2. If `"type"` is missing: add `"type": "module"` to the existing package.json. Do not overwrite other fields.
+3. If `"type"` exists and equals `"module"`: no action needed.
+4. If `"type"` exists with a value other than `"module"`: stop and tell the user exactly:
+   > Your package.json has `"type": "<current-value>"`. Videowright requires `"type": "module"` for ESM imports. Should I change it?
+   If the user agrees, update the field. If not, stop the install -- Videowright will not work without ESM.
+5. Check for `"scripts"` and add `"dev"`, `"render"`, and `"record"` entries if they do not already exist. Do not overwrite existing script entries.
 
 ### 4b: Install Videowright
 
@@ -138,7 +162,17 @@ Install the dev tools that Videowright projects use. These mirror the core Video
 
 If a dev dependency is already present at a compatible version, skip it. If present at an incompatible version, warn the user and let them decide whether to upgrade.
 
-### 4d: Install Playwright browsers
+### 4d: Ensure tsconfig.json exists
+
+If `tsconfig.json` does **not** exist in the current directory, copy the template:
+
+```bash
+cp node_modules/videowright/skill/assets/install/tsconfig.json tsconfig.json
+```
+
+If `tsconfig.json` **does** exist, leave it alone. Do not attempt to merge tsconfig files — the user's existing configuration takes precedence.
+
+### 4e: Install Playwright browsers
 
 ```bash
 npx playwright install
@@ -146,9 +180,11 @@ npx playwright install
 
 This downloads the browser binaries Playwright needs for e2e testing and video export.
 
-### 4e: Verify install
+### 4f: Verify install
 
-Confirm that `node_modules/videowright/` exists after installation. If it does not, surface the error to the user and stop.
+1. Confirm that `node_modules/videowright/` exists after installation. If it does not, surface the error to the user and stop.
+2. Read `package.json` and verify that `"type"` is set to `"module"`. If it is not, the dev server will fail with `Cannot use import statement outside a module`. Fix it before proceeding.
+3. Confirm that `tsconfig.json` exists.
 
 ---
 

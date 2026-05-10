@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"resolveJsonModule": true,
+		"noEmit": true
+	},
+	"include": [
+		"segments/**/*",
+		"components/**/*",
+		"transitions/**/*",
+		"styles/**/*",
+		"videos/**/*",
+		"videowright.config.ts"
+	]
+}

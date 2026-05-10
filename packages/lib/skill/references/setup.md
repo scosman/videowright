@@ -1,5 +1,7 @@
 # Setup
 
+Each input-gathering step is its own conversational turn. Do not stack questions.
+
 ## When this is loaded
 
 You were routed here because the setup gate in SKILL.md is open: `videowright.config.ts` does not exist, or its `defaultStyle` field is missing or empty.
@@ -25,20 +27,20 @@ Do not attempt repair. Do not proceed with setup. The user should re-run the ins
 | Config state | What to do |
 |---|---|
 | `videowright.config.ts` does not exist | Full setup. Run all steps below. |
-| File exists but `defaultStyle` is missing or empty string | Partial setup. Skip directory scaffolding (step 2). Jump to step 4 (pick first style) and continue from there. |
+| File exists but `defaultStyle` is missing or empty string | Partial setup. Skip directory scaffolding (step 2). Jump to step 3 (pick first style) and continue from there. |
 | File exists and `defaultStyle` is set to a slug | Gate is closed. You should not be here. Return to SKILL.md intent dispatch. |
 
-A partial setup means the user started setup previously but did not finish picking a style. Resume where they left off — never re-scaffold files that already exist.
+A partial setup means the user started setup previously but did not finish picking a style. Resume where they left off -- never re-scaffold files that already exist.
 
 ## Steps
 
-### Step 1 — Confirm intent
+### Step 1 -- Confirm intent
 
-Ask: "I'll set up a Videowright project here. This will create the directory structure, a starter video, and pick a visual style. OK to proceed?"
+Ask: "I'll set up a Videowright project here. This will create the directory structure, pick a visual style, and then we'll create your first video together. OK to proceed?"
 
 If the user says no, stop.
 
-### Step 2 — Scaffold directories
+### Step 2 -- Scaffold directories
 
 Create the consumer repo directory structure:
 
@@ -47,83 +49,59 @@ Create the consumer repo directory structure:
 ├── segments/               # shared segment library
 ├── components/             # shared web components
 ├── transitions/            # shared transition functions
-├── styles/                 # style folders (populated in step 4)
-└── videos/                 # per-video folders (populated in step 5)
+├── styles/                 # style folders (populated in step 3)
+└── videos/                 # per-video folders (populated after handoff to new_video.md)
 ```
 
-Only create directories that do not already exist. Do not overwrite existing files.
+Only create directories that do not already exist. Do not create any files inside these directories.
 
-### Step 3 — Pick first video name
+### Step 3 -- Pick first style
 
-Ask the user for a video name. Default: `demo_video`. Suggest a date prefix (e.g., `2026_05_demo`) but do not enforce it.
+The first style is required. Without it, there are no design tokens and any video will lack visual identity. There is no "skip and add later" path.
 
-The name becomes the folder name under `videos/`.
-
-### Step 4 — Pick first style
-
-The first style is required. The hello-world video's quality depends on it — skipping leaves the project without design tokens and the starter video looks placeholder-ugly. There is no "skip and add later" path.
+This is its own conversational turn -- do not combine with any other question.
 
 Dispatch to [setup_new_style.md](setup_new_style.md) with:
 
-- `setAsDefault: true` — this style becomes the project's `defaultStyle`.
-- `copySample: true` — install the sample segment into `segments/<slug>-sample/index.ts`. The hello-world timeline references this segment so the starter video showcases the chosen style.
+- `setAsDefault: false` -- do **not** let the style flow write `videowright.config.ts`. The config does not exist yet; Step 4 writes it with the chosen slug.
+- `copySample: true` -- install the sample segment into `segments/<slug>-sample/index.ts`. The sample segment showcases the chosen style.
 
-Wait for the style creation flow to complete before continuing.
+Wait for the style creation flow to complete. Record the chosen slug for Step 4.
 
-### Step 5 — Write config and scaffold hello-world
+### Step 4 -- Write config
 
-1. **Write `videowright.config.ts`** at the repo root (if it does not already exist from partial setup):
+Write `videowright.config.ts` at the repo root (if it does not already exist from partial setup):
 
-   ```ts
-   import { defineConfig } from 'videowright';
+```ts
+import { defineConfig } from 'videowright';
 
-   export default defineConfig({
-     projectStructure: 'v1',
-     defaultStyle: '<slug from step 4>',
-     defaults: {
-       resolution: [1920, 1080],
-       fps: 60,
-       aspectRatio: '16:9',
-     },
-   });
-   ```
-
-   If the file already exists (partial setup), only update `defaultStyle`.
-
-2. **Scaffold the hello-world video** in `videos/<name>/`:
-   - `timeline.ts` — imports the chosen style's `tokens.css` at the top of the file (the agent writes this import to match the chosen style; see [styles.md](styles.md) for the convention), defines a `Timeline` with the starter segments.
-   - `PLAN.md` — a populated plan for the hello-world video.
-   - `voiceover/script.md` — starter VO script. The hello-world defaults to voiceover audio intent as a teaching example, so the starter segments include `voiceover` fields and the script file is populated.
-
-   Use the reference examples in `node_modules/videowright/skill/assets/hello_world/` as guidance for structure and content. These are plain files (not templates) — the agent reads them and writes adapted versions into the consumer repo, adjusting the style import path, token usage, style slug, video name, and title to match the user's choices.
-
-3. **Scaffold starter segments** in `segments/`:
-   - The style pack's sample segment was already installed at `segments/<slug>-sample/index.ts` via step 4 (`copySample: true`). The hello-world timeline should reference this segment.
-   - Write additional hello-world segments (e.g., intro, outro) as needed. These segments should use the chosen style's CSS variables (`var(--color-accent)`, `var(--font-display)`, etc.).
-
-### Step 6 — Confirm
-
-Tell the user what was created:
-
+export default defineConfig({
+  projectStructure: 'v1',
+  defaultStyle: '<slug from step 3>',
+  defaults: {
+    resolution: [1920, 1080],
+    fps: 60,
+    aspectRatio: '16:9',
+  },
+});
 ```
-Setup complete! Here's what was created:
 
-- videowright.config.ts (default style: <slug>)
-- styles/<slug>/ (STYLE.md + tokens.css)
-- videos/<name>/ (timeline.ts + PLAN.md + voiceover/script.md)
-- segments/ (starter segments)
+If the file already exists (partial setup), only update `defaultStyle`.
 
-Next steps:
-1. npm install (if you haven't already)
-2. npx videowright dev
-```
+### Step 5 -- Hand off to first video
+
+Tell the user exactly:
+
+> Setup complete! Now let's create your first video -- tell me what you want to make. Describe the topic, audience, or purpose, and I'll handle the rest. Editing happens through chat: I write the code, you give direction.
+
+Then dispatch to [new_video.md](new_video.md) for the first real video. Do **not** ask for a video name here -- `new_video.md` handles that as part of its own intake flow.
 
 ## Edge cases
 
 | Situation | Behavior |
 |---|---|
 | `videowright` not in `package.json` | Stop with install instructions. Do not proceed. |
-| Config exists but `defaultStyle` is empty | Resume at step 4 (pick style). Skip scaffolding. |
+| Config exists but `defaultStyle` is empty | Resume at step 3 (pick style). Skip scaffolding. |
 | Some directories already exist | Skip creating them. Do not overwrite existing files. |
 | User declines to proceed at step 1 | Stop. Do not scaffold anything. |
-| User wants to skip style selection | Do not allow. Explain that the style is required for the starter video to look good. Offer Mode 3 (pick a built-in pack) as the fastest path. |
+| User wants to skip style selection | Do not allow. Explain that the style is required for videos to have visual identity. Offer Mode 4 (pick a built-in pack) as the fastest path. |

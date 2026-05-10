@@ -227,6 +227,29 @@ describe("skill file structure", () => {
 		"--font-mono",
 	];
 
+	it("install template package.json exists with required fields", () => {
+		const pkgPath = resolve(SKILL_ROOT, "assets/install/package.json");
+		expect(existsSync(pkgPath)).toBe(true);
+
+		const content = readFileSync(pkgPath, "utf-8");
+		const pkg = JSON.parse(content);
+		expect(pkg.type).toBe("module");
+		expect(pkg.scripts?.dev).toBeDefined();
+		expect(pkg.scripts?.render).toBeDefined();
+		expect(pkg.scripts?.record).toBeDefined();
+	});
+
+	it("install template tsconfig.json exists with required fields", () => {
+		const tsconfigPath = resolve(SKILL_ROOT, "assets/install/tsconfig.json");
+		expect(existsSync(tsconfigPath)).toBe(true);
+
+		const content = readFileSync(tsconfigPath, "utf-8");
+		const tsconfig = JSON.parse(content);
+		expect(tsconfig.compilerOptions).toBeDefined();
+		expect(tsconfig.include).toBeDefined();
+		expect(Array.isArray(tsconfig.include)).toBe(true);
+	});
+
 	describe.each(STYLE_PACKS)("style pack: %s", (packName) => {
 		const styleDir = resolve(SKILL_ROOT, `assets/styles/${packName}`);
 

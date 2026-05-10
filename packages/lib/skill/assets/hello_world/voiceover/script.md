@@ -7,4 +7,4 @@ Welcome to Videowright. Build animated videos with HTML, CSS, and JavaScript.
 This is the placeholder style. Clean, neutral, ready to customize.
 
 ## hello-outro
-Start building by editing the segments. Swap the style, add content, and make it yours.
+Tell the agent what to change next. Swap the style, add content, and make it yours.

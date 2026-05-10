@@ -5,8 +5,7 @@ let host: HTMLElement | null = null;
 export default defineSegment({
 	id: "hello-outro",
 	advances: [3.0],
-	voiceover:
-		"Start building by editing the segments. Swap the style, add content, and make it yours.",
+	voiceover: "Tell the agent what to change next. Swap the style, add content, and make it yours.",
 
 	mount(el) {
 		host = el;
@@ -36,15 +35,7 @@ export default defineSegment({
           text-align: center;
           line-height: 1.6;
           opacity: 0;
-        " data-ref="cta">Edit the segments in
-          <code style="
-            background: var(--color-accent);
-            color: var(--color-bg);
-            font-family: var(--font-mono);
-            padding: 0.2em 0.4em;
-            border-radius: 4px;
-          ">segments/</code>
-          to make this video yours. Swap the style, add content, and ship it.
+        " data-ref="cta">Tell the agent what to change next. Swap the style, add content, and make it yours.
         </p>
       </div>
     `;

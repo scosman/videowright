@@ -22,7 +22,6 @@ npx videowright dev videos/hello_videowright/timeline.ts
 
 ## Editing
 
-- Edit segments in `segments/` -- each segment has its own folder with an `index.ts`
-- Add new segments to `segments/<id>/index.ts` and wire them in `timeline.ts`
+- Describe what you want to change and the agent will update segments, timelines, and styles for you
 - The dev server reloads automatically on file changes
 - See `PLAN.md` for the video's design and history

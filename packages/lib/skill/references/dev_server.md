@@ -140,9 +140,9 @@ This overlay is always visible regardless of HUD toggle state.
 ### Iterating on a segment
 
 1. Run `npx videowright dev`.
-2. Navigate to the segment you are editing (use number keys or arrow keys).
-3. Edit the segment file and save. The page hot-reloads.
-4. Review the change. Repeat.
+2. Navigate to the segment (use number keys or arrow keys).
+3. The user describes what to change; the agent edits the segment file and saves. The page hot-reloads.
+4. Review the change in the browser. Repeat.
 
 ### Reviewing voiceover
 
