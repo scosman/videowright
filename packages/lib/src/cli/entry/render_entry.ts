@@ -1,7 +1,7 @@
 /**
  * Render-mode entry client for `videowright render`.
  * Similar to entry_client.ts but boots the player in render mode
- * and exposes CDP-callable globals for frame-by-frame control.
+ * and exposes page-evaluate-callable globals for frame-by-frame control.
  */
 
 // Virtual module provided by globalsVirtualModulePlugin -- exports concrete
@@ -101,7 +101,7 @@ async function boot() {
 	await player.load(finalTimeline, segmentLoaders, transitionLoaders);
 	await player.start();
 
-	// Expose render control globals for CDP
+	// Expose render control globals for page.evaluate
 	window.__VW_RENDER_ADVANCE__ = async () => {
 		try {
 			return await player.renderAdvance();

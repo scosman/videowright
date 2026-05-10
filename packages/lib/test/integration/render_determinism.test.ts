@@ -5,7 +5,7 @@
  * changing visible text on each iteration. Renders at 10fps and verifies
  * the output has the expected number of frames and non-zero file size.
  *
- * This validates the full A2 pipeline: JS time shim injection via
+ * This validates the full render pipeline: JS time shim injection via
  * addInitScript, virtual clock advancement, hold() firing via virtualized
  * setTimeout, and frame capture.
  *

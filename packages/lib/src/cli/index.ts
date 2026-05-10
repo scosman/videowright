@@ -38,7 +38,7 @@ Commands:
   dev [path]      Start the dev server
   script [path]   Generate voiceover script
   record [path]   Auto-advance playback for visual review or external screen capture
-  render [path]   Deterministic frame-by-frame export via CDP + ffmpeg
+  render [path]   Deterministic frame-by-frame export via JS time injection + ffmpeg
 
 Options:
   --port <n>            Dev server port (default: 5173)
