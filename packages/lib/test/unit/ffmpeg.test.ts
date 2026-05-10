@@ -102,6 +102,9 @@ describe("buildFfmpegArgs", () => {
 		expect(args).toContain("-shortest");
 		expect(args).toContain("0:v:0");
 		expect(args).toContain("1:a:0");
+		// apad filter pads audio with silence so video duration is canonical
+		expect(args).toContain("-af");
+		expect(args).toContain("apad");
 		// Audio file path
 		expect(args).toContain("/tmp/narration.mp3");
 	});

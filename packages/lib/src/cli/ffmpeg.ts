@@ -73,9 +73,20 @@ export interface FfmpegResult {
 /**
  * Build the ffmpeg argument array for a render pass.
  *
- * When `audioFilePath` is provided, the arguments include a second `-i` for
- * the audio file, AAC encoding, explicit stream mapping, and `-shortest`.
- * When absent, the existing video-only argument array is produced.
+ * Video duration is always canonical:
+ * - If audio is shorter than video, silence is padded to fill the gap.
+ * - If audio is longer than video, audio is truncated at the video end.
+ * - If no audio is provided, the output is video-only.
+ *
+ * The ffmpeg pattern used:
+ *   -map 0:v:0 -map 1:a:0         (explicit stream selection)
+ *   -af "apad" -shortest           (pad audio with silence to infinite length,
+ *                                    then -shortest clips at the video end)
+ *
+ * This works because apad extends the audio to infinite length, making the
+ * video stream always the shortest. -shortest then terminates the output
+ * when the video (the shorter stream) ends. The net effect: output duration
+ * equals video duration regardless of audio length.
  */
 export function buildFfmpegArgs(opts: {
 	fps: number;
@@ -93,7 +104,23 @@ export function buildFfmpegArgs(opts: {
 	args.push("-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "18");
 
 	if (audioFilePath) {
-		args.push("-c:a", "aac", "-b:a", "192k", "-map", "0:v:0", "-map", "1:a:0", "-shortest");
+		// Video duration drives output length. apad pads the audio with silence
+		// to infinite length, making video the shortest stream. -shortest then
+		// clips at the video end, truncating longer audio or filling shorter
+		// audio with silence.
+		args.push(
+			"-c:a",
+			"aac",
+			"-b:a",
+			"192k",
+			"-map",
+			"0:v:0",
+			"-map",
+			"1:a:0",
+			"-af",
+			"apad",
+			"-shortest",
+		);
 	}
 
 	args.push("-r", String(fps), outputPath);
