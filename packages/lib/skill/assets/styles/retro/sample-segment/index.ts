@@ -172,12 +172,13 @@ export default defineSegment({
 			fill: "forwards" as const,
 		};
 
+		// Staggered entrance using WAAPI delay (render-safe)
+
 		// Accent bar wipes in horizontally — the first visual anchor
 		bar.animate([{ width: "0" }, { width: "80px" }], {
 			...enter,
 			duration: 450,
 		});
-		await ctx.hold(150);
 
 		// Mono label fades in with a horizontal slide
 		label.animate(
@@ -185,9 +186,8 @@ export default defineSegment({
 				{ opacity: 0, transform: "translateX(-24px)" },
 				{ opacity: 1, transform: "translateX(0)" },
 			],
-			{ ...enter, duration: 350 },
+			{ ...enter, duration: 350, delay: 150 },
 		);
-		await ctx.hold(120);
 
 		// Headline slides in — the centerpiece
 		heading.animate(
@@ -195,9 +195,8 @@ export default defineSegment({
 				{ opacity: 0, transform: "translateX(-32px)" },
 				{ opacity: 1, transform: "translateX(0)" },
 			],
-			{ ...enter, duration: 500 },
+			{ ...enter, duration: 500, delay: 270 },
 		);
-		await ctx.hold(100);
 
 		// Body text follows
 		body.animate(
@@ -205,9 +204,8 @@ export default defineSegment({
 				{ opacity: 0, transform: "translateX(-24px)" },
 				{ opacity: 1, transform: "translateX(0)" },
 			],
-			{ ...enter, duration: 450 },
+			{ ...enter, duration: 450, delay: 370 },
 		);
-		await ctx.hold(250);
 
 		// Primary card scales up with the bolder retro swing
 		cardPrimary.animate(
@@ -215,16 +213,15 @@ export default defineSegment({
 				{ opacity: 0, transform: "scale(0.85)" },
 				{ opacity: 1, transform: "scale(1)" },
 			],
-			{ ...enter, duration: 500 },
+			{ ...enter, duration: 500, delay: 620 },
 		);
-		await ctx.hold(200);
 
 		// Neon glow blooms behind the primary card
 		glowPrimary.animate([{ opacity: 0 }, { opacity: 1 }], {
 			...enter,
 			duration: 700,
+			delay: 820,
 		});
-		await ctx.hold(150);
 
 		// Secondary badge slides in from below
 		cardSecondary.animate(
@@ -232,7 +229,7 @@ export default defineSegment({
 				{ opacity: 0, transform: "translateY(16px)" },
 				{ opacity: 1, transform: "translateY(0)" },
 			],
-			{ ...enter, duration: 400 },
+			{ ...enter, duration: 400, delay: 970 },
 		);
 
 		await ctx.waitForNext(); // Beat 1: full composition revealed

@@ -136,19 +136,20 @@ export default defineSegment({
 			fill: "forwards" as const,
 		};
 
+		// Staggered entrance using WAAPI delay (render-safe)
+
 		// 1. Blue circle scales from center — the anchor shape arrives first
 		circle.animate([{ transform: "scale(0)" }, { transform: "scale(1)" }], {
 			...geometric,
 			duration: 500,
 		});
-		await ctx.hold(400);
 
 		// 2. Red bar extends across the full width — structural divider
 		bar.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
 			...geometric,
 			duration: 450,
+			delay: 400,
 		});
-		await ctx.hold(300);
 
 		// 3. Heading slides in along the x-axis — pure transform + clip-path reveal, no opacity
 		heading.animate(
@@ -156,35 +157,35 @@ export default defineSegment({
 				{ transform: "translateX(-2rem)", clipPath: "inset(0 100% 0 0)" },
 				{ transform: "translateX(0)", clipPath: "inset(0 0 0 0)" },
 			],
-			{ ...geometric, duration: 400 },
+			{ ...geometric, duration: 400, delay: 700 },
 		);
-		await ctx.hold(200);
 
 		// 4. Label fades in — secondary element, opacity only
 		label.animate([{ opacity: 0 }, { opacity: 1 }], {
 			...geometric,
 			duration: 300,
+			delay: 900,
 		});
-		await ctx.hold(250);
 
 		// 5. Yellow square scales up — geometric counterweight to the circle
 		square.animate([{ transform: "scale(0)" }, { transform: "scale(1)" }], {
 			...geometric,
 			duration: 400,
+			delay: 1150,
 		});
-		await ctx.hold(150);
 
 		// 6. Black accent rectangle extends upward
 		rectAccent.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], {
 			...geometric,
 			duration: 350,
+			delay: 1300,
 		});
-		await ctx.hold(200);
 
 		// 7. Caption fades in — the last element, completing the composition
 		caption.animate([{ opacity: 0 }, { opacity: 1 }], {
 			...geometric,
 			duration: 350,
+			delay: 1500,
 		});
 
 		await ctx.waitForNext(); // Beat 1: full composition held for appreciation

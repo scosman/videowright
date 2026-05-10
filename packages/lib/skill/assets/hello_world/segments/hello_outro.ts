@@ -54,11 +54,10 @@ export default defineSegment({
 			{ duration: 500, fill: "forwards", easing: "ease-out" },
 		);
 
-		await ctx.hold(500);
-
-		// Animate call-to-action in
+		// Animate call-to-action in — staggered via WAAPI delay (render-safe)
 		cta.animate([{ opacity: 0 }, { opacity: 1 }], {
 			duration: 400,
+			delay: 500,
 			fill: "forwards",
 		});
 

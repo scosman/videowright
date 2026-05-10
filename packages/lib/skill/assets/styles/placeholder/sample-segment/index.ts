@@ -62,7 +62,7 @@ export default defineSegment({
 		const body = host?.querySelector('[data-ref="body"]') as HTMLElement;
 		const badge = host?.querySelector('[data-ref="badge"]') as HTMLElement;
 
-		// Fade in heading
+		// Staggered entrance using WAAPI delay (render-safe)
 		heading.animate(
 			[
 				{ opacity: 0, transform: "translateY(20px)" },
@@ -71,22 +71,17 @@ export default defineSegment({
 			{ duration: 500, fill: "forwards", easing: "ease-out" },
 		);
 
-		await ctx.hold(300);
-
-		// Fade in body text
 		body.animate(
 			[
 				{ opacity: 0, transform: "translateY(20px)" },
 				{ opacity: 1, transform: "translateY(0)" },
 			],
-			{ duration: 400, fill: "forwards", easing: "ease-out" },
+			{ duration: 400, delay: 300, fill: "forwards", easing: "ease-out" },
 		);
 
-		await ctx.hold(200);
-
-		// Fade in accent badge
 		badge.animate([{ opacity: 0 }, { opacity: 1 }], {
 			duration: 300,
+			delay: 500,
 			fill: "forwards",
 		});
 

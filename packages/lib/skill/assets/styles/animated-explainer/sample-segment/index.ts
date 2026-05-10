@@ -155,6 +155,8 @@ export default defineSegment({
 			fill: "forwards" as const,
 		};
 
+		// All animations use WAAPI delay for staggering (render-safe)
+
 		// --- Phase 1: Background shapes pop in with scale + rotation ---
 		blob1?.animate(
 			[
@@ -163,23 +165,21 @@ export default defineSegment({
 			],
 			{ ...bounce, duration: 600 },
 		);
-		await ctx.hold(100);
 
 		blob3?.animate(
 			[
 				{ opacity: 0, transform: "rotate(-12deg) scale(0)" },
 				{ opacity: 0.15, transform: "rotate(6deg) scale(1)" },
 			],
-			{ ...bounce, duration: 650 },
+			{ ...bounce, duration: 650, delay: 100 },
 		);
-		await ctx.hold(80);
 
 		blob2?.animate(
 			[
 				{ opacity: 0, transform: "scale(0)" },
 				{ opacity: 0.16, transform: "scale(1)" },
 			],
-			{ ...bounce, duration: 600 },
+			{ ...bounce, duration: 600, delay: 180 },
 		);
 
 		blob5?.animate(
@@ -187,18 +187,16 @@ export default defineSegment({
 				{ opacity: 0, transform: "rotate(8deg) scale(0)" },
 				{ opacity: 0.12, transform: "rotate(-4deg) scale(1)" },
 			],
-			{ ...bounce, duration: 550 },
+			{ ...bounce, duration: 550, delay: 180 },
 		);
-		await ctx.hold(80);
 
 		blob4?.animate(
 			[
 				{ opacity: 0, transform: "scale(0)" },
 				{ opacity: 0.2, transform: "scale(1)" },
 			],
-			{ ...bounce, duration: 600 },
+			{ ...bounce, duration: 600, delay: 260 },
 		);
-		await ctx.hold(200);
 
 		// --- Phase 2: Card enters with bounce scale ---
 		card?.animate(
@@ -206,9 +204,8 @@ export default defineSegment({
 				{ opacity: 0, transform: "scale(0.88) translateY(24px)" },
 				{ opacity: 1, transform: "scale(1) translateY(0)" },
 			],
-			{ ...bounce, duration: 700 },
+			{ ...bounce, duration: 700, delay: 460 },
 		);
-		await ctx.hold(400);
 
 		// --- Phase 3: Content stagger inside the card ---
 
@@ -218,9 +215,8 @@ export default defineSegment({
 				{ opacity: 0, transform: "scale(0.5) translateY(12px)" },
 				{ opacity: 1, transform: "scale(1) translateY(0)" },
 			],
-			{ ...bounce, duration: 600 },
+			{ ...bounce, duration: 600, delay: 860 },
 		);
-		await ctx.hold(180);
 
 		// Headline slides up
 		heading?.animate(
@@ -228,9 +224,8 @@ export default defineSegment({
 				{ opacity: 0, transform: "translateY(32px)" },
 				{ opacity: 1, transform: "translateY(0)" },
 			],
-			{ ...soft, duration: 550 },
+			{ ...soft, duration: 550, delay: 1040 },
 		);
-		await ctx.hold(160);
 
 		// Body text follows
 		body?.animate(
@@ -238,9 +233,8 @@ export default defineSegment({
 				{ opacity: 0, transform: "translateY(24px)" },
 				{ opacity: 1, transform: "translateY(0)" },
 			],
-			{ ...soft, duration: 500 },
+			{ ...soft, duration: 500, delay: 1200 },
 		);
-		await ctx.hold(200);
 
 		// Pill badges bounce in
 		pills?.animate(
@@ -248,7 +242,7 @@ export default defineSegment({
 				{ opacity: 0, transform: "scale(0.7) translateY(16px)" },
 				{ opacity: 1, transform: "scale(1) translateY(0)" },
 			],
-			{ ...bounce, duration: 600 },
+			{ ...bounce, duration: 600, delay: 1400 },
 		);
 
 		await ctx.waitForNext(); // Beat 1: full composition revealed

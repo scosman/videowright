@@ -51,15 +51,13 @@ export default defineSegment({
 			{ duration: 600, fill: "forwards", easing: "ease-out" },
 		);
 
-		await ctx.hold(400);
-
-		// Animate subtitle in
+		// Animate subtitle in — staggered via WAAPI delay (render-safe)
 		subtitle.animate(
 			[
 				{ opacity: 0, transform: "translateY(10px)" },
 				{ opacity: 1, transform: "translateY(0)" },
 			],
-			{ duration: 400, fill: "forwards", easing: "ease-out" },
+			{ duration: 400, delay: 400, fill: "forwards", easing: "ease-out" },
 		);
 
 		await ctx.waitForNext(); // Beat 1: content fully revealed, wait for user to advance

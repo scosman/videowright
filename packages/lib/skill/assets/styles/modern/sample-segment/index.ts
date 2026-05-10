@@ -126,12 +126,13 @@ export default defineSegment({
 			fill: "forwards" as const,
 		};
 
+		// Staggered entrance using WAAPI delay (render-safe)
+
 		// Monospace label fades in first -- fast, no transform
 		label.animate([{ opacity: 0 }, { opacity: 1 }], {
 			...enter,
 			duration: 300,
 		});
-		await ctx.hold(120);
 
 		// Headline rises into place
 		heading.animate(
@@ -139,9 +140,8 @@ export default defineSegment({
 				{ opacity: 0, transform: "translateY(16px)" },
 				{ opacity: 1, transform: "translateY(0)" },
 			],
-			{ ...enter, duration: 500 },
+			{ ...enter, duration: 500, delay: 120 },
 		);
-		await ctx.hold(100);
 
 		// Body text follows
 		body.animate(
@@ -149,9 +149,8 @@ export default defineSegment({
 				{ opacity: 0, transform: "translateY(12px)" },
 				{ opacity: 1, transform: "translateY(0)" },
 			],
-			{ ...enter, duration: 450 },
+			{ ...enter, duration: 450, delay: 220 },
 		);
-		await ctx.hold(200);
 
 		// Card scales up from 0.96 -- restrained, confident
 		card.animate(
@@ -159,14 +158,14 @@ export default defineSegment({
 				{ opacity: 0, transform: "scale(0.96)" },
 				{ opacity: 1, transform: "scale(1)" },
 			],
-			{ ...enter, duration: 500 },
+			{ ...enter, duration: 500, delay: 420 },
 		);
-		await ctx.hold(300);
 
 		// Glow blooms behind the card -- the moment of visual interest
 		glow.animate([{ opacity: 0 }, { opacity: 1 }], {
 			...enter,
 			duration: 800,
+			delay: 720,
 		});
 
 		await ctx.waitForNext(); // Beat 1: composition fully revealed

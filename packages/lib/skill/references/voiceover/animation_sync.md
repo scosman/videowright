@@ -19,7 +19,7 @@ Look for **fully automated animations** -- animations that run on a fixed clock 
 - **CSS animation durations** -- `animation: fadeIn 1.5s forwards`.
 - **GSAP timelines** -- `.to(el, { duration: 2, ... })` where the duration should align with narration.
 - **Lottie playback speed** -- if a Lottie animation's duration needs to match a segment beat.
-- **Element appearance delays** -- `setTimeout` (should not exist per coding rules, but if found) or chained holds that stage element reveals.
+- **Element appearance delays** -- WAAPI `delay` values or CSS animation delays that stage element reveals.
 
 ### Animations to leave alone
 
@@ -102,6 +102,10 @@ await ctx.hold(4200);  // synced to voiceover: intro narration ends at 4.2s
 ```
 
 This helps future editors understand the magic number.
+
+### Step 5: Render-safety review
+
+After adjusting each segment, run the render-safety CR checklist from [create_or_edit_video.md](../create_or_edit_video.md) (Step 2b) against the modified code. The sync pass may introduce or reveal patterns that break in render mode -- for example, a `ctx.hold()` loop used for a typing effect, or a `performance.now()` read driving a Three.js scene. Fix any issues before moving to the next segment.
 
 ## Tradeoffs
 

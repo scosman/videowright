@@ -75,9 +75,174 @@ The `ctx` object passed to `mount` and `play`:
 
 Use **`ctx.waitForNext()`** for interactive beats — points where the user (or the export driver) advances the video. This creates a pause that the user steps through with Space / Right Arrow in dev mode, and the export pipeline drives with the `advances` timing.
 
-Use **`ctx.hold(ms)`** for timed pauses — animations that play out on a clock. In dev mode, `hold` waits real time. In render mode, `hold` resolves immediately; the deterministic clock in render mode handles time via frame counting.
+Use **`ctx.hold(ms)`** for timed pauses that gate control flow — waiting before a `waitForNext()`, or inserting a gap between logical phases of a segment. In dev mode, `hold` waits real time. In render mode, `hold` resolves immediately; the deterministic clock in render mode handles time via frame counting.
 
-**Never use `setTimeout` or `setInterval` in segments.** They break render-mode clock control because render mode does not use wall-clock time. Use `ctx.hold(ms)` for timed delays and `ctx.waitForNext()` for interactive beats.
+**`ctx.hold(ms)` is NOT an animation primitive.** Because `hold` resolves immediately in render mode, any pattern that mutates DOM state in a `hold`-driven loop (e.g., typing out characters one by one) will run all iterations on the first render frame and show only the final state. Use WAAPI or CSS animations for visual motion — see "Render-safe animation patterns" below.
+
+**Never use `setTimeout` or `setInterval` in segments.** They break render-mode clock control because render mode does not use wall-clock time.
+
+### Render-safe animation patterns
+
+Render mode uses a **virtual clock** that the render driver advances frame by frame between captured screenshots. The Web Animations API (WAAPI) and CSS animations integrate with this virtual clock because they run on the document timeline, which the render driver controls. Raw `performance.now()`, `Date.now()`, `setTimeout`, and `setInterval` read wall-clock time and do **not** integrate with the virtual clock — they produce incorrect results in render mode.
+
+#### Forbidden patterns
+
+These patterns work in dev mode but break in render mode. **Never use them for animation.**
+
+**1. `await ctx.hold(N)` in a mutation loop** — the hold resolves immediately in render mode, so all iterations fire on the first frame:
+```ts
+// BAD: typing animation that skips to end in render mode
+async play(ctx) {
+  const el = host!.querySelector('[data-ref="text"]') as HTMLElement;
+  const text = 'Hello, world!';
+  for (let i = 0; i <= text.length; i++) {
+    el.textContent = text.slice(0, i);
+    await ctx.hold(50); // resolves immediately in render → all chars appear at once
+  }
+}
+```
+
+**2. `setTimeout` / `setInterval`** — wall-clock timers, invisible to the render driver:
+```ts
+// BAD: animation driven by setTimeout
+setTimeout(() => el.classList.add('visible'), 500);
+```
+
+**3. `performance.now()` / `Date.now()` for animation progress** — reads wall clock, not virtual clock:
+```ts
+// BAD: manual rAF loop with wall-clock time
+const start = performance.now();
+function tick() {
+  const t = (performance.now() - start) / 1000;
+  mesh.rotation.x = t * 0.25;
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+```
+
+**4. Custom `requestAnimationFrame` loops that compute their own deltaTime** — same wall-clock problem:
+```ts
+// BAD: deltaTime from rAF timestamps
+let last = 0;
+function tick(now: number) {
+  const dt = now - last;
+  last = now;
+  position += velocity * dt; // dt is wall-clock, not virtual
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+```
+
+#### Prescribed patterns
+
+**1. WAAPI for DOM animations** (the default choice):
+```ts
+// GOOD: WAAPI animations run on the document timeline — render-safe
+el.animate(
+  [
+    { opacity: 0, transform: 'translateY(20px)' },
+    { opacity: 1, transform: 'translateY(0)' },
+  ],
+  { duration: 500, fill: 'forwards', easing: 'ease-out' },
+);
+```
+
+Use WAAPI `delay` to stagger multiple animations instead of `ctx.hold()` between them:
+```ts
+// GOOD: staggered entrance using WAAPI delay — render-safe
+const items = host!.querySelectorAll('.item');
+items.forEach((item, i) => {
+  (item as HTMLElement).animate(
+    [
+      { opacity: 0, transform: 'translateY(16px)' },
+      { opacity: 1, transform: 'translateY(0)' },
+    ],
+    { duration: 400, delay: i * 80, fill: 'forwards', easing: 'ease-out' },
+  );
+});
+```
+
+**2. CSS animations and transitions** declared in CSS or set via `el.style.animation`:
+```ts
+// GOOD: CSS animation — runs on document timeline, render-safe
+el.style.animation = 'fadeIn 0.5s ease-out forwards';
+```
+
+**3. WAAPI for typing animations** — use per-character `delay` instead of a mutation loop:
+```ts
+// GOOD: typing animation using WAAPI delay-per-character — render-safe
+mount(el) {
+  const text = 'Hello, world!';
+  el.innerHTML = text
+    .split('')
+    .map((ch) => `<span style="opacity:0">${ch === ' ' ? '&nbsp;' : ch}</span>`)
+    .join('');
+},
+
+async play(ctx) {
+  const chars = host!.querySelectorAll('span');
+  chars.forEach((ch, i) => {
+    (ch as HTMLElement).animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 1, // near-instant per character
+      delay: i * 50, // 50ms between each character
+      fill: 'forwards',
+    });
+  });
+  await ctx.waitForNext();
+}
+```
+
+**4. `ctx.clock()` for time-derived values** — returns deterministic milliseconds in render mode:
+```ts
+// GOOD: Three.js driven by ctx.clock() — render-safe
+async play(ctx) {
+  function tick() {
+    if (ctx.signal.aborted) return;
+    const t = ctx.clock() / 1000; // seconds since mount, deterministic in render
+    mesh.rotation.x = t * 0.25;
+    mesh.rotation.y = t * 0.15;
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  await ctx.waitForNext();
+}
+```
+
+**5. Lottie — drive frames manually via `ctx.clock()`** instead of letting lottie-web run its own rAF loop:
+```ts
+// GOOD: Lottie with manual frame drive — render-safe
+async play(ctx) {
+  const anim = lottie.loadAnimation({
+    container: host!,
+    animationData: data,
+    autoplay: false, // critical: disable internal rAF loop
+  });
+
+  function tick() {
+    if (ctx.signal.aborted) return;
+    anim.goToAndStop(ctx.clock(), false); // ctx.clock() returns ms
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  await ctx.waitForNext();
+}
+```
+
+**6. Three.js — use `ctx.clock()` instead of `performance.now()`** for all time-derived values (rotation, position, shader uniforms):
+```ts
+// GOOD: Three.js scene driven by deterministic clock
+const t = ctx.clock() / 1000;
+mesh.position.y = Math.sin(t * 2) * 0.5;
+```
+
+#### When `ctx.hold()` is still appropriate
+
+`ctx.hold()` is fine for **control-flow pauses** that do not drive animation:
+- Waiting a fixed time before calling `ctx.waitForNext()`.
+- Inserting a gap between two logical phases of a segment (e.g., hold 2 seconds after all animations finish before play resolves).
+
+In render mode, these holds resolve immediately, which is correct — the segment proceeds without waiting, and the `advances` array controls when the driver fires the next beat.
 
 ## The `advances` array
 
@@ -193,14 +358,14 @@ Rules:
 
 Segments own their DOM. Inside a segment, use whatever fits:
 
-- **CSS animations and transitions** for simple motion.
-- **GSAP** for complex timeline-based animation.
-- **Three.js / WebGL** for 3D scenes.
-- **Lottie** for After Effects animations.
-- **Animated SVG** for vector graphics.
+- **CSS animations and transitions** for simple motion. Render-safe -- they run on the document timeline.
+- **GSAP** for complex timeline-based animation. Render-safe when using its document-timeline mode.
+- **Three.js / WebGL** for 3D scenes. Drive time-derived values with `ctx.clock()`, not `performance.now()`. See render-safe patterns above.
+- **Lottie** for After Effects animations. Use manual frame drive with `ctx.clock()` (`autoplay: false`, `anim.goToAndStop(ctx.clock(), false)`). See render-safe patterns above.
+- **Animated SVG** for vector graphics. Use WAAPI or CSS animations for SVG element animations.
 - **React / shadcn** for component-driven UI (attach to `el` via `createRoot`).
 - **echarts / D3** for data visualization.
-- **Canvas 2D** for pixel-level control.
+- **Canvas 2D** for pixel-level control. Use `ctx.clock()` for time-derived drawing.
 
 If you need DOM isolation (e.g., to avoid CSS conflicts), attach a shadow root to `el`:
 
