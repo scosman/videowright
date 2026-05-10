@@ -8,6 +8,8 @@ export type {
 	TimelineEntry,
 	TimelineMeta,
 	Timeline,
+	Timing,
+	Voiceover,
 	Transition,
 	TransitionContext,
 	Config,

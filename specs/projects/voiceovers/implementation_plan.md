@@ -16,7 +16,7 @@ Five phases. Phase 1 is the `record` cleanup — a prerequisite that makes audio
   - Update or delete tests that exercise record's old ffmpeg path. Keep argv tests for the new shape.
   - At end of phase: `record` boots a clean playback view; user can manually run external screen capture; no mp4 produced.
 
-- [ ] **Phase 2: Core types and `render` audio**
+- [x] **Phase 2: Core types and `render` audio**
   - Add `Timing` and `Voiceover` types and extend `Timeline` with `default_timing` / `default_voiceover` in `packages/lib/src/types.ts`.
   - Implement `resolveTiming`, `validateTiming`, `loadVoiceover` in `packages/lib/src/timeline/`.
   - Modify `packages/lib/src/cli/ffmpeg.ts` to accept optional `audioFilePath` and emit single-pass two-input args.

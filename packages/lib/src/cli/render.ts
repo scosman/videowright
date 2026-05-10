@@ -17,12 +17,17 @@
  *   before returning, so the caller never captures a mid-transition frame
  */
 
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { validateSegmentAdvances } from "../timeline/index.js";
-import type { Timeline } from "../types.js";
+import { loadVoiceover } from "../timeline/loadVoiceover.js";
+import type { ResolvedTiming, TimingSegment } from "../timeline/resolveTiming.js";
+import { resolveTiming } from "../timeline/resolveTiming.js";
+import { validateTiming, validateVoiceover } from "../timeline/validateTiming.js";
+import type { Timeline, Voiceover } from "../types.js";
 import { discoverProject } from "./discover_project.js";
 import { UserError } from "./errors.js";
-import { findFfmpeg, spawnFfmpeg, writeWithBackpressure } from "./ffmpeg.js";
+import { buildFfmpegArgs, findFfmpeg, spawnFfmpeg, writeWithBackpressure } from "./ffmpeg.js";
 import { ensurePlaywright } from "./playwright_check.js";
 import { loadModule } from "./ts_loader.js";
 
@@ -34,6 +39,7 @@ export interface RenderOptions {
 	fps?: number;
 	output?: string;
 	verbose?: boolean;
+	voiceover?: string;
 }
 
 export interface RenderResult {
@@ -99,6 +105,77 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	// Load timeline (only for segment id list -- advances come from the browser)
 	const timelineMod = await loadModule(timelinePath);
 	const timeline = timelineMod.default as Timeline;
+
+	// 2b. Resolve voiceover if requested
+	const videoFolder = dirname(timelinePath);
+	const voiceoverSuppressed = opts.voiceover === "none";
+	let audioFilePath: string | undefined;
+	let cliVoiceoverModule: Voiceover | undefined;
+
+	if (!voiceoverSuppressed && opts.voiceover) {
+		// loadVoiceover rewrites audio_file to an absolute path, validates
+		// file existence, so the returned voiceover object is self-contained.
+		const voResult = await loadVoiceover({
+			videoFolder,
+			slug: opts.voiceover,
+		});
+		audioFilePath = voResult.audioFilePath;
+		cliVoiceoverModule = voResult.voiceover;
+
+		if (verbose) {
+			console.log(`voiceover: ${opts.voiceover} (${audioFilePath})`);
+		}
+	} else if (!voiceoverSuppressed && timeline.default_voiceover) {
+		// default_voiceover.audio_file is relative to the video folder (the
+		// directory containing timeline.ts) per the Voiceover type contract.
+		const defaultAudioPath = resolve(videoFolder, timeline.default_voiceover.audio_file);
+		if (!existsSync(defaultAudioPath)) {
+			throw new UserError(
+				`Default voiceover audio file not found: ${defaultAudioPath}`,
+				"Check the audio_file path in your timeline's default_voiceover.",
+			);
+		}
+		audioFilePath = defaultAudioPath;
+
+		if (verbose) {
+			console.log(`voiceover: default (${audioFilePath})`);
+		}
+	}
+
+	// Validate the active voiceover before proceeding.
+	const activeVoiceover =
+		cliVoiceoverModule ?? (!voiceoverSuppressed ? timeline.default_voiceover : undefined);
+	if (activeVoiceover) {
+		// File-existence validation: skip for CLI voiceovers because
+		// loadVoiceover already checked audio_file and threw on missing.
+		// Run for default_voiceover where no prior check has been done
+		// (the existsSync above only checked the audio file, not
+		// provider_timing_file).
+		if (!cliVoiceoverModule) {
+			const voValidation = validateVoiceover(activeVoiceover, videoFolder);
+			if (!voValidation.ok) {
+				throw new UserError(
+					`Voiceover validation failed:\n${voValidation.errors.join("\n")}`,
+					"Check voiceover file paths.",
+				);
+			}
+			for (const w of voValidation.warnings) {
+				console.warn(`Warning: ${w}`);
+			}
+		}
+
+		const segmentIds = timeline.segments.map((s) => s.id);
+		const timingValidation = validateTiming(activeVoiceover.timing, segmentIds);
+		if (!timingValidation.ok) {
+			throw new UserError(
+				`Voiceover timing validation failed:\n${timingValidation.errors.join("\n")}`,
+				"Check the timing object in your voiceover.ts file.",
+			);
+		}
+		for (const w of timingValidation.warnings) {
+			console.warn(`Warning: ${w}`);
+		}
+	}
 
 	if (verbose) {
 		console.log(`timeline: ${timelinePath}`);
@@ -233,11 +310,33 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 				);
 			}
 
-			// Build segmentAdvances Map from the validated data
+			// Build minimal segment objects from browser-sourced advances
+			// for resolveTiming's base layer.
+			const browserSegments: TimingSegment[] = timeline.segments.map((entry) => ({
+				id: entry.id,
+				advances: advancesMap[entry.id] ?? [],
+			}));
+
+			// Resolve timing using the four-level precedence. Voiceover timing
+			// overlays on top of segment advances from the browser.
+			const resolved: ResolvedTiming = resolveTiming({
+				segments: browserSegments,
+				defaultTiming: timeline.default_timing,
+				defaultVoiceover: timeline.default_voiceover,
+				cliVoiceoverSlug: opts.voiceover,
+				cliVoiceoverModule,
+			});
+
+			if (verbose && resolved.source !== "segments") {
+				console.log(`timing source: ${resolved.source}`);
+			}
+
+			// Build segmentAdvances Map from the resolved data
 			const segmentAdvances = new Map<string, number[]>();
 			for (const entry of timeline.segments) {
-				if (advancesMap[entry.id]) {
-					segmentAdvances.set(entry.id, advancesMap[entry.id]);
+				const advances = resolved.perSegment[entry.id];
+				if (advances) {
+					segmentAdvances.set(entry.id, advances);
 				}
 			}
 
@@ -259,26 +358,7 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 
 			// 5. Start ffmpeg process
 			const outputPath = resolve(cwd, output);
-			const ffmpegArgs = [
-				"-y",
-				"-f",
-				"image2pipe",
-				"-framerate",
-				String(fps),
-				"-i",
-				"pipe:0",
-				"-c:v",
-				"libx264",
-				"-pix_fmt",
-				"yuv420p",
-				"-preset",
-				"fast",
-				"-crf",
-				"18",
-				"-r",
-				String(fps),
-				outputPath,
-			];
+			const ffmpegArgs = buildFfmpegArgs({ fps, outputPath, audioFilePath });
 
 			const { process: ffmpegProc, done: ffmpegDone } = spawnFfmpeg(ffmpegPath, ffmpegArgs);
 			ffmpegProcRef = ffmpegProc;

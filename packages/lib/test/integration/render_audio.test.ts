@@ -1,0 +1,211 @@
+/**
+ * Integration test: render with voiceover audio muxing.
+ *
+ * Creates a minimal fixture project (config, timeline, one segment, one
+ * voiceover with a tiny valid mp3), runs `render --voiceover <slug>`, and
+ * verifies the output mp4 contains an audio stream via ffprobe.
+ *
+ * Skips if ffmpeg or Playwright are not available, or if the browser
+ * cannot launch (e.g., sandboxed environments).
+ */
+
+import { execFileSync, execSync } from "node:child_process";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	unlinkSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+function generateSilentMp3(): Buffer {
+	try {
+		const tmpPath = join(tmpdir(), `vw-test-silence-${Date.now()}.mp3`);
+		execSync(
+			`ffmpeg -y -f lavfi -i anullsrc=r=44100:cl=mono -t 0.5 -c:a libmp3lame -b:a 128k "${tmpPath}" 2>/dev/null`,
+		);
+		const buf = readFileSync(tmpPath);
+		try {
+			unlinkSync(tmpPath);
+		} catch {}
+		return buf;
+	} catch {
+		return Buffer.alloc(0);
+	}
+}
+
+function systemHasFfmpeg(): boolean {
+	try {
+		execFileSync("which", ["ffmpeg"], { encoding: "utf-8", stdio: "pipe" });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+async function canLaunchBrowser(): Promise<boolean> {
+	try {
+		const pw = await import("playwright-core");
+		const chromiumPath = pw.chromium.executablePath();
+		return Boolean(chromiumPath && existsSync(chromiumPath));
+	} catch {
+		return false;
+	}
+}
+
+const HAS_DEPS = systemHasFfmpeg() && (await canLaunchBrowser());
+
+const tmpDir = join(
+	tmpdir(),
+	`vw-render-audio-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+);
+
+function setupFixtureProject(): void {
+	const segDir = join(tmpDir, "segments", "hello");
+	const voDir = join(tmpDir, "videos", "test-video", "voiceovers", "narrator");
+	const videoDir = join(tmpDir, "videos", "test-video");
+
+	mkdirSync(segDir, { recursive: true });
+	mkdirSync(voDir, { recursive: true });
+
+	writeFileSync(
+		join(tmpDir, "videowright.config.ts"),
+		`export default { projectStructure: "v1" as const };`,
+	);
+
+	writeFileSync(
+		join(segDir, "index.ts"),
+		`import { defineSegment } from "videowright";
+export default defineSegment({
+	id: "hello",
+	advances: [1.0],
+	mount(el) {
+		el.style.cssText = "display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#222;";
+		el.innerHTML = "<h1 style='color:white;font-size:48px;'>Hello</h1>";
+	},
+	async play(ctx) {
+		await ctx.hold(1000);
+	},
+});`,
+	);
+
+	writeFileSync(
+		join(videoDir, "timeline.ts"),
+		`import type { Timeline } from "videowright";
+const timeline: Timeline = {
+	meta: { title: "Audio Test" },
+	segments: [{ id: "hello" }],
+};
+export default timeline;`,
+	);
+
+	writeFileSync(
+		join(voDir, "voiceover.ts"),
+		`import type { Voiceover } from "videowright";
+const vo: Voiceover = {
+	audio_file: "silence.mp3",
+	provider: "elevenlabs",
+	timing: { perSegment: { hello: [0.5] } },
+};
+export default vo;`,
+	);
+
+	const mp3 = generateSilentMp3();
+	if (mp3.length > 0) {
+		writeFileSync(join(voDir, "silence.mp3"), mp3);
+	}
+}
+
+/**
+ * Helper that catches browser-launch failures (e.g., sandboxed environments
+ * where Chromium's MachPort call is blocked) and skips the test gracefully
+ * instead of failing.
+ */
+async function runRenderOrSkip(
+	opts: Parameters<typeof import("../../src/cli/render.js").runRender>[0],
+) {
+	const { runRender } = await import("../../src/cli/render.js");
+	try {
+		return await runRender(opts);
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		if (msg.includes("browserType.launch") || msg.includes("Permission denied")) {
+			console.warn("Skipping: browser cannot launch in this environment");
+			return null;
+		}
+		throw e;
+	}
+}
+
+describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
+	beforeAll(() => {
+		setupFixtureProject();
+	});
+
+	afterAll(() => {
+		if (existsSync(tmpDir)) {
+			rmSync(tmpDir, { recursive: true, force: true });
+		}
+	});
+
+	it("render_voiceover_produces_mp4_with_audio_stream", async () => {
+		const mp3Path = join(tmpDir, "videos", "test-video", "voiceovers", "narrator", "silence.mp3");
+		if (!existsSync(mp3Path) || statSync(mp3Path).size === 0) {
+			return; // ffmpeg failed to generate silence mp3
+		}
+
+		const outputPath = join(tmpDir, "output.mp4");
+		const result = await runRenderOrSkip({
+			cwd: tmpDir,
+			positional: "videos/test-video/timeline.ts",
+			width: 320,
+			height: 240,
+			fps: 10,
+			output: outputPath,
+			voiceover: "narrator",
+		});
+
+		if (!result) return; // browser launch blocked
+
+		expect(result.outputPath).toBe(outputPath);
+		expect(existsSync(outputPath)).toBe(true);
+		expect(result.frames).toBeGreaterThan(0);
+
+		// Verify audio stream exists via ffprobe
+		const probeOutput = execSync(
+			`ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 "${outputPath}"`,
+			{ encoding: "utf-8" },
+		);
+		expect(probeOutput.trim()).toBe("audio");
+	}, 60000);
+
+	it("render_without_voiceover_produces_silent_mp4", async () => {
+		const outputPath = join(tmpDir, "output-silent.mp4");
+		const result = await runRenderOrSkip({
+			cwd: tmpDir,
+			positional: "videos/test-video/timeline.ts",
+			width: 320,
+			height: 240,
+			fps: 10,
+			output: outputPath,
+			voiceover: "none",
+		});
+
+		if (!result) return; // browser launch blocked
+
+		expect(result.outputPath).toBe(outputPath);
+		expect(existsSync(outputPath)).toBe(true);
+
+		// Verify no audio stream
+		const probeOutput = execSync(
+			`ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 "${outputPath}"`,
+			{ encoding: "utf-8" },
+		);
+		expect(probeOutput.trim()).toBe("");
+	}, 60000);
+});

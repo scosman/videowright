@@ -1,5 +1,13 @@
 import type { Config, Segment, Timeline, Transition } from "../types.js";
 
+// Re-export voiceover-related helpers
+export { resolveTiming } from "./resolveTiming.js";
+export type { ResolvedTiming, ResolveTimingArgs, TimingSegment } from "./resolveTiming.js";
+export { validateTiming, validateVoiceover } from "./validateTiming.js";
+export type { ValidationResult } from "./validateTiming.js";
+export { loadVoiceover } from "./loadVoiceover.js";
+export type { LoadVoiceoverArgs, LoadVoiceoverResult } from "./loadVoiceover.js";
+
 // ---- Loader map types ----
 
 export type SegmentLoaderMap = Map<string, () => Promise<{ default: Segment }>>;

@@ -93,7 +93,54 @@ export interface TimelineMeta {
 export interface Timeline {
 	meta: TimelineMeta;
 	segments: TimelineEntry[];
+	/** Standalone timing overrides (used when no voiceover is active). */
+	default_timing?: Timing;
+	/** Default voiceover for this video. */
+	default_voiceover?: Voiceover;
 }
+
+// ---- Timing ----
+
+/**
+ * Per-segment advance schedule overrides. Used by voiceovers and as a
+ * standalone timing layer (`default_timing` on Timeline).
+ *
+ * Keys are segment ids; values are advance times in seconds (same units as
+ * SegmentSpec.advances). A Timing only needs to specify segments it wants
+ * to override -- unspecified segments fall back to their own `advances`.
+ */
+export type Timing = {
+	perSegment: Partial<Record<string, number[]>>;
+};
+
+// ---- Voiceover ----
+
+/**
+ * A single voiceover for a video. Stored at
+ * `videos/<video>/voiceovers/<slug>/voiceover.ts`.
+ */
+export type Voiceover = {
+	/**
+	 * Audio file path. In a voiceover.ts file on disk, this is relative to the
+	 * voiceover.ts file's directory. After loading via `loadVoiceover()`, it is
+	 * rewritten to an absolute path. When used as `default_voiceover` in
+	 * timeline.ts, it should be relative to the video folder (the directory
+	 * containing timeline.ts).
+	 */
+	audio_file: string;
+	/** Provider that produced the audio. */
+	provider: "elevenlabs" | "manual";
+	/**
+	 * Provider timing JSON path. Same resolution rules as `audio_file`:
+	 * relative to voiceover.ts on disk, absolute after `loadVoiceover()`,
+	 * relative to the video folder when used in `default_voiceover`.
+	 */
+	provider_timing_file?: string;
+	/** Per-segment advance timing synced to this audio. */
+	timing: Timing;
+	/** Freeform notes about this voiceover. */
+	notes?: string;
+};
 
 // ---- Transition ----
 

@@ -18,6 +18,7 @@ export interface ParsedArgs {
 		height?: number;
 		fps?: number;
 		output?: string;
+		voiceover?: string;
 	};
 }
 
@@ -26,6 +27,9 @@ const KNOWN_COMMANDS = new Set<string>(["dev", "script", "record", "render"]);
 /** Flags that only apply to the `render` command. Rejected on all other commands. */
 const RENDER_ONLY_FLAGS = ["width", "height", "fps", "output"] as const;
 const RENDER_ONLY_COMMANDS = new Set<Command>(["render"]);
+
+/** Flags that apply to render only (record gains --voiceover in Phase 3). */
+const VOICEOVER_COMMANDS = new Set<Command>(["render"]);
 
 export class ArgvError extends Error {
 	override name = "ArgvError";
@@ -68,6 +72,7 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 			height: { type: "string" },
 			fps: { type: "string" },
 			output: { type: "string" },
+			voiceover: { type: "string" },
 		},
 		allowPositionals: true,
 		strict: true,
@@ -126,6 +131,12 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 		}
 	}
 
+	// Reject --voiceover on commands that don't support it
+	const voiceover = values.voiceover as string | undefined;
+	if (voiceover !== undefined && !VOICEOVER_COMMANDS.has(command)) {
+		throw new ArgvError(`--voiceover is only valid for the "render" command`);
+	}
+
 	return {
 		command,
 		positional: positionals[0],
@@ -137,6 +148,7 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 			height,
 			fps,
 			output: values.output as string | undefined,
+			voiceover,
 		},
 	};
 }

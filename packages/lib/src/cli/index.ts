@@ -41,15 +41,17 @@ Commands:
   render [path]   Deterministic frame-by-frame export via CDP + ffmpeg
 
 Options:
-  --port <n>      Dev server port (default: 5173)
-  --write         Write script to file instead of stdout
-  --width <n>     Video width in pixels (render only, default: 1920)
-  --height <n>    Video height in pixels (render only, default: 1080)
-  --fps <n>       Frames per second (render only, default: 60)
-  --output <path> Output file path (render only, default: output.mp4)
-  --verbose       Show extra detail
-  --help          Show this help
-  --version       Show version
+  --port <n>            Dev server port (default: 5173)
+  --write               Write script to file instead of stdout
+  --width <n>           Video width in pixels (render only, default: 1920)
+  --height <n>          Video height in pixels (render only, default: 1080)
+  --fps <n>             Frames per second (render only, default: 60)
+  --output <path>       Output file path (render only, default: output.mp4)
+  --voiceover <slug>    Use voiceover from voiceovers/<slug>/ (render only)
+  --voiceover none      Disable voiceover (ignore default_voiceover)
+  --verbose             Show extra detail
+  --help                Show this help
+  --version             Show version
 `;
 
 function formatError(message: string, hint?: string, verbose?: boolean, stack?: string): string {
@@ -161,6 +163,7 @@ export async function main(argv?: string[]): Promise<number> {
 				fps: flags.fps,
 				output: flags.output,
 				verbose: flags.verbose,
+				voiceover: flags.voiceover,
 			});
 			console.log(
 				`\n  Rendered ${result.frames} frames (${result.duration.toFixed(1)}s) to ${result.outputPath}\n`,

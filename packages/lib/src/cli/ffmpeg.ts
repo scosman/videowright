@@ -71,6 +71,37 @@ export interface FfmpegResult {
 }
 
 /**
+ * Build the ffmpeg argument array for a render pass.
+ *
+ * When `audioFilePath` is provided, the arguments include a second `-i` for
+ * the audio file, AAC encoding, explicit stream mapping, and `-shortest`.
+ * When absent, the existing video-only argument array is produced.
+ */
+export function buildFfmpegArgs(opts: {
+	fps: number;
+	outputPath: string;
+	audioFilePath?: string;
+}): string[] {
+	const { fps, outputPath, audioFilePath } = opts;
+
+	const args: string[] = ["-y", "-f", "image2pipe", "-framerate", String(fps), "-i", "pipe:0"];
+
+	if (audioFilePath) {
+		args.push("-i", audioFilePath);
+	}
+
+	args.push("-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "fast", "-crf", "18");
+
+	if (audioFilePath) {
+		args.push("-c:a", "aac", "-b:a", "192k", "-map", "0:v:0", "-map", "1:a:0", "-shortest");
+	}
+
+	args.push("-r", String(fps), outputPath);
+
+	return args;
+}
+
+/**
  * Spawn ffmpeg with the given arguments.
  * Returns a promise that resolves when the process exits.
  * stderr is captured for diagnostics.
