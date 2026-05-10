@@ -45,4 +45,26 @@ describe("ts_loader", () => {
 		expect(value).toBeDefined();
 		expect(value.name).toBe("test");
 	});
+
+	it("loads a module that imports a .css file without crashing", async () => {
+		// Regression test: consumer timeline.ts files import tokens.css at the
+		// top level (e.g. `import '../../styles/modern/tokens.css'`). The CSS is
+		// only needed in the browser (Vite handles it). The CLI-side loader must
+		// treat these imports as no-ops instead of crashing with
+		// ERR_UNKNOWN_FILE_EXTENSION.
+		const cssFile = join(tmpDir, "tokens.css");
+		writeFileSync(cssFile, ":root { --color-bg: #000; }", "utf-8");
+
+		const testFile = join(tmpDir, "timeline_with_css.ts");
+		writeFileSync(
+			testFile,
+			`import './tokens.css';\nconst t = { meta: { title: 'css-test' }, segments: [] };\nexport default t;`,
+			"utf-8",
+		);
+
+		const mod = await loadModule(testFile);
+		const value = mod.default as { meta: { title: string } };
+		expect(value).toBeDefined();
+		expect(value.meta.title).toBe("css-test");
+	});
 });
