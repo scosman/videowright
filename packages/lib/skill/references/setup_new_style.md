@@ -17,20 +17,21 @@ The caller passes two flags:
 
 ## Flow
 
-Ask the user how they want to define the style. Present all four options as a rich list:
+Present this message verbatim — do not rephrase or regenerate it:
+
+<!-- Maintainer note: the built-in pack list below is baked in. Adding or removing a pack under skill/assets/styles/ requires updating this list. -->
 
 > How would you like to define your visual style?
 >
-> 1. **Reference docs / brand guides / marketing pages** -- Paste content into chat, point me at local files or folders, or give me a URL. I'll fetch the page and extract colors, typography, and visual patterns to build your style.
->    - *Examples: a brand guidelines PDF, a CSS file, a Figma export, a marketing site URL like `https://yourcompany.com`*
->
-> 2. **Copy from a previous Videowright project** -- If you have another Videowright project with a style you like, give me the path. I'll read its `styles/<slug>/STYLE.md` and `tokens.css` and bring them into this project.
->    - *Example: `../other-project` or `/Users/me/videos/client-project`*
->
-> 3. **Describe in chat** -- Type a short description of the look you want. I'll build the style from your words.
->    - *Example: "Modern look using Inter, white background, #e0e230 accent, sans-serif headers, monospace for code"*
->
-> 4. **Built-in style pack** -- Choose from a curated set of ready-made styles. I'll list them with descriptions so you can pick.
+> 1. **Generate from reference docs** — provide a marketing page, brand guide, CSS file, or other document and I'll derive a style from it.
+> 2. **Copy from a previous Videowright project** — provide a path to an existing project's style folder.
+> 3. **Describe it** — give me a short description and I'll generate a style. Example: "Neo-brutalist, Inter font, yellow accent color."
+> 4. **Built-in style pack** — pick one of these ready-made styles:
+>    - **Modern** — Clean, tech-product polish. Restrained motion, generous whitespace, Inter + JetBrains Mono.
+>    - **Retro** — 80s/90s warmth with neon accents, bold typography, and VHS-era personality. Expressive but tasteful.
+>    - **Bauhaus** — Geometric forms, primary-color palette, strict grid. Functional typography and bold shapes in the 1920s Bauhaus tradition.
+>    - **Animated Explainer** — Warm, illustrative, motion-rich. Friendly typography, soft colors, and generous animation for educational and narrative content.
+>    - **Placeholder** — Neutral baseline with system fonts. A starting point to customize or replace.
 
 ### Mode 1 -- Ingest reference material
 
@@ -74,24 +75,11 @@ The user types a description: "Modern look using Inter, white background, #e0e23
 
 ### Mode 4 -- Pick a built-in style pack
 
-Choose one of the built-in packs shipped with Videowright.
+Choose one of the built-in packs shipped with Videowright. The pack list and descriptions are already shown in the question above — no need to read frontmatter at runtime.
 
-1. Read frontmatter from each `STYLE.md` in the skill's built-in style packs. Resolve via the installed package path: `node_modules/videowright/skill/assets/styles/*/STYLE.md`. Extract `title` and `picker_description` from each.
-2. Present the picker -- list each pack with its title and one-line description (from `picker_description`):
-
-   ```
-   Built-in style packs:
-   1. Modern -- Clean, tech-product polish. Restrained motion, generous whitespace.
-   2. Retro -- 80s/90s-inspired warmth. Bolder color, typographic personality.
-   3. Bauhaus -- Geometric, primary palette, strict grid. Motion respects the system.
-   4. Animated Explainer -- Illustrative, generous motion, friendly typography. The Kurzgesagt feel.
-   5. Placeholder -- Neutral baseline with system fonts. A starting point.
-   ```
-
-   (Actual descriptions come from the frontmatter; the above are examples.)
-
-3. Copy the chosen pack from `node_modules/videowright/skill/assets/styles/<slug>/` into the consumer repo at `styles/<slug>/` (STYLE.md, tokens.css, and sample-segment/). The slug is locked to the pack's slug -- no rename.
-4. If `copySample` is true, copy `styles/<slug>/sample-segment/index.ts` into `segments/<slug>-sample/index.ts`.
+1. The user picks a pack from the list presented in the question. Confirm the choice.
+2. Copy the chosen pack from `node_modules/videowright/skill/assets/styles/<slug>/` into the consumer repo at `styles/<slug>/` (STYLE.md, tokens.css, and sample-segment/). The slug is locked to the pack's slug -- no rename.
+3. If `copySample` is true, copy `styles/<slug>/sample-segment/index.ts` into `segments/<slug>-sample/index.ts`.
 
 After any mode, the user's copy in `styles/<slug>/` is the source of truth. The skill does not auto-update it from `skill/assets/` later.
 
