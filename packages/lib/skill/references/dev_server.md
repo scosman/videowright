@@ -72,12 +72,26 @@ The dev server uses Vite's file-watching with full page reloads. When you save c
 
 Edits appear almost instantly. You do not need to restart the dev server when editing content.
 
+## Audio playback
+
+When the video has a `default_voiceover` set in `timeline.ts`, the dev server loads the voiceover audio and enables synced playback:
+
+- The play button in the HUD starts auto-advance with audio playing through an HTML `<audio>` element.
+- Audio is synced to the player's logical timeline position.
+- Manual navigation (arrow keys, clicking, number keys) pauses audio and stops auto-advance.
+- Pressing play again resumes from the current position.
+
+If no `default_voiceover` is set, the play button still works — it auto-advances silently using `default_timing` or segment `advances`.
+
+`dev` does not accept a `--voiceover` flag. It always uses `default_voiceover` from `timeline.ts`. To test a specific voiceover, set it as the default or use `record --voiceover <slug>`.
+
 ## HUD (Heads-Up Display)
 
 The HUD is a semi-transparent overlay at the bottom of the player that shows:
 
 | Field | Description |
 |---|---|
+| **play/pause button** | Toggle auto-advance with synced audio. Shows triangle (play) in idle, pause icon when playing. |
 | **segment** | Current segment id. |
 | **beat** | Current beat number within the segment. |
 | **seg time** | Elapsed time since this segment mounted. |
@@ -92,7 +106,7 @@ Press **H** to toggle the HUD on and off. The HUD is visible by default.
 
 The `?hideHud=1` query parameter starts with the HUD hidden. This is used internally by `videowright render` so the HUD does not appear in exported frames.
 
-The `?recordMode=1` query parameter is used by `videowright record` to start the player in record mode with reduced HUD chrome for external screen capture.
+The `?recordMode=1` query parameter is used by `videowright record` to start the player in record mode with reduced HUD chrome (only play button and end-of-timeline badge visible).
 
 ### Error display
 

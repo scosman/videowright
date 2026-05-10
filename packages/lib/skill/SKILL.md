@@ -15,6 +15,7 @@ Videowright lets you author high-quality animated explainer videos in HTML/CSS/J
 - "Add a style" / "Change the default style"
 - "Match the look of \<past video\>"
 - "Generate a script for \<video\>"
+- "Add a voiceover" / "Generate a voiceover" / "Record a voiceover"
 - "Run the dev server" / "Preview the video"
 - "Export the video" / "Render the video"
 - "Write tests for \<video\>"
@@ -40,6 +41,7 @@ Read the user's request and route to the matching reference file:
 | Change the default style | [references/styles.md](references/styles.md) |
 | Match a past video's style | [references/styles.md](references/styles.md) |
 | Generate or regenerate a VO script | [references/voiceover.md](references/voiceover.md) |
+| Add a voiceover (AI-generated or manual) | [references/voiceover.md](references/voiceover.md) |
 | Run or review the dev server | [references/dev_server.md](references/dev_server.md) |
 | Export the video | [references/export.md](references/export.md) |
 | Write tests | [references/testing.md](references/testing.md) |

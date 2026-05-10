@@ -32,8 +32,27 @@ describe("skill file structure", () => {
 			"styles.md",
 			"testing.md",
 			"types.md",
+			"voiceover",
 			"voiceover.md",
 		]);
+	});
+
+	it("references/voiceover/ has the expected sub-references", () => {
+		const voDir = resolve(SKILL_ROOT, "references/voiceover");
+		expect(existsSync(voDir)).toBe(true);
+
+		const files = readdirSync(voDir).sort();
+		expect(files).toEqual([
+			"animation_sync.md",
+			"provider_script.md",
+			"providers",
+			"script_writing.md",
+			"style_intake.md",
+			"sync_algorithm.md",
+		]);
+
+		const providerFiles = readdirSync(resolve(voDir, "providers")).sort();
+		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md"]);
 	});
 
 	it("hello_world has timeline as a plain reference file", () => {

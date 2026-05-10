@@ -18,13 +18,15 @@ Before handing off to the build phase, you need all of the following. Ask only f
 | **Script** | If voiceover | Full VO copy if the user has it. If not, you will draft one during the build phase based on the other inputs. |
 | **Segment outline** | Optional | If the user has a structure in mind, capture it. Otherwise, the build phase generates one from the script + purpose. |
 
-### Audio intent disclosure
+### Audio intent notes
 
-When the user picks **voiceover** or **music**, explicitly tell them:
+When the user picks **voiceover**, note that Videowright supports integrated voiceover audio:
 
-> Audio playback is not implemented in Videowright yet. Your video will be silent in dev and export. The voiceover script is generated for review and external TTS / mixing in post.
+- Audio plays in `dev` and `record` modes via an HTML `<audio>` element synced to the player.
+- `render` muxes audio into the output MP4 via ffmpeg.
+- The voiceover flow (AI-generated or manual) is handled after the video is scaffolded. See [voiceover.md](voiceover.md).
 
-Do not skip this disclosure. The user needs to know before committing to a plan.
+When the user picks **music**, note that background music is not currently supported. The video will be silent in dev and export. Music can be added in post-production.
 
 ## One-shot vs. iterate
 

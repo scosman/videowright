@@ -14,7 +14,7 @@ This is a single file because the underlying mechanics — segments, timeline co
 These reference files cover the building blocks. Load them as needed — do not re-read this section's summaries when the full reference is available.
 
 - **[authoring_segment.md](authoring_segment.md)** — segment lifecycle (`mount`/`play`/`unmount`), `defineSegment`, timing with `ctx.waitForNext()` and `ctx.hold(ms)`, idempotency, the `setTimeout` footgun, any-web-tech guidance.
-- **[voiceover.md](voiceover.md)** — the `voiceover` field on segments, VO-first authoring pattern, `videowright script` CLI for round-tripping between segments and `voiceover/script.md`.
+- **[voiceover.md](voiceover.md)** — voiceover flows (AI-generated and manual), the `voiceover` field on segments, VO-first authoring pattern, `videowright script` CLI, file conventions, CLI usage (`--voiceover`).
 - **[styles.md](styles.md)** — style folder structure, how segments consume tokens via CSS variables, switching styles, the timeline.ts import convention.
 - **[project_structure.md](project_structure.md)** — consumer repo layout, file-ownership rules (top-level dirs are shared, per-video files live in `videos/<name>/`).
 - **[types.md](types.md)** — quick reference for `Segment`, `PlayerContext`, `Timeline`, `TimelineMeta`, `Config`.

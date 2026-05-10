@@ -2,82 +2,228 @@
 
 ## When this is loaded
 
-You were routed here from the intent dispatch table or from another workflow that needs to work with voiceover content.
+You were routed here from the intent dispatch table or from another workflow that needs to work with voiceover content. This is the top-level reference for all voiceover functionality.
 
-## Audio playback status
+## Overview
 
-Audio playback is not implemented in Videowright. Videos are silent in dev and export modes. The voiceover system exists for:
+Videowright supports voiceover audio integrated into video playback. A voiceover consists of an audio file (mp3 or wav), a `Timing` that syncs segment advances to the audio, and metadata stored in a typed `voiceover.ts` file. Audio plays in `dev` and `record` modes via an HTML `<audio>` element and is muxed into MP4 output by `render` via ffmpeg.
 
-- **Script authoring** — writing and organizing VO copy per segment.
-- **Review** — reading the script in the HUD or exported markdown.
-- **External production** — feeding the script to TTS services or voice talent for mixing in post.
+Two production flows are supported:
 
-When a user chooses voiceover as their audio intent, always tell them:
+- **AI-generated** -- write a script, transform it with provider-specific tags, generate audio via ElevenLabs v3 TTS through their web portal, import the audio and per-word timing JSON.
+- **Manual** -- user provides their own audio file, then runs it through ElevenLabs Speech-to-Text to get per-word timing data for sync.
 
-> Audio playback is not implemented in Videowright yet. Your video will be silent in dev and export. The voiceover script is generated for review and external TTS / mixing in post.
+Both flows produce the same output: a `voiceover.ts` file with a `Voiceover` object that includes the audio path and a `Timing` object.
 
-## The `voiceover` field
+## Flow entry point
 
-Each segment can declare a `voiceover` string in its `defineSegment` spec:
+When the user asks to "add a voiceover" or "generate a voiceover", ask:
+
+> Do you have an audio file already, or would you like to generate one with AI text-to-speech?
+
+- **AI generation** -- follow Flow A below.
+- **User-provided audio** -- follow Flow B below.
+
+### Flow A: AI generation (ElevenLabs)
+
+1. **Style intake.** Ask the user about voice, tone, and style preferences. See [voiceover/style_intake.md](voiceover/style_intake.md).
+2. **Script.** Write or integrate the VO script into PLAN.md. See [voiceover/script_writing.md](voiceover/script_writing.md).
+3. **Provider script.** Transform the PLAN script into `provider_script.md` with provider-specific annotations. See [voiceover/provider_script.md](voiceover/provider_script.md).
+4. **Generate audio.** Walk the user through the ElevenLabs portal to generate audio and download timing data. See [voiceover/providers/elevenlabs.md](voiceover/providers/elevenlabs.md).
+5. **Sync timing.** Read the provider timing JSON and compute a `Timing` object. See [voiceover/sync_algorithm.md](voiceover/sync_algorithm.md).
+6. **Default voiceover?** Ask whether to set this as the default. If yes, update `timeline.ts` and run a one-time animation sync. See [voiceover/animation_sync.md](voiceover/animation_sync.md).
+7. **Write `voiceover.ts`.** Create the typed module exporting a `Voiceover` object.
+
+### Flow B: Manual (user-provided audio)
+
+1. **Get the audio.** Ask the user to provide or drop an audio file into `voiceovers/<slug>/`.
+2. **Generate transcript and timing.** Walk the user through ElevenLabs Speech-to-Text to get per-word timing data. See [voiceover/providers/manual.md](voiceover/providers/manual.md).
+3. **Sync timing.** Same as Flow A step 5.
+4. **Default voiceover?** Same as Flow A step 6.
+5. **Write `voiceover.ts`.** Same as Flow A step 7.
+
+## File and folder conventions
+
+Voiceovers live per-video under the video folder:
+
+```
+videos/<video-slug>/
+  timeline.ts
+  PLAN.md
+  voiceovers/
+    <vo-slug>/
+      voiceover.ts             # typed Voiceover object (default export)
+      <audio-file>.mp3|wav     # any name, referenced from voiceover.ts
+      provider_timing.json     # provider-supplied per-word timings (optional)
+      provider_script.md       # provider-annotated script (AI flow only)
+```
+
+**Slug naming.** Both auto-versioned (`v1`, `v2`) and user-named (`narrator-warm`, `take-3`) are valid. The slug is the folder name and is what the user passes to `--voiceover <slug>`.
+
+**Multiple voiceovers.** Stored as separate sibling folders under `voiceovers/`. Each is independent and self-contained. Only one can be active at a time (via CLI flag or `default_voiceover`).
+
+## Types
+
+### `Voiceover`
+
+```ts
+type Voiceover = {
+  audio_file: string;             // path relative to the voiceover.ts file
+  provider: "elevenlabs" | "manual";
+  provider_timing_file?: string;  // path relative to the voiceover.ts file
+  timing: Timing;
+  notes?: string;
+};
+```
+
+### `Timing`
+
+```ts
+type Timing = {
+  perSegment: Partial<Record<string, number[]>>;
+};
+```
+
+A `Timing` overrides segment `advances` for any segments it lists. Segments not listed fall back to their own `advances` array.
+
+### `Timeline` extensions
+
+```ts
+interface Timeline {
+  meta: TimelineMeta;
+  segments: TimelineEntry[];
+  default_timing?: Timing;       // standalone timing overrides
+  default_voiceover?: Voiceover; // default voiceover for this video
+}
+```
+
+## Writing `voiceover.ts`
+
+A voiceover module default-exports a `Voiceover` object:
+
+```ts
+import type { Voiceover } from 'videowright';
+
+const voiceover: Voiceover = {
+  audio_file: './narration.mp3',
+  provider: 'elevenlabs',
+  provider_timing_file: './provider_timing.json',
+  timing: {
+    perSegment: {
+      'intro':          [4.2],
+      'feature-cards':  [2.1, 5.8, 9.3, 12.0],
+      'outro':          [3.5],
+    },
+  },
+  notes: 'Warm male voice, conversational tone',
+};
+
+export default voiceover;
+```
+
+## Setting a default voiceover
+
+When a voiceover is set as default, update `timeline.ts` to import and assign it:
+
+```ts
+import '../../styles/modern/tokens.css';
+import type { Timeline } from 'videowright';
+import defaultVoiceover from './voiceovers/v1/voiceover.js';
+
+const timeline: Timeline = {
+  meta: { title: 'My Video' },
+  segments: [
+    { id: 'intro' },
+    { id: 'feature-cards', transition: 'fade' },
+    { id: 'outro', transition: 'fade' },
+  ],
+  default_voiceover: defaultVoiceover,
+};
+
+export default timeline;
+```
+
+When using `default_voiceover`, the `audio_file` and `provider_timing_file` paths in the voiceover object are relative to the video folder (the directory containing `timeline.ts`), not the voiceover.ts directory. Adjust paths accordingly -- typically `./voiceovers/<slug>/narration.mp3`.
+
+## CLI usage
+
+`render` and `record` accept `--voiceover`:
+
+```bash
+# Use a specific voiceover
+npx videowright render --voiceover v1
+npx videowright record --voiceover narrator-warm
+
+# Suppress voiceover (ignore default_voiceover, use default_timing or segment advances)
+npx videowright render --voiceover none
+
+# No flag: use default_voiceover from timeline.ts if set, otherwise no audio
+npx videowright render
+```
+
+`dev` does not accept `--voiceover`. It uses `default_voiceover` from `timeline.ts` if set, otherwise no audio.
+
+## Audio playback by mode
+
+| Mode | Audio mechanism | Behavior |
+|---|---|---|
+| `dev` | HTML `<audio>` element | Play button in HUD starts auto-advance with synced audio. Manual nav pauses audio. |
+| `record` | HTML `<audio>` element | Same as dev. User runs external screen capture over the browser. |
+| `render` | ffmpeg audio mux | Audio file is muxed into the output MP4 as a second input to ffmpeg. No `<audio>` element. |
+
+## Timing precedence
+
+When determining advance schedules:
+
+1. **Active voiceover's `timing`** -- if a voiceover is active (via `--voiceover <slug>` or `default_voiceover`).
+2. **`default_timing`** on `timeline.ts` -- if no voiceover is active.
+3. **`SegmentSpec.advances`** -- per-segment fallback.
+
+`--voiceover none` suppresses voiceovers (skips levels 1 and 2 for voiceover) but still respects `default_timing`.
+
+## The `voiceover` field on segments
+
+Each segment can declare a `voiceover` string in `defineSegment`:
 
 ```ts
 export default defineSegment({
   id: 'intro',
   advances: [3.0],
-  voiceover: 'Welcome to the product demo. Today we will walk through the three key features.',
-
-  async play(ctx) {
-    await ctx.hold(3000);
-  },
+  voiceover: 'Welcome to the product demo.',
+  async play(ctx) { await ctx.hold(3000); },
 });
 ```
 
-The voiceover text is:
+This field is:
 
-- **Shown in the HUD** during dev mode — the bottom bar displays the current segment's VO text.
+- **Shown in the HUD** during dev mode.
 - **Collected by `videowright script`** into a single markdown document.
 - **Used by the agent** to understand the segment's narrative purpose when editing.
 
-For segments with no spoken content (silent intros, transition segments, visual-only beats), leave `voiceover` unset or empty.
+It is a display hint, not the canonical voiceover audio source. The canonical audio comes from the `Voiceover` object in `voiceover.ts`.
 
 ## VO-first authoring
 
 The default authoring pattern for new videos with voiceover intent:
 
-1. **Write the script first.** Draft the full VO copy organized by segment. Each section of the script maps to a segment.
-2. **Scaffold segments from the script.** Each segment's content and timing follow from its VO text. A 30-word VO section suggests a ~12 second segment; a 100-word section suggests ~40 seconds (based on ~150 WPM spoken pace).
+1. **Write the script first.** Draft the full VO copy organized by segment in PLAN.md.
+2. **Scaffold segments from the script.** Each segment's content and timing follow from its VO text. A 30-word section suggests ~12s; a 100-word section suggests ~40s (based on ~150 WPM).
 3. **Set `voiceover` on each segment** to its section of the script.
-4. **Write `voiceover/script.md`** with the full assembled script.
-
-This pattern produces coherent videos because the visuals are designed to match the narrative, not the other way around. See [new_video.md](new_video.md) for how the design phase captures the script, and [create_or_edit_video.md](create_or_edit_video.md) for how the build phase uses it.
+4. **Generate the audio** using one of the two flows above.
+5. **Sync timing** to align segment advances with the audio.
 
 ## `videowright script` CLI
 
-The `script` command reads a timeline's segments and assembles their `voiceover` fields into a single markdown document.
-
-### Usage
+The `script` command reads segments' `voiceover` fields and assembles them into markdown:
 
 ```bash
-# Print script to stdout
-npx videowright script
-
-# Print script for a specific video
-npx videowright script videos/my_video/timeline.ts
-
-# Write to voiceover/script.md
-npx videowright script --write
-
-# Write for a specific video
-npx videowright script videos/my_video/timeline.ts --write
+npx videowright script              # print to stdout
+npx videowright script --write      # write to voiceover/script.md
 ```
 
-### Default discovery
-
-When no timeline path is given, `videowright script` finds the most recently modified `timeline.ts` under `videos/` (same discovery logic as `videowright dev`).
+See the `videowright script` section below for output format and `--write` behavior.
 
 ### Output format
-
-The generated markdown follows this structure:
 
 ```markdown
 # Video Title
@@ -93,40 +239,24 @@ Voiceover text for the second segment.
 *No voiceover: segment-id-3, segment-id-4*
 ```
 
-Segments without a `voiceover` field are listed at the bottom under a "No voiceover" note.
-
 ### `--write` flag
 
-With `--write`, the script is written to `videos/<name>/voiceover/script.md` (the `voiceover/` directory is created if it does not exist). The video folder is inferred from the timeline path's parent directory.
-
-Without `--write`, the script is printed to stdout.
-
-## Where `script.md` lives
-
-```
-videos/<name>/
-├── timeline.ts
-├── PLAN.md
-└── voiceover/
-    └── script.md          # generated by `videowright script --write`
-```
-
-The `voiceover/script.md` file lives inside the video's folder. It is a per-video file, not shared.
+With `--write`, the script is written to `videos/<name>/voiceover/script.md`. Without `--write`, it prints to stdout.
 
 ## Keeping things in sync
 
-The `voiceover` field on each segment and the `voiceover/script.md` file are two representations of the same content. They must stay in sync:
+The `voiceover` field on each segment and `voiceover/script.md` are two representations of the same content:
 
 - **After editing `voiceover` fields** on segments, run `npx videowright script --write` to regenerate `script.md`.
 - **After editing `script.md`** directly, update each segment's `voiceover` field to match.
-
-The `videowright script` command generates `script.md` from segments — it is a one-way extraction. There is no reverse sync command. If the user edits `script.md` directly, the agent must manually update the segment `voiceover` fields.
 
 ## Edge cases
 
 | Situation | Behavior |
 |---|---|
-| User wants VO but has no script yet | Draft one during the build phase based on the video's purpose and segment outline. Set `voiceover` fields as you scaffold segments. |
-| User changes audio intent from silent to voiceover mid-project | Add `voiceover` fields to existing segments. Run `videowright script --write` to generate `script.md`. |
-| User changes audio intent from voiceover to silent | Leave `voiceover` fields in place (they do no harm). Note the change in PLAN.md. |
-| Segment has VO but video is marked silent in PLAN.md | The `voiceover` field still works (shown in HUD, collected by script). The PLAN.md intent is informational — it does not suppress VO fields. |
+| User wants VO but has no script yet | Draft one during the build phase based on the video's purpose and segment outline. |
+| User changes audio intent from silent to voiceover mid-project | Add `voiceover` fields to existing segments. Run `videowright script --write`. Follow the voiceover flow to generate audio and timing. |
+| Audio file missing on disk | CLI errors before playback or render starts with a clear message and path. |
+| `--voiceover <slug>` with non-existent slug | CLI errors with a hint to check the voiceovers folder. |
+| Browser autoplay blocked | Audio is silent until the user clicks the play button (which counts as a user gesture). |
+| Default voiceover set but user switches via `--voiceover <other-slug>` | Advance timing updates automatically. In-segment animations remain tuned to the original default -- the user can re-run the animation sync pass if needed. |

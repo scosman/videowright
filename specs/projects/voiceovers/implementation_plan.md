@@ -35,7 +35,7 @@ Five phases. Phase 1 is the `record` cleanup — a prerequisite that makes audio
   - `dev` reads `default_voiceover` from `timeline.ts` and wires the player accordingly. No `--voiceover` flag for dev.
   - At end of phase: `dev` and `record` both play voiceover audio synced to playback. Play button works in both. Manual nav pauses correctly.
 
-- [ ] **Phase 4: Skill content**
+- [x] **Phase 4: Skill content**
   - Rewrite `packages/lib/skill/references/voiceover.md` (currently a stub) as the core voiceover reference.
   - Create `packages/lib/skill/references/voiceover/` subfolder with: `style_intake.md`, `script_writing.md`, `provider_script.md`, `sync_algorithm.md`, `animation_sync.md`.
   - Create `packages/lib/skill/references/voiceover/providers/` with: `elevenlabs.md` (TTS tag conventions, pause mechanisms, portal walkthroughs for both TTS and STT, expected output formats), `manual.md` (user-provided audio flow through ElevenLabs STT).

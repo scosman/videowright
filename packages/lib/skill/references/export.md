@@ -47,16 +47,16 @@ npx videowright record videos/my_video/timeline.ts
 ### How it works
 
 1. Boots the dev server on an auto-assigned port.
-2. Prints a URL with `?recordMode=1` (HUD hidden for clean capture).
+2. Prints a URL with `?recordMode=1` (reduced HUD for clean capture).
 3. The user opens the URL in their browser.
-4. The user navigates manually with keyboard/mouse (same controls as `dev`), optionally with external screen-capture software running.
-
-Auto-advance playback via a play button is planned for a future update. Until then, the user drives timing manually.
+4. A play button in the HUD starts auto-advance with synced audio (if a voiceover is active). The user can also navigate manually with keyboard/mouse (same controls as `dev`).
+5. The user runs their own screen-capture software over the browser window.
 
 ### Characteristics
 
 - **Mode**: interactive (same as `dev`).
 - **No MP4 output.** For MP4 export, use `render`.
+- **Audio**: plays through browser `<audio>` element when a voiceover is active.
 - **Best for**: Quick visual review, screen recording with external tools.
 
 ## Render options
@@ -67,6 +67,8 @@ Auto-advance playback via a play button is planned for a future update. Until th
 | `--height <n>` | `1080` | Video height in pixels. |
 | `--fps <n>` | `60` | Frames per second. |
 | `--output <path>` | `output.mp4` | Output file path (relative to cwd). |
+| `--voiceover <slug>` | | Use voiceover from `voiceovers/<slug>/`. |
+| `--voiceover none` | | Disable voiceover (ignore `default_voiceover`). |
 | `--verbose` | off | Show progress, frame counts, timing, ffmpeg output on error. |
 
 ### Positional argument
@@ -94,6 +96,40 @@ npx playwright install chromium
 
 `record` does **not** require Playwright -- it uses the standard dev server and the user's own browser.
 
+## Audio
+
+When a voiceover is active, `render` muxes the audio file into the output MP4 via ffmpeg:
+
+- The audio file is added as a second input to ffmpeg alongside the frame pipe.
+- Audio is encoded as AAC at 192kbps.
+- The `-shortest` flag bounds output to the shorter of video and audio.
+- The voiceover's `Timing` object drives segment advances, so video and audio durations should match.
+
+### Voiceover selection
+
+```bash
+# Use a specific voiceover
+npx videowright render --voiceover v1
+
+# Suppress voiceover (ignore default_voiceover)
+npx videowright render --voiceover none
+
+# No flag: use default_voiceover from timeline.ts if set, otherwise silent
+npx videowright render
+```
+
+If no voiceover is active (no `--voiceover` flag and no `default_voiceover`), the output is silent.
+
+### Record mode voiceover
+
+`record` also accepts `--voiceover`:
+
+```bash
+npx videowright record --voiceover v1
+```
+
+Audio plays through the browser's `<audio>` element during record mode. The play button starts auto-advance with synced audio.
+
 ## Output
 
 The default output path is `output.mp4` in the current working directory. A suggested convention is to place exports inside the video's folder at `videos/<name>/exports/`:
@@ -102,7 +138,7 @@ The default output path is `output.mp4` in the current working directory. A sugg
 npx videowright render --output videos/demo/exports/final.mp4
 ```
 
-The output is an H.264-encoded MP4 with `yuv420p` pixel format (widely compatible). Audio is not currently included -- videos are silent in the export. (Voiceover audio muxing via `--voiceover` is planned for a future update.)
+The output is an H.264-encoded MP4 with `yuv420p` pixel format (widely compatible).
 
 ## Advances validation
 
@@ -119,10 +155,6 @@ During rendering, the driver checks for coherence issues:
 
 - **Segment transitioned too early**: A segment moved to the next segment before all its advances were fired. Fix: remove unused entries from the `advances` array.
 - **Segment parked after all advances**: All advances fired but the segment is still waiting (stuck on `waitForNext`). Fix: add more entries to the `advances` array.
-
-## Audio
-
-Exported videos are currently silent. Audio muxing via `render --voiceover <slug>` is planned for a future update. Until then, if the video has voiceover intent, the VO script exists for review and external TTS/mixing in post -- it is not rendered into the MP4.
 
 ## Common gotchas
 

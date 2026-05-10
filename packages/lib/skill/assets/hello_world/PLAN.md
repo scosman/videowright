@@ -11,7 +11,7 @@
 
 ## Audio intent
 - Mode: voiceover
-- Notes: VO demonstrates the voiceover field and script workflow. Audio playback is not implemented -- script is for review and external TTS.
+- Notes: VO demonstrates the voiceover field and script workflow. Audio plays in dev and record modes; muxed into MP4 via render.
 
 ## Segment outline
 1. hello-intro -- Title card with animated entrance

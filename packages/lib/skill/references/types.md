@@ -58,8 +58,17 @@ A complete timeline definition. Default export of a video's `timeline.ts`.
 interface Timeline {
   meta: TimelineMeta;
   segments: TimelineEntry[];
+  default_timing?: Timing;
+  default_voiceover?: Voiceover;
 }
 ```
+
+| Field | Required | Purpose |
+|---|---|---|
+| `meta` | Yes | Timeline-level metadata. |
+| `segments` | Yes | Ordered array of segment entries. |
+| `default_timing` | No | Standalone timing overrides. Used when no voiceover is active. |
+| `default_voiceover` | No | Default voiceover for this video. See [voiceover.md](voiceover.md). |
 
 ### `TimelineMeta`
 
@@ -100,6 +109,44 @@ interface TimelineEntry {
 | `transition` | No | Transition when entering this segment. String name (e.g., `'fade'`) or config object. |
 
 Built-in transitions: `cut`, `fade`, `slideLeft`, `slideRight`, `slideUp`, `slideDown`.
+
+## Timing and Voiceover types
+
+### `Timing`
+
+Per-segment advance schedule overrides. Used by voiceovers and as a standalone timing layer (`default_timing` on Timeline).
+
+```ts
+type Timing = {
+  perSegment: Partial<Record<string, number[]>>;
+};
+```
+
+Keys are segment ids; values are advance times in seconds (same units as `SegmentSpec.advances`). A Timing only needs to specify segments it wants to override -- unspecified segments fall back to their own `advances`.
+
+### `Voiceover`
+
+A single voiceover for a video. Stored at `videos/<video>/voiceovers/<slug>/voiceover.ts`.
+
+```ts
+type Voiceover = {
+  audio_file: string;
+  provider: "elevenlabs" | "manual";
+  provider_timing_file?: string;
+  timing: Timing;
+  notes?: string;
+};
+```
+
+| Field | Required | Purpose |
+|---|---|---|
+| `audio_file` | Yes | Audio file path, relative to `voiceover.ts` directory. |
+| `provider` | Yes | Provider that produced the audio. |
+| `provider_timing_file` | No | Provider timing JSON path, relative to `voiceover.ts` directory. |
+| `timing` | Yes | Per-segment advance timing synced to this audio. |
+| `notes` | No | Freeform notes about this voiceover. |
+
+See [voiceover.md](voiceover.md) for the full voiceover flow and file conventions.
 
 ## Transition types
 
