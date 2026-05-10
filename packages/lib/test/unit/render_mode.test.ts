@@ -1,85 +1,83 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SegmentRunner } from "../../src/segment/SegmentRunner.js";
 import { defineSegment } from "../../src/segment/defineSegment.js";
 
 describe("SegmentRunner render mode", () => {
-	it("render_mode_hold_resolves_immediately", async () => {
+	it("render_mode_hold_uses_setTimeout_like_interactive", async () => {
+		// With the JS time shim approach, hold() uses real setTimeout in both modes.
+		// In render mode in the browser, the shim virtualizes setTimeout.
+		// In unit tests (jsdom), we use vi.useFakeTimers to simulate this.
+		vi.useFakeTimers();
+
+		let holdDone = false;
 		const segment = defineSegment({
 			id: "test-hold",
 			advances: [5.0],
 			async play(ctx) {
-				// In render mode, this should resolve immediately (no real timer)
-				const start = Date.now();
-				await ctx.hold(5000); // 5 seconds -- would be slow if it actually waited
-				const elapsed = Date.now() - start;
-				// Should have resolved in well under 100ms
-				expect(elapsed).toBeLessThan(100);
+				await ctx.hold(5000);
+				holdDone = true;
 			},
 		});
 
 		const runner = new SegmentRunner(segment, { mode: "render" });
 		const el = document.createElement("div");
 		await runner.mount(el);
-		await runner.startPlay();
+		const p = runner.startPlay();
 
+		await Promise.resolve();
+		expect(holdDone).toBe(false);
+
+		// Advance fake timers to simulate the shim advancing virtual time
+		vi.advanceTimersByTime(5000);
+		await Promise.resolve();
+		await p;
+		expect(holdDone).toBe(true);
 		expect(runner.currentState).toBe("done");
+
+		vi.useRealTimers();
 	});
 
-	it("render_mode_clock_deterministic_during_playback", async () => {
-		// Verify that clock() returns non-zero values when frames are advanced
-		// between waitForNext invocations (the realistic scenario).
-		const clockValues: number[] = [];
+	it("render_mode_clock_uses_performance_now", async () => {
+		// Clock uses performance.now() in both modes. In render mode in the
+		// browser, the shim virtualizes performance.now(). In unit tests, we
+		// mock it directly.
+		let now = 0;
+		vi.spyOn(performance, "now").mockImplementation(() => now);
 
+		let capturedClock: (() => number) | undefined;
 		const segment = defineSegment({
-			id: "test-clock-live",
-			advances: [0.5, 1.5],
+			id: "test-clock",
+			advances: [1.0, 2.0],
 			async play(ctx) {
-				clockValues.push(ctx.clock()); // before any frame advance
+				capturedClock = ctx.clock;
 				await ctx.waitForNext();
-				clockValues.push(ctx.clock()); // after some frames
-				await ctx.waitForNext();
-				clockValues.push(ctx.clock()); // after more frames
 			},
 		});
 
-		// 60fps -> frameDurationMs = 1000/60
-		const frameDurationMs = 1000 / 60;
-		const runner = new SegmentRunner(segment, {
-			mode: "render",
-			frameDurationMs,
-		});
-
+		const runner = new SegmentRunner(segment, { mode: "render" });
 		const el = document.createElement("div");
 		await runner.mount(el);
 		runner.startPlay();
 
-		// Wait a tick for play() to start and park on first waitForNext
 		await new Promise((r) => setTimeout(r, 10));
-		expect(clockValues.length).toBe(1);
-		expect(clockValues[0]).toBe(0); // no frames advanced yet
+		expect(capturedClock).toBeDefined();
+		const clock = capturedClock as () => number;
 
-		// Simulate 30 frames of rendering, then advance beat
-		for (let i = 0; i < 30; i++) {
-			runner.advanceRenderFrame();
-		}
-		runner.triggerNext(); // resolve first waitForNext
+		// At mount, clock is 0
+		expect(clock()).toBe(0);
 
-		await new Promise((r) => setTimeout(r, 10));
-		expect(clockValues.length).toBe(2);
-		expect(clockValues[1]).toBeCloseTo(30 * frameDurationMs, 1); // ~500ms
+		// Simulating virtual time advancing (what the shim does in the browser)
+		now = 500;
+		expect(clock()).toBe(500);
 
-		// Simulate 60 more frames, then advance beat
-		for (let i = 0; i < 60; i++) {
-			runner.advanceRenderFrame();
-		}
-		runner.triggerNext(); // resolve second waitForNext
+		now = 1500;
+		expect(clock()).toBe(1500);
 
-		await new Promise((r) => setTimeout(r, 10));
-		expect(clockValues.length).toBe(3);
-		expect(clockValues[2]).toBeCloseTo(90 * frameDurationMs, 1); // ~1500ms
+		runner.unmount();
+		vi.restoreAllMocks();
 	});
 
 	it("render_mode_context_reports_render", async () => {
@@ -101,21 +99,54 @@ describe("SegmentRunner render mode", () => {
 		expect(reportedMode).toBe("render");
 	});
 
-	it("interactive_mode_hold_uses_timer", async () => {
-		const segment = defineSegment({
-			id: "test-interactive-hold",
-			advances: [0.01],
-			async play(ctx) {
-				await ctx.hold(10); // 10ms -- real timer in interactive mode
-			},
+	it("render_mode_hold_and_clock_behave_same_as_interactive", async () => {
+		// This is the key behavioral test: both modes use the same
+		// underlying APIs (setTimeout, performance.now). The difference
+		// is that in render mode in the browser, the JS shim intercepts these.
+		vi.useFakeTimers();
+
+		let interactiveHoldDone = false;
+		let renderHoldDone = false;
+
+		const makeSegment = (id: string) =>
+			defineSegment({
+				id,
+				advances: [1.0],
+				async play(ctx) {
+					await ctx.hold(100);
+				},
+			});
+
+		// Interactive mode
+		const iRunner = new SegmentRunner(makeSegment("interactive-test"), { mode: "interactive" });
+		const iEl = document.createElement("div");
+		await iRunner.mount(iEl);
+		const iP = iRunner.startPlay().then(() => {
+			interactiveHoldDone = true;
 		});
 
-		const runner = new SegmentRunner(segment, { mode: "interactive" });
-		const el = document.createElement("div");
-		await runner.mount(el);
-		await runner.startPlay();
+		// Render mode
+		const rRunner = new SegmentRunner(makeSegment("render-test"), { mode: "render" });
+		const rEl = document.createElement("div");
+		await rRunner.mount(rEl);
+		const rP = rRunner.startPlay().then(() => {
+			renderHoldDone = true;
+		});
 
-		expect(runner.currentState).toBe("done");
+		await Promise.resolve();
+		expect(interactiveHoldDone).toBe(false);
+		expect(renderHoldDone).toBe(false);
+
+		vi.advanceTimersByTime(100);
+		await Promise.resolve();
+		await Promise.resolve();
+		await iP;
+		await rP;
+
+		expect(interactiveHoldDone).toBe(true);
+		expect(renderHoldDone).toBe(true);
+
+		vi.useRealTimers();
 	});
 
 	it("render_mode_waitForNext_still_requires_trigger", async () => {
@@ -147,29 +178,5 @@ describe("SegmentRunner render mode", () => {
 
 		await new Promise((r) => setTimeout(r, 10));
 		expect(waitResolved).toBe(true);
-	});
-
-	it("advanceRenderFrame_increments_clock_monotonically", () => {
-		const segment = defineSegment({
-			id: "test-frame-counter",
-			advances: [1.0],
-			async play(ctx) {
-				await ctx.waitForNext();
-			},
-		});
-
-		const frameDurationMs = 1000 / 30; // 30fps
-		const runner = new SegmentRunner(segment, {
-			mode: "render",
-			frameDurationMs,
-		});
-
-		// Before mount, advance should still work (it just increments the counter)
-		runner.advanceRenderFrame();
-		runner.advanceRenderFrame();
-		runner.advanceRenderFrame();
-		// 3 frames at 30fps = 100ms
-		// We can't test clock() without mounting, but we verify the method doesn't throw
-		expect(typeof runner.advanceRenderFrame).toBe("function");
 	});
 });

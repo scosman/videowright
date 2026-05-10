@@ -406,10 +406,14 @@ export class Player {
 	 * Only valid when the player was constructed with renderMode: true.
 	 *
 	 * This method:
-	 * 1. Advances the active runner's render frame counter (for deterministic clock).
-	 * 2. Tries to advance a beat within the current segment.
-	 * 3. If the segment is exhausted, transitions to the next segment (awaiting completion).
-	 * 4. Returns false when the timeline is fully exhausted.
+	 * 1. Tries to advance a beat within the current segment.
+	 * 2. If the segment is exhausted, starts a transition to the next segment.
+	 * 3. Returns false when the timeline is fully exhausted.
+	 *
+	 * Transitions are NOT awaited — WAAPI animations are driven by the JS time
+	 * shim's virtual clock, so they complete as the render driver advances time.
+	 * Awaiting transition completion here would deadlock because the transition's
+	 * `.finished` promises only resolve when the shim advances the clock.
 	 */
 	async renderAdvance(): Promise<boolean> {
 		if (!this.options.renderMode) {
@@ -421,10 +425,6 @@ export class Player {
 
 		const slot = this.getCurrentSlot();
 		if (!slot.runner) return false;
-
-		// Advance the deterministic frame counter on the active runner.
-		// This makes clock() return incrementing values between beats.
-		slot.runner.advanceRenderFrame();
 
 		// Try to advance a beat within the current segment
 		const consumed = slot.runner.triggerNext();
@@ -440,11 +440,15 @@ export class Player {
 			return false;
 		}
 
-		// transitionTo is fully async -- we await it so the caller only gets
-		// control back once the transition animation is complete and the new
-		// segment is mounted and playing.
-		await this.transitionTo(nextIndex, "forward");
-		return this.currentState === "playing";
+		// Start the transition but do NOT await it. WAAPI animations are driven
+		// by the virtual clock shim — awaiting here would deadlock because the
+		// transition's .finished promises only resolve when __VW_ADVANCE_CLOCK__
+		// is called by the render driver.
+		this.transitionTo(nextIndex, "forward").catch((e) => {
+			const segId = this.timeline?.segments[nextIndex]?.id ?? "unknown";
+			this.handleLifecycleError(segId, e);
+		});
+		return true;
 	}
 
 	// --- Private: navigation ---
@@ -592,10 +596,7 @@ export class Player {
 
 			// Create runner and mount
 			const runnerMode = this.options.renderMode ? "render" : "interactive";
-			const runner = new SegmentRunner(segment, {
-				mode: runnerMode,
-				frameDurationMs: this.options.renderMode ? 1000 / this.options.fps : undefined,
-			});
+			const runner = new SegmentRunner(segment, { mode: runnerMode });
 			incomingSlot.runner = runner;
 			incomingSlot.timelineIndex = targetIndex;
 
@@ -672,7 +673,6 @@ export class Player {
 		const runner = new SegmentRunner(segment, {
 			mode: runnerMode,
 			seekBeats: seekBeat,
-			frameDurationMs: this.options.renderMode ? 1000 / this.options.fps : undefined,
 		});
 
 		const slot = this.getCurrentSlot();
@@ -792,7 +792,6 @@ export class Player {
 			const runner = new SegmentRunner(segment, {
 				mode: runnerMode,
 				seekBeats: beat,
-				frameDurationMs: this.options.renderMode ? 1000 / this.options.fps : undefined,
 			});
 
 			// Clear stale WAAPI transition animations before reuse

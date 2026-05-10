@@ -33,6 +33,7 @@ export interface PlaywrightPage {
 	screenshot(opts?: Record<string, unknown>): Promise<Buffer>;
 	evaluate<T>(fn: (() => T) | string): Promise<T>;
 	waitForFunction(fn: (() => unknown) | string, opts?: Record<string, unknown>): Promise<unknown>;
+	addInitScript(opts: { content: string }): Promise<void>;
 	on(event: string, handler: (...args: unknown[]) => void): void;
 	close(): Promise<void>;
 }

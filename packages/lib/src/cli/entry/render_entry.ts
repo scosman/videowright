@@ -30,6 +30,8 @@ declare global {
 		__VW_RENDER_ERROR__: string | null;
 		__VW_SEGMENT_ADVANCES__: Record<string, number[]>;
 		__VW_SEGMENTS_LOADED__: boolean;
+		__VW_ENGAGE_VIRTUAL_TIME__: () => void;
+		__VW_ADVANCE_CLOCK__: (deltaMs: number) => void;
 	}
 }
 

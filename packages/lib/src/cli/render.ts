@@ -1,20 +1,23 @@
 /**
- * `videowright render` -- deterministic CDP-driven frame export.
+ * `videowright render` -- deterministic JS-injection-driven frame export.
  *
- * The player runs in render mode: no wall-clock dependence, controlled
- * frame-by-frame advancement via CDP. Each frame is captured as a PNG
- * screenshot and piped to ffmpeg for encoding.
+ * The player runs in render mode with a JS time shim injected into the page
+ * BEFORE navigation via `page.addInitScript()`. The shim virtualizes:
+ * - Date, Date.now, performance.now
+ * - setTimeout, setInterval, clearTimeout, clearInterval
+ * - requestAnimationFrame, cancelAnimationFrame
+ * - Element.prototype.animate (WAAPI)
  *
- * Timing is driven by each segment's `advances` array (segment-relative seconds).
- * The render driver converts advances to frame counts and fires triggerNext()
- * at the correct frame boundaries.
+ * The render driver advances the virtual clock by `frameMs` per frame,
+ * firing timers and RAF callbacks deterministically. WAAPI animations
+ * are paused and driven by explicit `currentTime` updates.
  *
  * Frames are byte-identical across runs because:
- * - hold() resolves immediately (no real timers)
- * - clock() returns deterministic values based on frame count
- * - The render driver controls advancement, not real time
- * - renderAdvance() is fully async -- it awaits transition completion
- *   before returning, so the caller never captures a mid-transition frame
+ * - All time APIs return virtual time controlled by the driver
+ * - hold() uses setTimeout, which is virtualized
+ * - clock() uses performance.now, which is virtualized
+ * - RAF callbacks fire exactly once per render frame
+ * - WAAPI animations advance by exactly frameMs per frame
  */
 
 import { existsSync } from "node:fs";
@@ -29,6 +32,7 @@ import { discoverProject } from "./discover_project.js";
 import { UserError } from "./errors.js";
 import { buildFfmpegArgs, findFfmpeg, spawnFfmpeg, writeWithBackpressure } from "./ffmpeg.js";
 import { ensurePlaywright } from "./playwright_check.js";
+import { TIME_SHIM_SOURCE } from "./time_shim.js";
 import { loadModule } from "./ts_loader.js";
 
 export interface RenderOptions {
@@ -92,6 +96,7 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	const height = opts.height ?? 1080;
 	const fps = opts.fps ?? 60;
 	const output = opts.output ?? "output.mp4";
+	const frameMs = 1000 / fps;
 
 	// 1. Validate dependencies
 	const ffmpegPath = findFfmpeg();
@@ -184,6 +189,8 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 		console.log(`output: ${output}`);
 	}
 
+	console.log("Starting render... this may take a while.");
+
 	// 3. Boot Vite dev server with render entry
 	const { createServer } = await import("vite");
 	const { findPackageRoot, fullReloadPlugin, segmentDiscoveryPlugin } = await import(
@@ -265,7 +272,7 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	process.on("SIGTERM", onSignal);
 
 	try {
-		// 4. Launch headless browser
+		// 4. Launch headless browser (no special CDP flags)
 		const browser = await pw.chromium.launch({ headless: true });
 		browserRef = browser;
 		const context = await browser.newContext({
@@ -273,6 +280,9 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 			deviceScaleFactor: 1,
 		});
 		const page = await context.newPage();
+
+		// Inject time shim BEFORE navigation so it runs before any user code
+		await page.addInitScript({ content: TIME_SHIM_SOURCE });
 
 		// Surface page errors
 		const pageErrors: Error[] = [];
@@ -283,7 +293,7 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 		});
 
 		try {
-			await page.goto(renderUrl, { waitUntil: "networkidle" } as Record<string, unknown>);
+			await page.goto(renderUrl, { waitUntil: "domcontentloaded" } as Record<string, unknown>);
 
 			// Wait for render mode to be ready
 			await page.waitForFunction("window.__VW_RENDER_READY__ === true", {
@@ -295,6 +305,10 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 			if (bootError) {
 				throw new UserError(`Render boot failed: ${bootError}`);
 			}
+
+			// Switch time shim from passthrough (real timers for boot) to
+			// driver-controlled mode (virtual timers for deterministic capture).
+			await page.evaluate("window.__VW_ENGAGE_VIRTUAL_TIME__()");
 
 			// Retrieve advances from the browser context (segments loaded via Vite,
 			// which can handle CSS/JSON/image imports that Node's tsImport cannot)
@@ -373,9 +387,11 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 
 			let frameCount = 0;
 			let scheduleIdx = 0;
+			const progressIntervalFrames = Math.round(5 * fps); // every 5s of video
+			let lastProgressFrame = 0;
 
 			try {
-				// 6. Frame-by-frame render loop driven by advances schedule
+				// 6. Frame-by-frame render loop
 				while (frameCount < totalFrames) {
 					if (ffmpegErrors.length > 0) {
 						throw new UserError(`ffmpeg stdin error: ${ffmpegErrors[0].message}`);
@@ -394,7 +410,8 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 					while (scheduleIdx < schedule.length && schedule[scheduleIdx].globalFrame <= frameCount) {
 						const entry = schedule[scheduleIdx];
 
-						// Fire renderAdvance
+						// Fire renderAdvance (starts transition, does not await completion --
+						// WAAPI transitions are driven by the shim's clock advance)
 						const hasMore = (await page.evaluate("window.__VW_RENDER_ADVANCE__()")) as boolean;
 
 						// Check for errors after advance
@@ -419,7 +436,6 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 						if (entry.isLast && !hasMore && scheduleIdx < schedule.length - 1) {
 							// Last advance for this segment but schedule has more segments
 							// and renderAdvance returned false -- timeline ended too early
-							// This shouldn't happen with correct advances; just log
 							if (verbose) {
 								console.warn(
 									`Warning: renderAdvance returned false at segment "${entry.segmentId}" advance ${entry.advanceIndex}`,
@@ -430,15 +446,22 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 						scheduleIdx++;
 					}
 
+					// Advance virtual clock by one frame's worth of time.
+					// This fires pending timers, RAF callbacks, and updates WAAPI animations.
+					await page.evaluate(`window.__VW_ADVANCE_CLOCK__(${frameMs})`);
+
 					// Capture frame
 					const screenshot = (await page.screenshot({ type: "png" })) as Buffer;
 					if (!ffmpegProc.stdin?.writable) break;
 					await writeWithBackpressure(ffmpegProc.stdin, screenshot);
 					frameCount++;
 
-					if (verbose && frameCount % 10 === 0) {
-						const pct = Math.min(100, Math.round((frameCount / totalFrames) * 100));
-						process.stdout.write(`\r  frames: ${frameCount}/${totalFrames} (${pct}%)`);
+					// Progress output every 5s of rendered video
+					if (frameCount - lastProgressFrame >= progressIntervalFrames) {
+						const renderedSec = (frameCount / fps).toFixed(1);
+						const totalSec = (totalFrames / fps).toFixed(1);
+						console.log(`Rendered ${renderedSec}s / ${totalSec}s`);
+						lastProgressFrame = frameCount;
 					}
 				}
 
