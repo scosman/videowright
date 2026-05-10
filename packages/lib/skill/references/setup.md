@@ -92,9 +92,9 @@ If the file already exists (partial setup), only update `defaultStyle`.
 
 Tell the user exactly:
 
-> Setup complete! Now let's create your first video -- tell me what you want to make. Describe the topic, audience, or purpose, and I'll handle the rest. Editing happens through chat: I write the code, you give direction.
+> Project configured. Starting first video.
 
-Then dispatch to [new_video.md](new_video.md) for the first real video. Do **not** ask for a video name here -- `new_video.md` handles that as part of its own intake flow.
+Then immediately load [new_video.md](new_video.md) and follow its intake flow. Do **not** add any transition question or suggestion between setup and new_video — `new_video.md` handles all intake (purpose, audience, audio intent, etc.) as part of its own flow.
 
 ## Edge cases
 

@@ -288,13 +288,13 @@ Replace `<subfolder>` with the actual sub-folder name chosen in Step 1.
 
 ---
 
-## Step 7: Final report
+## Step 7: Continue to setup
 
 Tell the user exactly:
 
-> Done. Installed Videowright for [list of agents]. Try:
-> - "Make me a 30-second project intro video" -- to scaffold a video.
-> - `npx videowright dev` -- to preview.
+> Videowright installed. Now configuring the project.
+
+Then immediately load [references/setup.md](../references/setup.md) and follow it. Do **not** wait for user input between install and setup — proceed directly.
 
 ---
 

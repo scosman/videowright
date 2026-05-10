@@ -214,13 +214,13 @@ The marked-region content is concise. Sections:
 
 The exact wording is finalized once and lives in the install Markdown verbatim (no agent-side rewriting). This keeps behavior consistent across agents/models.
 
-### Step 7: Final state report
+### Step 7: Continue to setup
 
-The agent reports a short summary back to the user:
+The agent reports a terse confirmation and chains directly into setup:
 
-> Done. Installed Videowright for <agents>. Try:
-> - "Make me a 30-second project intro video" — to scaffold a video.
-> - `npx videowright dev` — to preview.
+> Videowright installed. Now configuring the project.
+
+The agent then immediately loads `references/setup.md` and continues without waiting for user input. Install → setup → new_video is a single unbroken chain.
 
 ---
 
