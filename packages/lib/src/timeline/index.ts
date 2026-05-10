@@ -1,12 +1,11 @@
 import type { Config, Segment, Timeline, Transition } from "../types.js";
 
-// Re-export voiceover-related helpers
+// Re-export browser-safe helpers only.
+// Node-only helpers (loadVoiceover, validateTiming, validateVoiceover) are
+// imported directly from their own modules by CLI code to avoid pulling
+// node:fs into browser bundles.
 export { resolveTiming } from "./resolveTiming.js";
 export type { ResolvedTiming, ResolveTimingArgs, TimingSegment } from "./resolveTiming.js";
-export { validateTiming, validateVoiceover } from "./validateTiming.js";
-export type { ValidationResult } from "./validateTiming.js";
-export { loadVoiceover } from "./loadVoiceover.js";
-export type { LoadVoiceoverArgs, LoadVoiceoverResult } from "./loadVoiceover.js";
 
 // ---- Loader map types ----
 
