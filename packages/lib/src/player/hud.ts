@@ -12,6 +12,12 @@ export interface HudState {
 	mode: "interactive" | "render";
 	ended: boolean;
 	error?: { segmentId: string; message: string; stack?: string };
+	playbackMode?: "idle" | "playing";
+	recordMode?: boolean;
+}
+
+export interface HudOptions {
+	onPlayToggle?: () => void;
 }
 
 export interface Hud {
@@ -110,6 +116,24 @@ const HUD_STYLES = `
 	margin: 4px;
 }
 .vw-hud-btn:hover { background: rgba(255,255,255,0.3); }
+.vw-hud-play {
+	background: rgba(255,255,255,0.15);
+	border: 1px solid rgba(255,255,255,0.35);
+	color: #fff;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	cursor: pointer;
+	font-size: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: auto;
+	padding: 0;
+	line-height: 1;
+	flex-shrink: 0;
+}
+.vw-hud-play:hover { background: rgba(255,255,255,0.3); }
 `;
 
 function formatTime(ms: number): string {
@@ -140,13 +164,28 @@ function releaseHudStyles(): void {
 	}
 }
 
-export function createHud(): Hud {
+export function createHud(options?: HudOptions): Hud {
 	const el = document.createElement("div");
 	el.className = "vw-hud";
 
 	acquireHudStyles();
 
 	let isVisible = true;
+
+	// Persistent play button -- created once, updated on each render.
+	// Avoids recreating and re-attaching listeners on every update() call.
+	let playBtn: HTMLButtonElement | null = null;
+	if (options?.onPlayToggle) {
+		playBtn = document.createElement("button");
+		playBtn.className = "vw-hud-play";
+		playBtn.textContent = "▶";
+		playBtn.title = "Play";
+		const handler = options.onPlayToggle;
+		playBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			handler();
+		});
+	}
 
 	const hud: Hud = {
 		el,
@@ -172,6 +211,19 @@ export function createHud(): Hud {
 
 			const inner = document.createElement("div");
 			inner.className = "vw-hud-inner";
+
+			// Play/pause button (shown in dev and record modes, not render)
+			if (state.mode !== "render" && playBtn) {
+				playBtn.textContent = state.playbackMode === "playing" ? "⏸" : "▶";
+				playBtn.title = state.playbackMode === "playing" ? "Pause" : "Play";
+				inner.appendChild(playBtn);
+			}
+
+			// In record mode, show only play button and end-of-timeline badge
+			if (state.recordMode) {
+				el.appendChild(inner);
+				return;
+			}
 
 			addItem(inner, "segment", state.segmentId);
 			addItem(inner, "beat", String(state.beat));

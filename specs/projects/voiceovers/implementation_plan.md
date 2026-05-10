@@ -26,7 +26,7 @@ Five phases. Phase 1 is the `record` cleanup — a prerequisite that makes audio
   - Integration test: `render_audio.test.ts` — fixture timeline + fixture mp3 → render → ffprobe confirms audio stream.
   - At end of phase: `render --voiceover <slug>` produces an mp4 with the voiceover audio muxed in.
 
-- [ ] **Phase 3: Player audio + HUD play button + `record` voiceover wiring**
+- [x] **Phase 3: Player audio + HUD play button + `record` voiceover wiring**
   - Player gains `<audio>` element ownership in `packages/lib/src/player/index.ts` (created when active voiceover present).
   - Implement `idle` ↔ `playing` state machine. Auto-advance loop runs only in `playing`. Manual nav drops to `idle` and pauses audio. Drift tolerance 200ms.
   - HUD play button in `packages/lib/src/player/hud.ts`. Visible in `dev` and `record` modes; hidden under `?hideHud=1` (render).

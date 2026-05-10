@@ -18,6 +18,15 @@ export interface PlayerOptions {
 	renderMode?: boolean;
 	/** Frames per second for render mode clock. Default 60. */
 	fps?: number;
+	/** Vite-served audio file URL for voiceover playback (dev/record only). */
+	audioFile?: string;
+	/** Record mode: reduced HUD showing only play button and end-of-timeline. */
+	recordMode?: boolean;
+	/**
+	 * Fully resolved per-segment timing for auto-advance.
+	 * Keys are segment ids; values are advance times in seconds (segment-relative).
+	 */
+	resolvedTiming?: Record<string, number[]>;
 }
 
 type PlayerState = "idle" | "loading" | "playing" | "transitioning" | "ended" | "errored";
@@ -31,7 +40,14 @@ interface SlotEntry {
 export class Player {
 	private host: HTMLElement;
 	private hostWrapper: HTMLDivElement;
-	private options: { hud: boolean; renderMode: boolean; fps: number };
+	private options: {
+		hud: boolean;
+		renderMode: boolean;
+		fps: number;
+		audioFile?: string;
+		recordMode: boolean;
+		resolvedTiming?: Record<string, number[]>;
+	};
 	private state: PlayerState = "idle";
 
 	private timeline: Timeline | null = null;
@@ -50,12 +66,22 @@ export class Player {
 	private started = false;
 	private transitioning = false;
 
+	// Audio and playback mode state
+	private audioEl: HTMLAudioElement | null = null;
+	private _playbackMode: "idle" | "playing" = "idle";
+	private autoAdvanceTimer: ReturnType<typeof setTimeout> | null = null;
+	/** Drift tolerance in ms: snap audio if it drifts beyond this threshold. */
+	private static readonly DRIFT_TOLERANCE_MS = 200;
+
 	constructor(host: HTMLElement, options?: PlayerOptions) {
 		this.host = host;
 		this.options = {
 			hud: options?.hud ?? !options?.renderMode,
 			renderMode: options?.renderMode ?? false,
 			fps: options?.fps ?? 60,
+			audioFile: options?.audioFile,
+			recordMode: options?.recordMode ?? false,
+			resolvedTiming: options?.resolvedTiming,
 		};
 
 		this.hostWrapper = document.createElement("div");
@@ -75,7 +101,17 @@ export class Player {
 		this.hostWrapper.appendChild(slotElA);
 		this.hostWrapper.appendChild(slotElB);
 
-		this.hud = createHud();
+		// Create audio element if an audio file is provided (not in render mode)
+		if (this.options.audioFile && !this.options.renderMode) {
+			this.audioEl = document.createElement("audio");
+			this.audioEl.preload = "auto";
+			this.audioEl.src = this.options.audioFile;
+			// Keep the element in the DOM but hidden
+			this.audioEl.style.display = "none";
+			this.hostWrapper.appendChild(this.audioEl);
+		}
+
+		this.hud = createHud({ onPlayToggle: () => this.togglePlayback() });
 		this.hostWrapper.appendChild(this.hud.el);
 
 		this.host.appendChild(this.hostWrapper);
@@ -155,6 +191,14 @@ export class Player {
 	}
 
 	destroy(): void {
+		// Stop auto-advance and audio
+		this.cancelAutoAdvance();
+		if (this.audioEl) {
+			this.audioEl.pause();
+			this.audioEl.remove();
+			this.audioEl = null;
+		}
+
 		// Unmount current runner
 		const current = this.getCurrentSlot();
 		if (current.runner) {
@@ -203,6 +247,158 @@ export class Player {
 
 	get isTransitioning(): boolean {
 		return this.transitioning;
+	}
+
+	get playbackMode(): "idle" | "playing" {
+		return this._playbackMode;
+	}
+
+	// --- Playback mode (auto-advance with audio) ---
+
+	togglePlayback(): void {
+		if (this.options.renderMode) return;
+		if (this.state === "errored") return;
+		if (this.transitioning) return;
+
+		if (this._playbackMode === "idle") {
+			this.enterPlaying();
+		} else {
+			this.enterIdle();
+		}
+	}
+
+	private enterPlaying(): void {
+		if (this.state === "ended") return;
+		this._playbackMode = "playing";
+
+		// Sync audio to current logical position and play
+		if (this.audioEl) {
+			const logicalTime = this.computeLogicalAudioTime();
+			this.audioEl.currentTime = logicalTime;
+			this.audioEl.play().catch(() => {
+				// Browser may block autoplay; the user clicked play so it should work.
+				// If it fails, we still auto-advance silently.
+			});
+		}
+
+		this.scheduleNextAutoAdvance();
+		this.updateHud();
+	}
+
+	private enterIdle(): void {
+		this._playbackMode = "idle";
+		this.cancelAutoAdvance();
+
+		if (this.audioEl) {
+			this.audioEl.pause();
+		}
+
+		this.updateHud();
+	}
+
+	private cancelAutoAdvance(): void {
+		if (this.autoAdvanceTimer !== null) {
+			clearTimeout(this.autoAdvanceTimer);
+			this.autoAdvanceTimer = null;
+		}
+	}
+
+	/**
+	 * Compute the logical audio time based on where we are in the timeline.
+	 * Walks the resolved timing from segment 0 up to the current segment + beat.
+	 */
+	private computeLogicalAudioTime(): number {
+		if (!this.timeline || !this.options.resolvedTiming) return 0;
+
+		const currentIndex = this.getCurrentSlot().timelineIndex;
+		const currentBeat = this.getCurrentSlot().runner?.currentBeat ?? 0;
+		let elapsed = 0;
+
+		for (let i = 0; i < this.timeline.segments.length; i++) {
+			const segId = this.timeline.segments[i].id;
+			const advances = this.options.resolvedTiming[segId];
+
+			if (i < currentIndex) {
+				if (advances && advances.length > 0) {
+					elapsed += advances[advances.length - 1];
+				}
+			} else if (i === currentIndex) {
+				if (advances && currentBeat > 0 && currentBeat <= advances.length) {
+					elapsed += advances[currentBeat - 1];
+				}
+				break;
+			}
+		}
+
+		return elapsed;
+	}
+
+	/**
+	 * Compute the time until the next advance in the current segment, then schedule it.
+	 */
+	private scheduleNextAutoAdvance(): void {
+		if (this._playbackMode !== "playing") return;
+		if (this.state === "ended" || this.state === "errored") return;
+		if (!this.timeline || !this.options.resolvedTiming) return;
+
+		const slot = this.getCurrentSlot();
+		if (!slot.runner) return;
+
+		const segId = this.timeline.segments[slot.timelineIndex]?.id;
+		if (!segId) return;
+
+		const advances = this.options.resolvedTiming[segId];
+		if (!advances || advances.length === 0) return;
+
+		const currentBeat = slot.runner.currentBeat;
+
+		// Next advance index = currentBeat (0-based: beat 0 means advance[0] fires next)
+		if (currentBeat >= advances.length) {
+			// Segment exhausted -- this shouldn't happen if handleNext transitions properly
+			return;
+		}
+
+		// Time of the current beat (start of this beat) and the next advance
+		const currentBeatTime = currentBeat > 0 ? advances[currentBeat - 1] : 0;
+		const nextAdvanceTime = advances[currentBeat];
+		const delaySeconds = nextAdvanceTime - currentBeatTime;
+
+		if (delaySeconds <= 0) {
+			// Fire immediately
+			this.autoAdvanceTick();
+			return;
+		}
+
+		this.autoAdvanceTimer = setTimeout(() => {
+			this.autoAdvanceTick();
+		}, delaySeconds * 1000);
+	}
+
+	private async autoAdvanceTick(): Promise<void> {
+		this.autoAdvanceTimer = null;
+		if (this._playbackMode !== "playing") return;
+		if (this.state === "ended" || this.state === "errored") return;
+
+		// Fire next advance (may transition state to "ended")
+		await this.handleNext();
+
+		// Check audio drift after the advance so the expected time reflects
+		// the post-advance position, not the pre-advance one.
+		if (this.audioEl && this.options.resolvedTiming) {
+			const expectedTime = this.computeLogicalAudioTime();
+			const actualTime = this.audioEl.currentTime;
+			const drift = Math.abs(actualTime - expectedTime);
+			if (drift > Player.DRIFT_TOLERANCE_MS / 1000) {
+				this.audioEl.currentTime = expectedTime;
+			}
+		}
+
+		// If still playing, schedule the next one.
+		// Cast needed: TS narrows this.state from the early guard, but
+		// handleNext() can mutate it to "ended" at runtime.
+		if (this._playbackMode === "playing" && (this.state as PlayerState) !== "ended") {
+			this.scheduleNextAutoAdvance();
+		}
 	}
 
 	/**
@@ -259,12 +455,23 @@ export class Player {
 		if (typeof cmd === "string") {
 			switch (cmd) {
 				case "next":
+					// Manual nav pauses playback
+					if (this._playbackMode === "playing") {
+						this.enterIdle();
+					}
 					await this.handleNext();
 					break;
 				case "prev":
+					// Manual nav pauses playback
+					if (this._playbackMode === "playing") {
+						this.enterIdle();
+					}
 					await this.handlePrev();
 					break;
 				case "restart":
+					if (this._playbackMode === "playing") {
+						this.enterIdle();
+					}
 					await this.handleRestart();
 					break;
 				case "toggleHud":
@@ -272,6 +479,9 @@ export class Player {
 					break;
 			}
 		} else if (cmd.kind === "jumpTo") {
+			if (this._playbackMode === "playing") {
+				this.enterIdle();
+			}
 			await this.jumpToIndex(cmd.index);
 		}
 	}
@@ -297,6 +507,10 @@ export class Player {
 		const nextIndex = slot.timelineIndex + 1;
 		if (!this.timeline || nextIndex >= this.timeline.segments.length) {
 			this.state = "ended";
+			// Stop audio and playback on end
+			if (this._playbackMode === "playing") {
+				this.enterIdle();
+			}
 			this.updateHud();
 			this.broadcastState();
 			return;
@@ -542,6 +756,11 @@ export class Player {
 
 		if (sameBeat) return;
 
+		// External hash change is manual nav -- pause playback
+		if (this._playbackMode === "playing") {
+			this.enterIdle();
+		}
+
 		if (this.state === "ended") {
 			this.state = "playing";
 		}
@@ -659,6 +878,8 @@ export class Player {
 			voiceover,
 			mode: this.options.renderMode ? "render" : "interactive",
 			ended: this.state === "ended",
+			playbackMode: this._playbackMode,
+			recordMode: this.options.recordMode,
 		};
 
 		this.hud.update(hudState);

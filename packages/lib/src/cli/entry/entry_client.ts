@@ -7,6 +7,12 @@
 // These globals are injected by Vite's define config in dev.ts
 declare const __VW_TIMELINE_PATH__: string;
 declare const __VW_CONSUMER_ROOT__: string;
+// Optional: injected by record.ts when --voiceover is used, or by dev.ts
+// for default_voiceover audio path resolution
+declare const __VW_AUDIO_FILE__: string | undefined;
+declare const __VW_RESOLVED_TIMING__: Record<string, number[]> | undefined;
+// Injected by record.ts when --voiceover none is used to suppress default_voiceover
+declare const __VW_VOICEOVER_NONE__: boolean | undefined;
 
 // Virtual module provided by segmentDiscoveryPlugin in dev.ts.
 // It exports a Record<string, () => Promise<Module>> with explicit dynamic imports
@@ -22,6 +28,7 @@ import {
 	validateTimeline,
 } from "../../index.js";
 import type { Config, Timeline } from "../../index.js";
+import { resolveTiming } from "../../timeline/resolveTiming.js";
 
 // Extend window for ready signals used by render command (__VW_PLAYER_READY__,
 // __VW_SEGMENT_ADVANCES__) and internally for segment-load tracking
@@ -102,12 +109,56 @@ async function boot() {
 	if (!host) throw new Error("No #player-host element found");
 
 	// Support ?hideHud=1 for render screenshots (HUD must not appear in rendered frames)
-	// Support ?recordMode=1 for record mode (reduced HUD for external screen capture;
-	// Phase 3 will differentiate this from hideHud by showing a play button)
+	// Support ?recordMode=1 for record mode (reduced HUD showing only play button)
 	const params = new URLSearchParams(window.location.search);
 	const hideHud = params.has("hideHud");
 	const recordMode = params.has("recordMode");
-	const playerOpts = hideHud || recordMode ? { hud: false } : undefined;
+
+	// Resolve audio and timing for voiceover playback.
+	// The CLI may inject __VW_AUDIO_FILE__ (dev.ts for default_voiceover, or
+	// record.ts for --voiceover <slug>) and __VW_RESOLVED_TIMING__ (record.ts only).
+	// __VW_VOICEOVER_NONE__ suppresses default_voiceover (record --voiceover none).
+	let audioFile: string | undefined;
+	let resolvedTimingMap: Record<string, number[]> | undefined;
+
+	const voiceoverNone =
+		typeof __VW_VOICEOVER_NONE__ !== "undefined" ? __VW_VOICEOVER_NONE__ : false;
+	const injectedAudio = typeof __VW_AUDIO_FILE__ !== "undefined" ? __VW_AUDIO_FILE__ : undefined;
+	const injectedTiming =
+		typeof __VW_RESOLVED_TIMING__ !== "undefined" ? __VW_RESOLVED_TIMING__ : undefined;
+
+	if (!voiceoverNone && injectedAudio) {
+		audioFile = injectedAudio;
+	}
+
+	if (injectedTiming) {
+		resolvedTimingMap = injectedTiming;
+	} else {
+		// Build resolved timing from segment advances + timeline defaults.
+		// When voiceover is suppressed, pass no voiceover so resolveTiming
+		// falls back to default_timing or segment advances.
+		const segments: Array<{ id: string; advances: number[] }> = [];
+		for (const entry of finalTimeline.segments) {
+			const advances = advancesMap[entry.id];
+			if (advances) {
+				segments.push({ id: entry.id, advances });
+			}
+		}
+
+		const resolved = resolveTiming({
+			segments,
+			defaultTiming: finalTimeline.default_timing,
+			defaultVoiceover: voiceoverNone ? undefined : finalTimeline.default_voiceover,
+		});
+		resolvedTimingMap = resolved.perSegment;
+	}
+
+	const playerOpts = {
+		hud: !hideHud,
+		recordMode,
+		audioFile,
+		resolvedTiming: resolvedTimingMap,
+	};
 	const player = new Player(host, playerOpts);
 	await player.load(finalTimeline, segmentLoaders, transitionLoaders);
 	await player.start();

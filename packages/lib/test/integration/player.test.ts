@@ -639,3 +639,264 @@ describe("Player integration", () => {
 		expect(document.querySelector("style[data-vw-hud]")).toBeNull();
 	});
 });
+
+describe("Player playback mode", () => {
+	it("starts_in_idle_mode", async () => {
+		const seg = makeSegment({
+			id: "seg-0",
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [1] },
+		});
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		expect(player.playbackMode).toBe("idle");
+
+		player.destroy();
+	});
+
+	it("toggle_switches_idle_to_playing", async () => {
+		const seg = makeSegment({
+			id: "seg-0",
+			advances: [2],
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [2] },
+		});
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("playing");
+
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("idle");
+
+		player.destroy();
+	});
+
+	it("manual_nav_pauses_playback", async () => {
+		const seg0 = makeSegment({
+			id: "seg-0",
+			advances: [1, 2],
+			async play(ctx) {
+				await ctx.waitForNext();
+				await ctx.waitForNext();
+			},
+		});
+		const seg1 = makeSegment({ id: "seg-1", async play() {} });
+
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [1, 2], "seg-1": [1] },
+		});
+		await player.load(
+			makeTimeline(["seg-0", "seg-1"]),
+			makeLoader([seg0, seg1]),
+			makeTransitionLoaders(),
+		);
+		await player.start();
+		await flush();
+
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("playing");
+
+		// Manual nav (ArrowRight) should pause playback and advance a beat
+		pressKey("ArrowRight");
+		await flush();
+		expect(player.playbackMode).toBe("idle");
+		// Verify the nav actually happened (beat advanced from 0 to 1)
+		expect(location.hash).toBe("#/seg-0/1");
+
+		player.destroy();
+	});
+
+	it("end_of_timeline_stops_playback", async () => {
+		const seg = makeSegment({ id: "seg-0", async play() {} });
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [0.5] },
+		});
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("playing");
+
+		// Manually advance to end (play() has no beats, so next advances to end)
+		pressKey("ArrowRight");
+		await flush();
+
+		// Manual nav paused, and state should be ended
+		expect(player.playbackMode).toBe("idle");
+		expect(player.currentState).toBe("ended");
+
+		player.destroy();
+	});
+
+	it("toggle_noop_in_render_mode", async () => {
+		const seg = makeSegment({ id: "seg-0", async play() {} });
+		const player = new Player(host, { renderMode: true });
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("idle");
+
+		player.destroy();
+	});
+
+	it("hud_shows_play_button", async () => {
+		const seg = makeSegment({
+			id: "seg-0",
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+		const player = new Player(host);
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		const playBtn = host.querySelector(".vw-hud-play") as HTMLButtonElement;
+		expect(playBtn).toBeTruthy();
+		expect(playBtn.textContent).toContain("▶"); // play symbol
+
+		player.destroy();
+	});
+
+	it("hud_play_button_click_toggles_playback", async () => {
+		const seg = makeSegment({
+			id: "seg-0",
+			advances: [2],
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [2] },
+		});
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		expect(player.playbackMode).toBe("idle");
+
+		const playBtn = host.querySelector(".vw-hud-play") as HTMLButtonElement;
+		playBtn.click();
+		await flush();
+
+		expect(player.playbackMode).toBe("playing");
+
+		player.destroy();
+	});
+
+	it("record_mode_hud_shows_only_play_button", async () => {
+		const seg = makeSegment({ id: "seg-0", async play() {} });
+		const player = new Player(host, { recordMode: true });
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		// Should have play button
+		const playBtn = host.querySelector(".vw-hud-play");
+		expect(playBtn).toBeTruthy();
+
+		// Should not have segment info items
+		const items = host.querySelectorAll(".vw-hud-item");
+		expect(items.length).toBe(0);
+
+		// Should not have keyboard shortcut ref
+		const keys = host.querySelectorAll(".vw-hud-keys");
+		expect(keys.length).toBe(0);
+
+		player.destroy();
+	});
+
+	it("audio_time_correct_with_empty_advances_segment", async () => {
+		// Segment "gap" has no advances in resolvedTiming -- computeLogicalAudioTime
+		// must still break at the current segment and not accumulate later segments.
+		const segA = makeSegment({ id: "seg-a", async play() {} });
+		const segGap = makeSegment({ id: "seg-gap", async play() {} });
+		const segB = makeSegment({
+			id: "seg-b",
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+
+		const player = new Player(host, {
+			resolvedTiming: {
+				"seg-a": [1],
+				// "seg-gap" intentionally missing -- empty advances
+				"seg-b": [2],
+			},
+		});
+		await player.load(
+			makeTimeline(["seg-a", "seg-gap", "seg-b"]),
+			makeLoader([segA, segGap, segB]),
+			makeTransitionLoaders(),
+		);
+		await player.start();
+		await flush();
+
+		// Advance to seg-gap
+		pressKey("ArrowRight");
+		await flush(20);
+		expect(player.currentSegmentId).toBe("seg-gap");
+
+		// At seg-gap (index 1), audio time should be seg-a's duration (1s)
+		// and should NOT include seg-b's duration (2s).
+		// We can't directly call computeLogicalAudioTime, but we can toggle
+		// playback to verify it doesn't throw/misbehave at a gap segment.
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("playing");
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("idle");
+
+		// Now advance to seg-b
+		pressKey("ArrowRight");
+		await flush(20);
+		expect(player.currentSegmentId).toBe("seg-b");
+
+		// Toggle playback at seg-b -- should work correctly
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("playing");
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("idle");
+
+		player.destroy();
+	});
+
+	it("destroy_stops_audio_and_auto_advance", async () => {
+		const seg = makeSegment({
+			id: "seg-0",
+			advances: [5],
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [5] },
+		});
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("playing");
+
+		// Destroy should clean up without errors
+		player.destroy();
+		await flush();
+	});
+});

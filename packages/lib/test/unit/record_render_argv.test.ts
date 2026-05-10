@@ -54,6 +54,25 @@ describe("argv parser: record command", () => {
 			'--fps is only valid for the "render" command',
 		);
 	});
+
+	it("argv_record_with_voiceover_slug", () => {
+		const result = parseArgv(["record", "--voiceover", "narrator-warm"]);
+		expect(result.command).toBe("record");
+		expect(result.flags.voiceover).toBe("narrator-warm");
+	});
+
+	it("argv_record_with_voiceover_none", () => {
+		const result = parseArgv(["record", "--voiceover", "none"]);
+		expect(result.command).toBe("record");
+		expect(result.flags.voiceover).toBe("none");
+	});
+
+	it("argv_record_with_voiceover_and_path", () => {
+		const result = parseArgv(["record", "videos/demo/timeline.ts", "--voiceover", "v1"]);
+		expect(result.command).toBe("record");
+		expect(result.positional).toBe("videos/demo/timeline.ts");
+		expect(result.flags.voiceover).toBe("v1");
+	});
 });
 
 describe("argv parser: render command", () => {

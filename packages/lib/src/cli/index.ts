@@ -47,7 +47,7 @@ Options:
   --height <n>          Video height in pixels (render only, default: 1080)
   --fps <n>             Frames per second (render only, default: 60)
   --output <path>       Output file path (render only, default: output.mp4)
-  --voiceover <slug>    Use voiceover from voiceovers/<slug>/ (render only)
+  --voiceover <slug>    Use voiceover from voiceovers/<slug>/ (render, record)
   --voiceover none      Disable voiceover (ignore default_voiceover)
   --verbose             Show extra detail
   --help                Show this help
@@ -136,6 +136,7 @@ export async function main(argv?: string[]): Promise<number> {
 				cwd,
 				positional,
 				verbose: flags.verbose,
+				voiceover: flags.voiceover,
 			});
 			console.log(
 				`\n  videowright record running at ${result.url}\n  No mp4 output -- use "videowright render" for export.\n`,
