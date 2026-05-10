@@ -47,6 +47,56 @@ export function fullReloadPlugin(): Plugin {
 	};
 }
 
+/**
+ * Shape of globals injected into entry files via the virtual module.
+ */
+export interface VwGlobals {
+	timelinePath: string;
+	consumerRoot: string;
+	audioFile?: string;
+	resolvedTiming?: Record<string, number[]>;
+	voiceoverNone?: boolean;
+	renderFps?: number;
+}
+
+const VIRTUAL_GLOBALS_ID = "virtual:vw-globals";
+const RESOLVED_VIRTUAL_GLOBALS_ID = `\0${VIRTUAL_GLOBALS_ID}`;
+
+/**
+ * Vite plugin that provides a virtual module `virtual:vw-globals`.
+ * The module exports concrete values that were previously injected via
+ * Vite's `define:` config. Using a virtual module avoids text-substitution
+ * issues where `define` would rewrite `declare const` lines.
+ */
+export function globalsVirtualModulePlugin(globals: VwGlobals): Plugin {
+	return {
+		name: "videowright-globals",
+		resolveId(id) {
+			if (id === VIRTUAL_GLOBALS_ID) return RESOLVED_VIRTUAL_GLOBALS_ID;
+		},
+		load(id) {
+			if (id !== RESOLVED_VIRTUAL_GLOBALS_ID) return;
+
+			const lines: string[] = [];
+			lines.push(`export const timelinePath = ${JSON.stringify(globals.timelinePath)};`);
+			lines.push(`export const consumerRoot = ${JSON.stringify(globals.consumerRoot)};`);
+			lines.push(
+				`export const audioFile = ${globals.audioFile !== undefined ? JSON.stringify(globals.audioFile) : "undefined"};`,
+			);
+			lines.push(
+				`export const resolvedTiming = ${globals.resolvedTiming !== undefined ? JSON.stringify(globals.resolvedTiming) : "undefined"};`,
+			);
+			lines.push(
+				`export const voiceoverNone = ${globals.voiceoverNone !== undefined ? JSON.stringify(globals.voiceoverNone) : "undefined"};`,
+			);
+			lines.push(
+				`export const renderFps = ${globals.renderFps !== undefined ? JSON.stringify(globals.renderFps) : "undefined"};`,
+			);
+			return `${lines.join("\n")}\n`;
+		},
+	};
+}
+
 const VIRTUAL_SEGMENTS_ID = "virtual:vw-segments";
 const RESOLVED_VIRTUAL_SEGMENTS_ID = `\0${VIRTUAL_SEGMENTS_ID}`;
 

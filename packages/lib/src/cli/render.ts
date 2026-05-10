@@ -192,10 +192,20 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	const pkgRoot = findPackageRoot();
 	const entryDir = resolve(pkgRoot, "src/cli/entry");
 
+	const { globalsVirtualModulePlugin } = await import("./vite_helpers.js");
+
 	const server = await createServer({
 		configFile: false,
 		root: entryDir,
-		plugins: [fullReloadPlugin(), segmentDiscoveryPlugin(cwd)],
+		plugins: [
+			fullReloadPlugin(),
+			segmentDiscoveryPlugin(cwd),
+			globalsVirtualModulePlugin({
+				timelinePath,
+				consumerRoot: cwd,
+				renderFps: fps,
+			}),
+		],
 		server: {
 			port: 0,
 			strictPort: false,
@@ -207,14 +217,6 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 			alias: {
 				"@consumer": cwd,
 			},
-		},
-		define: {
-			__VW_TIMELINE_PATH__: JSON.stringify(timelinePath),
-			__VW_CONSUMER_ROOT__: JSON.stringify(cwd),
-			// __VW_RENDER_FPS__ is injected as a bare number literal via Vite's `define`.
-			// Vite performs direct text substitution, so String(60) becomes the literal `60`
-			// in the client bundle.
-			__VW_RENDER_FPS__: String(fps),
 		},
 	});
 

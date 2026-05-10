@@ -9,15 +9,21 @@ import type { Timeline } from "../types.js";
 import { discoverProject } from "./discover_project.js";
 import { UserError } from "./errors.js";
 import { loadModule } from "./ts_loader.js";
-import { findPackageRoot, fullReloadPlugin, segmentDiscoveryPlugin } from "./vite_helpers.js";
+import type { VwGlobals } from "./vite_helpers.js";
+import {
+	findPackageRoot,
+	fullReloadPlugin,
+	globalsVirtualModulePlugin,
+	segmentDiscoveryPlugin,
+} from "./vite_helpers.js";
 
 export interface DevOptions {
 	cwd: string;
 	positional?: string;
 	port?: number;
 	verbose?: boolean;
-	/** Extra Vite `define` entries, merged into the config. Used by record to inject voiceover globals. */
-	extraDefines?: Record<string, string>;
+	/** Extra globals merged into the virtual module. Used by record to inject voiceover globals. */
+	extraGlobals?: Partial<VwGlobals>;
 }
 
 export interface DevResult {
@@ -38,12 +44,11 @@ export async function runDev(opts: DevOptions): Promise<DevResult> {
 	await loadModule(configPath);
 
 	// Resolve default_voiceover audio path for dev mode.
-	// When called from record.ts, extraDefines already contains voiceover globals,
-	// so we only do this when no voiceover defines are present.
-	const voiceoverDefines: Record<string, string> = {};
+	// When called from record.ts, extraGlobals already contains voiceover globals,
+	// so we only do this when no voiceover globals are present.
+	const voiceoverGlobals: Partial<VwGlobals> = {};
 	const hasExternalVoiceoverConfig =
-		opts.extraDefines?.__VW_AUDIO_FILE__ !== undefined ||
-		opts.extraDefines?.__VW_VOICEOVER_NONE__ !== undefined;
+		opts.extraGlobals?.audioFile !== undefined || opts.extraGlobals?.voiceoverNone !== undefined;
 
 	if (!hasExternalVoiceoverConfig) {
 		try {
@@ -55,7 +60,7 @@ export async function runDev(opts: DevOptions): Promise<DevResult> {
 				const videoFolder = dirname(timelinePath);
 				const audioAbsPath = resolve(videoFolder, timeline.default_voiceover.audio_file);
 				if (existsSync(audioAbsPath)) {
-					voiceoverDefines.__VW_AUDIO_FILE__ = JSON.stringify(`/@fs/${audioAbsPath}`);
+					voiceoverGlobals.audioFile = `/@fs/${audioAbsPath}`;
 				} else if (verbose) {
 					console.warn(`default_voiceover audio file not found: ${audioAbsPath}`);
 				}
@@ -86,10 +91,17 @@ export async function runDev(opts: DevOptions): Promise<DevResult> {
 
 	const serverPort = port ?? 5173;
 
+	const globals: VwGlobals = {
+		timelinePath,
+		consumerRoot: cwd,
+		...voiceoverGlobals,
+		...(opts.extraGlobals ?? {}),
+	};
+
 	const server = await createServer({
 		configFile: false,
 		root: entryDir,
-		plugins: [fullReloadPlugin(), segmentDiscoveryPlugin(cwd)],
+		plugins: [fullReloadPlugin(), segmentDiscoveryPlugin(cwd), globalsVirtualModulePlugin(globals)],
 		server: {
 			port: serverPort,
 			strictPort: false,
@@ -101,12 +113,6 @@ export async function runDev(opts: DevOptions): Promise<DevResult> {
 			alias: {
 				"@consumer": cwd,
 			},
-		},
-		define: {
-			__VW_TIMELINE_PATH__: JSON.stringify(timelinePath),
-			__VW_CONSUMER_ROOT__: JSON.stringify(cwd),
-			...voiceoverDefines,
-			...(opts.extraDefines ?? {}),
 		},
 	});
 

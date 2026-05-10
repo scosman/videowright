@@ -4,15 +4,15 @@
  * provided by the segment discovery plugin, loads the timeline, and boots the Player.
  */
 
-// These globals are injected by Vite's define config in dev.ts
-declare const __VW_TIMELINE_PATH__: string;
-declare const __VW_CONSUMER_ROOT__: string;
-// Optional: injected by record.ts when --voiceover is used, or by dev.ts
-// for default_voiceover audio path resolution
-declare const __VW_AUDIO_FILE__: string | undefined;
-declare const __VW_RESOLVED_TIMING__: Record<string, number[]> | undefined;
-// Injected by record.ts when --voiceover none is used to suppress default_voiceover
-declare const __VW_VOICEOVER_NONE__: boolean | undefined;
+// Virtual module provided by globalsVirtualModulePlugin -- exports concrete
+// values that were previously injected via Vite's define: config.
+import {
+	consumerRoot,
+	audioFile as injectedAudio,
+	resolvedTiming as injectedTiming,
+	timelinePath,
+	voiceoverNone,
+} from "virtual:vw-globals";
 
 // Virtual module provided by segmentDiscoveryPlugin in dev.ts.
 // It exports a Record<string, () => Promise<Module>> with explicit dynamic imports
@@ -50,22 +50,22 @@ async function boot() {
 
 	if (Object.keys(segmentGlob).length === 0) {
 		console.warn(
-			`No segments discovered under ${__VW_CONSUMER_ROOT__}/segments/. Check that the segments directory exists and contains <id>/index.ts files.`,
+			`No segments discovered under ${consumerRoot}/segments/. Check that the segments directory exists and contains <id>/index.ts files.`,
 		);
 	}
 
 	const segmentLoaders = buildSegmentLoaderMap(segmentGlob);
 
 	// Load timeline
-	const timelineMod = (await import(/* @vite-ignore */ __VW_TIMELINE_PATH__)) as {
+	const timelineMod = (await import(/* @vite-ignore */ timelinePath)) as {
 		default: Timeline;
 	};
 	const timeline = timelineMod.default;
 
 	// Load config
-	const configMod = (await import(
-		/* @vite-ignore */ `${__VW_CONSUMER_ROOT__}/videowright.config.ts`
-	)) as { default: Config };
+	const configMod = (await import(/* @vite-ignore */ `${consumerRoot}/videowright.config.ts`)) as {
+		default: Config;
+	};
 	const config = configMod.default;
 
 	const transitionLoaders = buildTransitionLoaderMap(config);
@@ -115,20 +115,14 @@ async function boot() {
 	const recordMode = params.has("recordMode");
 
 	// Resolve audio and timing for voiceover playback.
-	// The CLI may inject __VW_AUDIO_FILE__ (dev.ts for default_voiceover, or
-	// record.ts for --voiceover <slug>) and __VW_RESOLVED_TIMING__ (record.ts only).
-	// __VW_VOICEOVER_NONE__ suppresses default_voiceover (record --voiceover none).
-	let audioFile: string | undefined;
+	// The CLI may inject audioFile (dev.ts for default_voiceover, or
+	// record.ts for --voiceover <slug>) and resolvedTiming (record.ts only).
+	// voiceoverNone suppresses default_voiceover (record --voiceover none).
+	let audioFileResolved: string | undefined;
 	let resolvedTimingMap: Record<string, number[]> | undefined;
 
-	const voiceoverNone =
-		typeof __VW_VOICEOVER_NONE__ !== "undefined" ? __VW_VOICEOVER_NONE__ : false;
-	const injectedAudio = typeof __VW_AUDIO_FILE__ !== "undefined" ? __VW_AUDIO_FILE__ : undefined;
-	const injectedTiming =
-		typeof __VW_RESOLVED_TIMING__ !== "undefined" ? __VW_RESOLVED_TIMING__ : undefined;
-
 	if (!voiceoverNone && injectedAudio) {
-		audioFile = injectedAudio;
+		audioFileResolved = injectedAudio;
 	}
 
 	if (injectedTiming) {
@@ -156,7 +150,7 @@ async function boot() {
 	const playerOpts = {
 		hud: !hideHud,
 		recordMode,
-		audioFile,
+		audioFile: audioFileResolved,
 		resolvedTiming: resolvedTimingMap,
 	};
 	const player = new Player(host, playerOpts);

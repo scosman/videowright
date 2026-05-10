@@ -35,8 +35,8 @@ export async function runRecord(opts: RecordOptions): Promise<RecordResult> {
 	// intentional for better error UX.
 	const { timelinePath } = discoverProject(cwd, positional, "record");
 
-	// Build extra Vite defines for voiceover injection
-	const extraDefines: Record<string, string> = {};
+	// Build extra globals for voiceover injection
+	const extraGlobals: Record<string, unknown> = {};
 	const voiceoverSuppressed = opts.voiceover === "none";
 
 	if (!voiceoverSuppressed && opts.voiceover) {
@@ -48,7 +48,7 @@ export async function runRecord(opts: RecordOptions): Promise<RecordResult> {
 		});
 
 		// Inject the audio file path for Vite serving via /@fs/ prefix
-		extraDefines.__VW_AUDIO_FILE__ = JSON.stringify(`/@fs/${voResult.audioFilePath}`);
+		extraGlobals.audioFile = `/@fs/${voResult.audioFilePath}`;
 
 		// Load timeline and segment advances for complete timing resolution.
 		// Segment advances are needed so partial voiceover Timings (which only
@@ -65,7 +65,7 @@ export async function runRecord(opts: RecordOptions): Promise<RecordResult> {
 			cliVoiceoverModule: voResult.voiceover,
 		});
 
-		extraDefines.__VW_RESOLVED_TIMING__ = JSON.stringify(resolved.perSegment);
+		extraGlobals.resolvedTiming = resolved.perSegment;
 
 		if (verbose) {
 			console.log(`voiceover: ${opts.voiceover} (${voResult.audioFilePath})`);
@@ -73,7 +73,7 @@ export async function runRecord(opts: RecordOptions): Promise<RecordResult> {
 	} else if (voiceoverSuppressed) {
 		// --voiceover none: inject suppression signal so entry_client.ts
 		// does not fall through to default_voiceover from the timeline.
-		extraDefines.__VW_VOICEOVER_NONE__ = "true";
+		extraGlobals.voiceoverNone = true;
 
 		if (verbose) {
 			console.log("voiceover: none (suppressed)");
@@ -82,7 +82,7 @@ export async function runRecord(opts: RecordOptions): Promise<RecordResult> {
 
 	// Boot dev server on auto-assigned port
 	const { runDev } = await import("./dev.js");
-	const devResult = await runDev({ cwd, positional, port: 0, verbose, extraDefines });
+	const devResult = await runDev({ cwd, positional, port: 0, verbose, extraGlobals });
 
 	const base = devResult.url.replace(/\/$/, "");
 	const separator = base.includes("?") ? "&" : "?";

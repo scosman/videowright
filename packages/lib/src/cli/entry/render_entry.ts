@@ -4,10 +4,9 @@
  * and exposes CDP-callable globals for frame-by-frame control.
  */
 
-// These globals are injected by Vite's define config
-declare const __VW_TIMELINE_PATH__: string;
-declare const __VW_CONSUMER_ROOT__: string;
-declare const __VW_RENDER_FPS__: number;
+// Virtual module provided by globalsVirtualModulePlugin -- exports concrete
+// values that were previously injected via Vite's define: config.
+import { consumerRoot, renderFps, timelinePath } from "virtual:vw-globals";
 
 // Virtual module provided by segmentDiscoveryPlugin
 // @ts-expect-error -- virtual module, no type declarations
@@ -44,15 +43,15 @@ async function boot() {
 	const segmentLoaders = buildSegmentLoaderMap(segmentGlob);
 
 	// Load timeline
-	const timelineMod = (await import(/* @vite-ignore */ __VW_TIMELINE_PATH__)) as {
+	const timelineMod = (await import(/* @vite-ignore */ timelinePath)) as {
 		default: Timeline;
 	};
 	const timeline = timelineMod.default;
 
 	// Load config
-	const configMod = (await import(
-		/* @vite-ignore */ `${__VW_CONSUMER_ROOT__}/videowright.config.ts`
-	)) as { default: Config };
+	const configMod = (await import(/* @vite-ignore */ `${consumerRoot}/videowright.config.ts`)) as {
+		default: Config;
+	};
 	const config = configMod.default;
 
 	const transitionLoaders = buildTransitionLoaderMap(config);
@@ -95,9 +94,7 @@ async function boot() {
 	const host = document.getElementById("player-host");
 	if (!host) throw new Error("No #player-host element found");
 
-	// Vite's define always injects a number literal, so typeof is technically redundant.
-	// Kept as a safety net in case the define is misconfigured.
-	const fps = typeof __VW_RENDER_FPS__ === "number" ? __VW_RENDER_FPS__ : 60;
+	const fps = typeof renderFps === "number" ? renderFps : 60;
 	const player = new Player(host, { renderMode: true, hud: false, fps });
 	await player.load(finalTimeline, segmentLoaders, transitionLoaders);
 	await player.start();
