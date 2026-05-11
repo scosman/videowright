@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SegmentRunner } from "../../src/segment/SegmentRunner.js";
+import { SegmentRunner, isAbortError } from "../../src/segment/SegmentRunner.js";
 import {
 	type PlayerContext,
 	SEGMENT_BRAND,
@@ -323,7 +323,7 @@ describe("SegmentRunner", () => {
 		expect(holdDone).toBe(true);
 	});
 
-	it("hold_resolves_immediately_on_abort", async () => {
+	it("hold_rejects_with_abort_error_on_unmount", async () => {
 		let holdDone = false;
 		const seg = makeSegment({
 			async play(ctx) {
@@ -333,20 +333,20 @@ describe("SegmentRunner", () => {
 		});
 		const runner = new SegmentRunner(seg, { mode: "interactive" });
 		await runner.mount(makeElement());
-		runner.startPlay();
+		const p = runner.startPlay();
 
 		await Promise.resolve();
 		expect(holdDone).toBe(false);
 
 		runner.unmount();
-		await Promise.resolve();
-		await Promise.resolve();
-		expect(holdDone).toBe(true);
+		// play() should unwind via AbortError -- code after hold never runs
+		await p;
+		expect(holdDone).toBe(false);
 	});
 
 	// ---- unmount ----
 
-	it("unmount_drains_pending_resolvers", async () => {
+	it("unmount_rejects_pending_resolvers_with_abort_error", async () => {
 		let playFinished = false;
 		const seg = makeSegment({
 			async play(ctx) {
@@ -361,12 +361,9 @@ describe("SegmentRunner", () => {
 		await Promise.resolve();
 
 		runner.unmount();
-		// Pending waitForNext promises should have resolved, allowing play to finish
-		await Promise.resolve();
-		await Promise.resolve();
-		await Promise.resolve();
+		// play() should unwind via AbortError -- code after waitForNext never runs
 		await p;
-		expect(playFinished).toBe(true);
+		expect(playFinished).toBe(false);
 	});
 
 	it("unmount_is_idempotent", async () => {
@@ -475,5 +472,144 @@ describe("SegmentRunner", () => {
 		await runner.mount(makeElement());
 
 		expect(runner.triggerPrev()).toBe(true);
+	});
+
+	// ---- abort behavior ----
+
+	it("play_non_abort_errors_still_propagate", async () => {
+		const seg = makeSegment({
+			async play() {
+				throw new Error("segment bug");
+			},
+		});
+		const runner = new SegmentRunner(seg, { mode: "interactive" });
+		await runner.mount(makeElement());
+
+		await expect(runner.startPlay()).rejects.toThrow("segment bug");
+	});
+
+	it("hold_rejects_immediately_when_already_aborted", async () => {
+		let holdRejected = false;
+		const seg = makeSegment({
+			async play(ctx) {
+				// First hold will be aborted by unmount
+				try {
+					await ctx.hold(5000);
+				} catch {
+					// Expected
+				}
+				// Second hold should reject immediately (signal already aborted)
+				try {
+					await ctx.hold(1000);
+				} catch {
+					holdRejected = true;
+				}
+			},
+		});
+		const runner = new SegmentRunner(seg, { mode: "interactive" });
+		await runner.mount(makeElement());
+		const p = runner.startPlay();
+
+		await Promise.resolve();
+		runner.unmount();
+		await p;
+		expect(holdRejected).toBe(true);
+	});
+
+	it("state_stays_unmounted_after_abort", async () => {
+		const seg = makeSegment({
+			async play(ctx) {
+				await ctx.hold(5000);
+			},
+		});
+		const runner = new SegmentRunner(seg, { mode: "interactive" });
+		await runner.mount(makeElement());
+		const p = runner.startPlay();
+
+		expect(runner.currentState).toBe("playing");
+		runner.unmount();
+		expect(runner.currentState).toBe("unmounted");
+		await p;
+		// State must remain "unmounted" -- .finally() must not overwrite it to "done"
+		expect(runner.currentState).toBe("unmounted");
+	});
+
+	it("play_promise_resolves_cleanly_on_unmount", async () => {
+		const seg = makeSegment({
+			async play(ctx) {
+				await ctx.waitForNext();
+				await ctx.hold(2000);
+			},
+		});
+		const runner = new SegmentRunner(seg, { mode: "interactive" });
+		await runner.mount(makeElement());
+		const p = runner.startPlay();
+		await Promise.resolve();
+
+		runner.unmount();
+		// Should resolve (not reject) because AbortError is caught internally
+		await expect(p).resolves.toBeUndefined();
+	});
+
+	// ---- nav during active play (integration-style) ----
+
+	it("unmount_during_hold_unwinds_cleanly", async () => {
+		// Simulates the exact user flow: segment is mid-play parked on hold(),
+		// user presses next, framework unmounts the segment. play() should
+		// unwind cleanly without crashing and state should be "unmounted".
+		let holdPassed = false;
+		let postHoldRan = false;
+		const seg = makeSegment({
+			async play(ctx) {
+				await ctx.hold(3000);
+				holdPassed = true;
+				await ctx.waitForNext();
+				postHoldRan = true;
+			},
+		});
+		const runner = new SegmentRunner(seg, { mode: "interactive" });
+		await runner.mount(makeElement());
+		const p = runner.startPlay();
+		await Promise.resolve();
+
+		// Segment is parked on hold(3000). Simulate nav by unmounting.
+		runner.unmount();
+		await expect(p).resolves.toBeUndefined();
+
+		expect(holdPassed).toBe(false);
+		expect(postHoldRan).toBe(false);
+		expect(runner.currentState).toBe("unmounted");
+	});
+
+	it("unmount_during_waitForNext_unwinds_cleanly", async () => {
+		// Simulates user pressing next when segment is parked on waitForNext.
+		let afterWait = false;
+		const seg = makeSegment({
+			async play(ctx) {
+				await ctx.waitForNext();
+				afterWait = true;
+			},
+		});
+		const runner = new SegmentRunner(seg, { mode: "interactive" });
+		await runner.mount(makeElement());
+		const p = runner.startPlay();
+		await Promise.resolve();
+
+		// Segment is parked on waitForNext. Simulate nav by unmounting.
+		runner.unmount();
+		await expect(p).resolves.toBeUndefined();
+
+		expect(afterWait).toBe(false);
+		expect(runner.currentState).toBe("unmounted");
+	});
+
+	// ---- isAbortError ----
+
+	it("isAbortError_identifies_abort_errors", () => {
+		expect(isAbortError(new DOMException("test", "AbortError"))).toBe(true);
+		expect(isAbortError(new Error("not abort"))).toBe(false);
+		expect(isAbortError(new DOMException("test", "NotFoundError"))).toBe(false);
+		expect(isAbortError(null)).toBe(false);
+		expect(isAbortError(undefined)).toBe(false);
 	});
 });

@@ -625,8 +625,8 @@ export class Player {
 			const incomingPlayPromise = runner.startPlay();
 
 			// Unmount outgoing before awaiting its play promise.
-			// Unmount drains pending waitForNext resolvers, so play() will resolve
-			// even if the outgoing segment was parked on waitForNext.
+			// Unmount rejects pending resolvers with AbortError, which the runner's
+			// internal .catch() swallows, so the play promise resolves cleanly.
 			const outgoingRunner = outgoingSlot.runner;
 			if (outgoingRunner) {
 				outgoingRunner.unmount();

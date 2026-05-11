@@ -1,5 +1,25 @@
 import type { PlayerContext, Segment } from "../types.js";
 
+/**
+ * Thrown when a segment's play() is interrupted by unmount.
+ * Framework code catches this to cleanly unwind segment teardown.
+ *
+ * Extends DOMException so that `isAbortError` can match both this class
+ * and the native AbortError raised by fetch/AbortController in browsers.
+ * The `(message, name)` constructor signature is supported in all modern
+ * browsers and jsdom (our test runner); Node 17+ also supports it.
+ */
+export class SegmentAbortError extends DOMException {
+	constructor() {
+		super("Segment aborted", "AbortError");
+	}
+}
+
+/** Type guard: true for SegmentAbortError or any DOMException with name "AbortError". */
+export function isAbortError(e: unknown): boolean {
+	return e instanceof DOMException && e.name === "AbortError";
+}
+
 type RunnerState = "created" | "mounted" | "playing" | "done" | "unmounted";
 
 export interface SegmentRunnerOptions {
@@ -17,7 +37,7 @@ export class SegmentRunner {
 	readonly segment: Segment;
 	readonly mode: "interactive" | "render";
 
-	private resolvers: Array<() => void> = [];
+	private resolvers: Array<{ resolve: () => void; reject: (e: Error) => void }> = [];
 	private beatCounter = 0;
 	private seekBeatsRemaining: number;
 	private abortCtrl = new AbortController();
@@ -47,9 +67,18 @@ export class SegmentRunner {
 			throw new Error("SegmentRunner: not mounted");
 		}
 		this.state = "playing";
-		this._playPromise = this.segment.play(this.makeContext()).finally(() => {
-			this.state = "done";
-		});
+		this._playPromise = this.segment
+			.play(this.makeContext())
+			.catch((e) => {
+				// Re-throw non-abort errors; swallow AbortError so play()
+				// resolves cleanly on unmount-triggered teardown.
+				if (!isAbortError(e)) throw e;
+			})
+			.finally(() => {
+				if (this.state !== "unmounted") {
+					this.state = "done";
+				}
+			});
 		return this._playPromise;
 	}
 
@@ -84,10 +113,11 @@ export class SegmentRunner {
 				console.error("unmount() threw", e);
 			}
 		}
-		// Drain pending resolvers so hanging awaits unblock
+		// Drain pending resolvers with AbortError so play() unwinds cleanly
+		const abortErr = new SegmentAbortError();
 		while (this.resolvers.length) {
 			const r = this.resolvers.shift();
-			if (r) r();
+			if (r) r.reject(abortErr);
 		}
 		this.state = "unmounted";
 	}
@@ -119,7 +149,7 @@ export class SegmentRunner {
 		const r = this.resolvers.shift();
 		if (r) {
 			this.beatCounter++;
-			r();
+			r.resolve();
 		}
 		return true;
 	}
@@ -132,32 +162,34 @@ export class SegmentRunner {
 					this.beatCounter++;
 					return Promise.resolve();
 				}
-				return new Promise<void>((resolve) => {
+				return new Promise<void>((resolve, reject) => {
 					if (this.state === "unmounted") {
-						resolve();
+						reject(new SegmentAbortError());
 						return;
 					}
-					this.resolvers.push(resolve);
+					this.resolvers.push({ resolve, reject });
 				});
 			},
 			hold: (ms: number) => {
 				// Both modes use real setTimeout. In render mode, the JS time shim
 				// virtualizes setTimeout so it fires when the driver advances the
 				// virtual clock, giving deterministic behavior.
-				return new Promise<void>((resolve) => {
+				return new Promise<void>((resolve, reject) => {
 					if (this.abortCtrl.signal.aborted) {
-						resolve();
+						reject(new SegmentAbortError());
 						return;
 					}
-					const t = setTimeout(resolve, ms);
-					this.abortCtrl.signal.addEventListener(
-						"abort",
-						() => {
-							clearTimeout(t);
-							resolve();
-						},
-						{ once: true },
-					);
+					const onAbort = () => {
+						clearTimeout(t);
+						reject(new SegmentAbortError());
+					};
+					const t = setTimeout(() => {
+						this.abortCtrl.signal.removeEventListener("abort", onAbort);
+						resolve();
+					}, ms);
+					this.abortCtrl.signal.addEventListener("abort", onAbort, {
+						once: true,
+					});
 				});
 			},
 			signal: this.abortCtrl.signal,
