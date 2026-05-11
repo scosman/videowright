@@ -63,7 +63,8 @@ Placeholder section for future style section with real assets
 
 6 styles to choose from (or create your own):
 
-<img width="947" height="536" alt="styles-2" src="https://github.com/user-attachments/assets/8e74fd1a-d966-40eb-924e-664581ad6629" />
+<img width="953" height="549" alt="styles-3-2" src="https://github.com/user-attachments/assets/3aaeecc2-7ca4-4c5a-8ed2-9adc4e226b2d" />
+
 
 
 Same video script as above, with two different styles applied. Both generated in 1 prompt.
