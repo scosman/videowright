@@ -387,7 +387,7 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 
 			let frameCount = 0;
 			let scheduleIdx = 0;
-			const progressIntervalFrames = Math.round(5 * fps); // every 5s of video
+			const progressIntervalFrames = Math.round(1 * fps); // every 1s of video
 			let lastProgressFrame = 0;
 
 			try {
@@ -456,7 +456,7 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 					await writeWithBackpressure(ffmpegProc.stdin, screenshot);
 					frameCount++;
 
-					// Progress output every 5s of rendered video
+					// Progress output every 1s of rendered video
 					if (frameCount - lastProgressFrame >= progressIntervalFrames) {
 						const renderedSec = (frameCount / fps).toFixed(1);
 						const totalSec = (totalFrames / fps).toFixed(1);
