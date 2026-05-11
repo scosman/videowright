@@ -128,7 +128,7 @@ export default voiceover;
 When a voiceover is set as default, update `timeline.ts` to import and assign it:
 
 ```ts
-import '../../styles/modern/tokens.css';
+import '../../styles/editorial-mono/tokens.css';
 import type { Timeline } from 'videowright';
 import defaultVoiceover from './voiceovers/v1/voiceover.js';
 

@@ -5,7 +5,7 @@ A starter video created during Videowright setup.
 ## Segments
 
 - **hello-intro** -- Title card with animated entrance
-- **placeholder-sample** -- Style token showcase (from the placeholder style pack)
+- **editorial-mono-sample-kinetic** -- Kinetic typography showcase (from the Editorial Mono style pack)
 - **hello-outro** -- Closing card with call to action
 
 ## Running

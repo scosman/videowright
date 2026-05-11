@@ -94,7 +94,7 @@ describe("skill file structure", () => {
 		const content = readFileSync(resolve(SKILL_ROOT, "assets/hello_world/timeline.ts"), "utf-8");
 		// The style import convention: first line imports tokens.css
 		expect(content).toMatch(/^import\s+["'].*tokens\.css["']/);
-		expect(content).toContain("styles/placeholder/tokens.css");
+		expect(content).toContain("styles/editorial-mono/tokens.css");
 	});
 
 	it("hello_intro.ts uses only the 6 recommended style tokens", () => {
@@ -173,6 +173,7 @@ describe("skill file structure", () => {
 			"utf-8",
 		);
 		expect(content).toContain("hello-intro");
+		expect(content).toContain("editorial-mono-sample-kinetic");
 		expect(content).not.toContain("{{");
 	});
 
@@ -216,7 +217,20 @@ describe("skill file structure", () => {
 		expect(content).toContain("transition");
 	});
 
-	const STYLE_PACKS = ["placeholder", "modern", "retro", "bauhaus", "animated-explainer"] as const;
+	const STYLE_PACKS = ["editorial-mono"] as const;
+
+	const SAMPLE_SCENES = [
+		"title",
+		"section",
+		"kinetic",
+		"bullet",
+		"stat",
+		"feature",
+		"grid",
+		"ui-showcase",
+		"content",
+		"cta",
+	] as const;
 
 	const RECOMMENDED_TOKENS = [
 		"--color-bg",
@@ -226,6 +240,8 @@ describe("skill file structure", () => {
 		"--font-body",
 		"--font-mono",
 	];
+
+	const RECOMMENDED_TOKENS_SET = new Set(RECOMMENDED_TOKENS);
 
 	it("install template package.json exists with required fields", () => {
 		const pkgPath = resolve(SKILL_ROOT, "assets/install/package.json");
@@ -257,7 +273,15 @@ describe("skill file structure", () => {
 			expect(existsSync(styleDir)).toBe(true);
 			expect(existsSync(resolve(styleDir, "STYLE.md"))).toBe(true);
 			expect(existsSync(resolve(styleDir, "tokens.css"))).toBe(true);
-			expect(existsSync(resolve(styleDir, "sample-segment/index.ts"))).toBe(true);
+			expect(existsSync(resolve(styleDir, "brand.md"))).toBe(true);
+			expect(existsSync(resolve(styleDir, "reference/scenes.html"))).toBe(true);
+			expect(existsSync(resolve(styleDir, "reference/animations.jsx"))).toBe(true);
+			for (const scene of SAMPLE_SCENES) {
+				expect(
+					existsSync(resolve(styleDir, `sample/${scene}.ts`)),
+					`Missing sample/${scene}.ts`,
+				).toBe(true);
+			}
 		});
 
 		it("STYLE.md has required frontmatter fields", () => {
@@ -276,41 +300,48 @@ describe("skill file structure", () => {
 			}
 		});
 
-		it("sample-segment uses defineSegment, voiceover, waitForNext, and references recommended tokens", () => {
-			const content = readFileSync(resolve(styleDir, "sample-segment/index.ts"), "utf-8");
-			expect(content).toContain("defineSegment");
-			expect(content).toContain("voiceover");
-			expect(content).toContain("waitForNext");
+		describe.each(SAMPLE_SCENES)("sample: %s", (scene) => {
+			const samplePath = resolve(styleDir, `sample/${scene}.ts`);
 
-			// Must reference at least one CSS var from the 6 recommended tokens
-			const varRefs = content.match(/var\(--[\w-]+\)/g) ?? [];
-			const recommendedSet = new Set(RECOMMENDED_TOKENS);
-			const usedRecommended = varRefs.filter((ref) => {
-				const token = ref.match(/var\((--[\w-]+)\)/)?.[1] ?? "";
-				return recommendedSet.has(token);
-			});
-			expect(
-				usedRecommended.length,
-				"sample-segment/index.ts must reference at least one CSS var from the 6 recommended tokens",
-			).toBeGreaterThanOrEqual(1);
-		});
+			it("uses defineSegment, voiceover, waitForNext, and references recommended tokens", () => {
+				const content = readFileSync(samplePath, "utf-8");
+				expect(content).toContain("defineSegment");
+				expect(content).toContain("voiceover");
+				expect(content).toContain("waitForNext");
 
-		it("sample-segment imports nothing from outside its own pack folder", () => {
-			const content = readFileSync(resolve(styleDir, "sample-segment/index.ts"), "utf-8");
-			const imports = content.match(/from\s+["']([^"']+)["']/g) ?? [];
-			for (const imp of imports) {
-				const path = imp.match(/from\s+["']([^"']+)["']/)?.[1] ?? "";
+				const varRefs = content.match(/var\(--[\w-]+\)/g) ?? [];
+				const usedRecommended = varRefs.filter((ref) => {
+					const token = ref.match(/var\((--[\w-]+)\)/)?.[1] ?? "";
+					return RECOMMENDED_TOKENS_SET.has(token);
+				});
 				expect(
-					path === "videowright" || path.startsWith("./") || path.startsWith("../"),
-					`Import "${path}" should be from "videowright" or a relative path within the pack`,
-				).toBe(true);
-				if (path.startsWith("../")) {
+					usedRecommended.length,
+					`sample/${scene}.ts must reference at least one CSS var from the 6 recommended tokens`,
+				).toBeGreaterThanOrEqual(1);
+			});
+
+			it("has id matching <slug>-sample-<scene>", () => {
+				const content = readFileSync(samplePath, "utf-8");
+				expect(content).toMatch(new RegExp(`id:\\s*["']${packName}-sample-${scene}["']`));
+			});
+
+			it("imports nothing from outside its own pack folder", () => {
+				const content = readFileSync(samplePath, "utf-8");
+				const imports = content.match(/from\s+["']([^"']+)["']/g) ?? [];
+				for (const imp of imports) {
+					const path = imp.match(/from\s+["']([^"']+)["']/)?.[1] ?? "";
 					expect(
-						!path.startsWith("../../"),
-						`Import "${path}" escapes the ${packName} pack folder`,
+						path === "videowright" || path.startsWith("./") || path.startsWith("../"),
+						`Import "${path}" should be from "videowright" or a relative path within the pack`,
 					).toBe(true);
+					if (path.startsWith("../")) {
+						expect(
+							!path.startsWith("../../"),
+							`Import "${path}" escapes the ${packName} pack folder`,
+						).toBe(true);
+					}
 				}
-			}
+			});
 		});
 	});
 });

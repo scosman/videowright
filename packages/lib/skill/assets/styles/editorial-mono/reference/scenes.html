@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Editorial Mono — Reference Scenes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; }
+  body { font-family: var(--font-body); }
+  /* Editorial Mono scene primitives */
+  .em-canvas { position: absolute; inset: 0; background: var(--color-bg); color: var(--color-fg); overflow: hidden; }
+  .em-label { font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--color-muted); font-weight: 500; }
+  .em-rule { background: var(--color-border); height: 1px; width: 100%; }
+  .em-rule-v { background: var(--color-border); width: 1px; height: 100%; }
+  .em-display { font-family: var(--font-display); font-weight: 400; line-height: 0.98; letter-spacing: -0.01em; color: var(--color-fg); }
+  .em-display.italic { font-style: italic; }
+  .em-body { font-family: var(--font-body); font-weight: 400; color: var(--color-fg); line-height: 1.4; }
+  .em-muted { color: var(--color-muted); }
+  .em-accent { color: var(--color-accent); }
+  .em-page-frame {
+    position: absolute;
+    left: var(--safe-x); right: var(--safe-x);
+    top: 56px; height: 1px;
+    background: var(--color-border);
+  }
+  .em-page-frame.bottom { top: auto; bottom: 56px; }
+  .em-folio {
+    position: absolute;
+    left: var(--safe-x);
+    top: 30px;
+    font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--color-muted);
+  }
+  .em-folio.right { left: auto; right: var(--safe-x); }
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<div id="root"></div>
+
+<script type="text/babel" src="animations.jsx"></script>
+<script type="text/babel">
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Editorial Mono — Reference Scenes
+ * Each scene is a Sprite with a 4-second window. Demo product: "Beacon".
+ * ────────────────────────────────────────────────────────────────────── */
+
+const SCENE = 4; // seconds per scene
+const FADE  = 0.25;
+
+// ── Easing alias used inside scenes ──────────────────────────────────
+const EOUT = Easing.easeOutQuart;
+const EIN  = Easing.easeInCubic;
+
+// ── Reusable: fade-up text that uses local sprite time but parameterised
+// by an `at` offset so we can stagger multiple lines within one scene.
+function FadeUp({
+  children,
+  at = 0,             // seconds into the scene to start entering
+  hold = SCENE,       // seconds visible
+  rise = 24,          // px to drift up
+  className = '',
+  style = {},
+}) {
+  const { localTime } = useSprite();
+  const t = localTime - at;
+  let opacity = 0, ty = rise;
+  if (t < 0) { opacity = 0; ty = rise; }
+  else if (t < 0.6) {
+    const k = EOUT(clamp(t / 0.6, 0, 1));
+    opacity = k;
+    ty = rise * (1 - k);
+  } else {
+    opacity = 1; ty = 0;
+  }
+  // exit fade in last FADE seconds of scene
+  const exitStart = SCENE - FADE;
+  if (localTime > exitStart) {
+    const k = EIN(clamp((localTime - exitStart) / FADE, 0, 1));
+    opacity *= (1 - k);
+  }
+  return (
+    <div className={className} style={{ ...style, opacity, transform: `translateY(${ty}px)` }}>
+      {children}
+    </div>
+  );
+}
+
+// ── Page frame chrome (folios + rules) shared across all scenes
+function PageChrome({ folio, right }) {
+  return (
+    <Sprite start={0} end={SCENE * 10} keepMounted>
+      <div className="em-folio">{folio}</div>
+      <div className="em-folio right">{right}</div>
+      <div className="em-page-frame" />
+      <div className="em-page-frame bottom" />
+    </Sprite>
+  );
+}
+
+// ── Scene 1: Title card ──────────────────────────────────────────────
+function TitleScene() {
+  return (
+    <Sprite start={0} end={SCENE}>
+      <div style={{ position: 'absolute', left: 'var(--safe-x)', top: 240 }}>
+        <FadeUp at={0} className="em-label" style={{ marginBottom: 48 }}>
+          Vol. 01  /  2026  /  Issue One
+        </FadeUp>
+        <FadeUp at={0.2}>
+          <div className="em-display" style={{ fontSize: 320 }}>
+            Beacon<span className="em-accent" style={{ fontStyle: 'italic' }}>.</span>
+          </div>
+        </FadeUp>
+        <FadeUp at={0.6} className="em-body em-muted" style={{ fontSize: 40, marginTop: 56, maxWidth: 1100, fontFamily: 'var(--font-display)', fontStyle: 'italic', color: 'var(--color-fg)' }}>
+          Long-running agents for research labs.
+        </FadeUp>
+      </div>
+    </Sprite>
+  );
+}
+
+// ── Scene 2: Section header ──────────────────────────────────────────
+function SectionScene() {
+  return (
+    <Sprite start={SCENE} end={SCENE * 2}>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 56 }}>
+        <FadeUp at={0} className="em-label">Chapter One</FadeUp>
+        <FadeUp at={0.15} style={{ width: 240, height: 1, background: 'var(--color-border)' }} rise={8} />
+        <FadeUp at={0.3}>
+          <div className="em-display italic" style={{ fontSize: 220, textAlign: 'center' }}>
+            The Problem
+          </div>
+        </FadeUp>
+        <FadeUp at={0.55} style={{ width: 240, height: 1, background: 'var(--color-border)' }} rise={8} />
+      </div>
+    </Sprite>
+  );
+}
+
+// ── Scene 3: Kinetic statement ───────────────────────────────────────
+function KineticScene() {
+  // word-by-word fade-up; last word gets a red underline draw
+  const words = [
+    { t: 'Most',    at: 0.00 },
+    { t: 'agents',  at: 0.15 },
+    { t: 'fail',    at: 0.30 },
+    { t: 'because', at: 0.45 },
+    { t: 'they',    at: 0.60 },
+    { t: 'forget',  at: 0.75, accent: true },
+  ];
+  return (
+    <Sprite start={SCENE * 2} end={SCENE * 3}>
+      {({ localTime }) => {
+        const underlineP = clamp((localTime - 1.7) / 0.6, 0, 1);
+        return (
+          <div style={{ position: 'absolute', left: 'var(--safe-x)', top: 260, maxWidth: 1500 }}>
+            <FadeUp at={0} className="em-label" style={{ marginBottom: 48 }}>
+              Statement
+            </FadeUp>
+            <div className="em-display italic" style={{ fontSize: 180, lineHeight: 1.0, display: 'flex', flexWrap: 'wrap', columnGap: 38, rowGap: 12 }}>
+              {words.map((w, i) => (
+                <FadeUp key={i} at={w.at} rise={28} style={{ position: 'relative' }}>
+                  <span>{w.t}{i === words.length - 1 ? '.' : ''}</span>
+                  {w.accent && (
+                    <div style={{
+                      position: 'absolute',
+                      left: 0, right: 'auto', bottom: 18,
+                      height: 8,
+                      width: `calc(${underlineP * 100}% - ${underlineP > 0 ? '14px' : '0px'})`,
+                      background: 'var(--color-accent)',
+                    }} />
+                  )}
+                </FadeUp>
+              ))}
+            </div>
+          </div>
+        );
+      }}
+    </Sprite>
+  );
+}
+
+// ── Scene 4: Bullet reveal ───────────────────────────────────────────
+function BulletScene() {
+  const items = [
+    { n: '01', t: 'Context windows decay.' },
+    { n: '02', t: 'Tool selection drifts.' },
+    { n: '03', t: 'Plans go stale.' },
+    { n: '04', t: 'Errors compound.' },
+  ];
+  return (
+    <Sprite start={SCENE * 3} end={SCENE * 4}>
+      <div style={{ position: 'absolute', left: 'var(--safe-x)', top: 200, right: 'var(--safe-x)' }}>
+        <FadeUp at={0} className="em-label" style={{ marginBottom: 64 }}>
+          Failure Modes
+        </FadeUp>
+        <FadeUp at={0.15}>
+          <div className="em-display italic" style={{ fontSize: 80, marginBottom: 80 }}>
+            Where agents break.
+          </div>
+        </FadeUp>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+          {items.map((it, i) => (
+            <FadeUp key={it.n} at={0.5 + i * 0.18} rise={18}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 48 }}>
+                <span className="em-label" style={{ fontSize: 22, color: 'var(--color-accent)', minWidth: 64 }}>{it.n}</span>
+                <span style={{ width: 32, height: 1, background: 'var(--color-fg)', alignSelf: 'center' }} />
+                <span className="em-body" style={{ fontSize: 48, fontWeight: 500 }}>{it.t}</span>
+              </div>
+            </FadeUp>
+          ))}
+        </div>
+      </div>
+    </Sprite>
+  );
+}
+
+// ── Scene 5: Stat card ───────────────────────────────────────────────
+function StatScene() {
+  return (
+    <Sprite start={SCENE * 4} end={SCENE * 5}>
+      {({ localTime }) => {
+        // Count-up over 900ms after a 200ms delay
+        const cP = clamp((localTime - 0.2) / 0.9, 0, 1);
+        const value = Math.round(EOUT(cP) * 84);
+        const underlineP = clamp((localTime - 1.4) / 0.7, 0, 1);
+        return (
+          <div style={{ position: 'absolute', inset: 0,
+                        display: 'grid', gridTemplateColumns: '1fr 1fr',
+                        alignItems: 'center',
+                        padding: '0 var(--safe-x)', gap: 80 }}>
+            <div>
+              <FadeUp at={0} className="em-label" style={{ marginBottom: 48 }}>
+                Finding · 03
+              </FadeUp>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <div className="em-display" style={{ fontSize: 380, lineHeight: 0.9 }}>
+                  {value}<span className="em-accent">%</span>
+                </div>
+                <div style={{
+                  position: 'absolute', left: 0, bottom: -16,
+                  height: 6, width: `${underlineP * 80}%`,
+                  background: 'var(--color-accent)',
+                }} />
+              </div>
+            </div>
+            <FadeUp at={0.4} rise={20}>
+              <div className="em-body" style={{ fontSize: 44, lineHeight: 1.3, maxWidth: 640, fontWeight: 400 }}>
+                of agent failures occur <em style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>after</em> the fourth tool call.
+              </div>
+              <div className="em-label" style={{ marginTop: 32 }}>
+                Source · Beacon Logs, Q1 2026
+              </div>
+            </FadeUp>
+          </div>
+        );
+      }}
+    </Sprite>
+  );
+}
+
+// ── Scene 6: Feature card ────────────────────────────────────────────
+function FeatureScene() {
+  return (
+    <Sprite start={SCENE * 5} end={SCENE * 6}>
+      <div style={{ position: 'absolute', left: 'var(--safe-x)', top: 220, right: 'var(--safe-x)' }}>
+        <FadeUp at={0} className="em-label" style={{ marginBottom: 64 }}>
+          Feature · 01 of 03
+        </FadeUp>
+        <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 64, alignItems: 'start' }}>
+          <FadeUp at={0.15}>
+            {/* Editorial 'dropcap' style mark */}
+            <div style={{
+              width: 140, height: 140,
+              border: '1px solid var(--color-fg)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'var(--font-display)', fontSize: 100, fontStyle: 'italic',
+            }}>C</div>
+          </FadeUp>
+          <div>
+            <FadeUp at={0.25}>
+              <div className="em-display italic" style={{ fontSize: 140 }}>
+                Checkpoint memory.
+              </div>
+            </FadeUp>
+            <FadeUp at={0.5} rise={16}>
+              <div className="em-body" style={{ fontSize: 32, lineHeight: 1.4, maxWidth: 1100, marginTop: 48, fontWeight: 400 }}>
+                Beacon snapshots an agent's reasoning state at each tool boundary.
+                When a plan goes stale, the agent rewinds — not to the start, but
+                to the last point its model of the world was correct.
+              </div>
+            </FadeUp>
+          </div>
+        </div>
+      </div>
+    </Sprite>
+  );
+}
+
+// ── Scene 7: Card grid ───────────────────────────────────────────────
+function CardGridScene() {
+  const cards = [
+    { n: '01', name: 'Memory',   d: 'Persistent state across long sessions.' },
+    { n: '02', name: 'Reasoning', d: 'Plans that adapt to fresh evidence.' },
+    { n: '03', name: 'Recovery', d: 'Rewind to a last-known-good moment.' },
+  ];
+  return (
+    <Sprite start={SCENE * 6} end={SCENE * 7}>
+      <div style={{ position: 'absolute', left: 'var(--safe-x)', top: 220, right: 'var(--safe-x)' }}>
+        <FadeUp at={0} className="em-label" style={{ marginBottom: 64 }}>
+          The Architecture
+        </FadeUp>
+        <FadeUp at={0.15}>
+          <div className="em-display italic" style={{ fontSize: 100, marginBottom: 96 }}>
+            Three primitives.
+          </div>
+        </FadeUp>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, background: 'var(--color-border)' }}>
+          {cards.map((c, i) => (
+            <FadeUp key={c.n} at={0.45 + i * 0.18} rise={20}>
+              <div style={{ background: 'var(--color-bg)', padding: '48px 56px 56px', minHeight: 360 }}>
+                <div className="em-label em-accent" style={{ marginBottom: 32, color: 'var(--color-accent)' }}>{c.n}</div>
+                <div className="em-display" style={{ fontSize: 64, marginBottom: 32 }}>{c.name}</div>
+                <div className="em-body em-muted" style={{ fontSize: 24, lineHeight: 1.4, maxWidth: 320 }}>{c.d}</div>
+              </div>
+            </FadeUp>
+          ))}
+        </div>
+      </div>
+    </Sprite>
+  );
+}
+
+// ── Scene 8: UI showcase ─────────────────────────────────────────────
+function UIShowcaseScene() {
+  return (
+    <Sprite start={SCENE * 7} end={SCENE * 8}>
+      {({ localTime }) => {
+        const arrow1 = clamp((localTime - 1.0) / 0.5, 0, 1);
+        const arrow2 = clamp((localTime - 1.4) / 0.5, 0, 1);
+        return (
+          <>
+            <FadeUp at={0} className="em-label" style={{ position: 'absolute', left: 'var(--safe-x)', top: 110 }}>
+              Plate II · The Console
+            </FadeUp>
+
+            {/* product mock */}
+            <FadeUp at={0.2}>
+              <div style={{
+                position: 'absolute', left: 360, top: 200, width: 1200, height: 680,
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-fg)',
+              }}>
+                {/* window header */}
+                <div style={{ height: 48, borderBottom: '1px solid var(--color-fg)',
+                              display: 'flex', alignItems: 'center', padding: '0 20px', gap: 10 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 5, border: '1px solid var(--color-fg)' }} />
+                  <span style={{ width: 10, height: 10, borderRadius: 5, border: '1px solid var(--color-fg)' }} />
+                  <span style={{ width: 10, height: 10, borderRadius: 5, border: '1px solid var(--color-fg)' }} />
+                  <span className="em-label" style={{ marginLeft: 16, fontSize: 13 }}>BEACON · session 41ac</span>
+                </div>
+                {/* fake content */}
+                <div style={{ padding: 32, display: 'grid', gridTemplateColumns: '240px 1fr', gap: 32, height: 'calc(100% - 48px)' }}>
+                  <div style={{ borderRight: '1px solid var(--color-border)', paddingRight: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {['Run', 'Memory', 'Plan', 'Tools', 'Trace'].map((x, i) => (
+                      <div key={x} className="em-body" style={{ fontSize: 18, color: i === 2 ? 'var(--color-fg)' : 'var(--color-muted)', fontWeight: i === 2 ? 500 : 400 }}>{x}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    <div className="em-display" style={{ fontSize: 36 }}>Plan · v3</div>
+                    {['Read the eval spec', 'Generate 12 candidate prompts', 'Score each against the rubric', 'Select top-3 by F1', 'Iterate the top-3 with reasoning trace'].map((s, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
+                        <span className="em-label" style={{ fontSize: 13, color: 'var(--color-muted)', minWidth: 32 }}>{String(i+1).padStart(2,'0')}</span>
+                        <span className="em-body" style={{ fontSize: 20 }}>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </FadeUp>
+
+            {/* callouts */}
+            <div style={{ position: 'absolute', left: 80, top: 360, width: 280, opacity: arrow1 }}>
+              <div className="em-label em-accent">A · Sidebar</div>
+              <div className="em-body" style={{ fontSize: 20, marginTop: 8, lineHeight: 1.35 }}>
+                Five views of the same run.
+              </div>
+              <div style={{ height: 1, width: `${arrow1 * 200}px`, background: 'var(--color-accent)', marginTop: 14 }} />
+            </div>
+            <div style={{ position: 'absolute', left: 1580, top: 540, width: 260, opacity: arrow2, textAlign: 'right' }}>
+              <div className="em-label em-accent" style={{ color: 'var(--color-accent)' }}>B · Plan</div>
+              <div className="em-body" style={{ fontSize: 20, marginTop: 8, lineHeight: 1.35 }}>
+                Versioned, diff-able, replayable.
+              </div>
+              <div style={{ height: 1, width: `${arrow2 * 200}px`, background: 'var(--color-accent)', marginTop: 14, marginLeft: 'auto' }} />
+            </div>
+          </>
+        );
+      }}
+    </Sprite>
+  );
+}
+
+// ── Scene 9: Content card ────────────────────────────────────────────
+function ContentScene() {
+  return (
+    <Sprite start={SCENE * 8} end={SCENE * 9}>
+      <div style={{ position: 'absolute', left: 'var(--safe-x)', right: 'var(--safe-x)', top: 200 }}>
+        <FadeUp at={0} className="em-label" style={{ marginBottom: 48 }}>
+          On the Record
+        </FadeUp>
+        <FadeUp at={0.2}>
+          <div className="em-display italic" style={{ fontSize: 120, marginBottom: 64 }}>
+            What we believe.
+          </div>
+        </FadeUp>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 96 }}>
+          <FadeUp at={0.45} rise={16}>
+            <div className="em-body" style={{ fontSize: 28, lineHeight: 1.5, fontWeight: 400 }}>
+              The next decade of AI infrastructure will be built around <em style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>long</em> runs — agents that work for hours, not seconds. The bottleneck won't be the model. It will be everything around the model.
+            </div>
+          </FadeUp>
+          <FadeUp at={0.65} rise={16}>
+            <div className="em-body em-muted" style={{ fontSize: 22, lineHeight: 1.55 }}>
+              We're building Beacon for that world. A workbench for long-running agents: memory, recovery, observability. Designed for the people doing the actual work — research engineers at labs, founders shipping product, evaluators who need to know what their model just did and why.
+            </div>
+          </FadeUp>
+        </div>
+      </div>
+    </Sprite>
+  );
+}
+
+// ── Scene 10: CTA / outro ────────────────────────────────────────────
+function CTAScene() {
+  return (
+    <Sprite start={SCENE * 9} end={SCENE * 10}>
+      <div style={{ position: 'absolute', inset: 0,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 56 }}>
+        <FadeUp at={0} className="em-label">Continued in Vol. 02</FadeUp>
+        <FadeUp at={0.15}>
+          <div className="em-display italic" style={{ fontSize: 180, textAlign: 'center' }}>
+            Read the brief.
+          </div>
+        </FadeUp>
+        <FadeUp at={0.4}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+            <span className="em-body" style={{ fontSize: 36, fontWeight: 500 }}>beacon.run</span>
+            <span className="em-accent" style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 60, lineHeight: 1 }}>→</span>
+          </div>
+        </FadeUp>
+        <FadeUp at={0.65} style={{ position: 'absolute', bottom: 96 }}>
+          {/* placeholder logo lockup */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 24, height: 24, border: '1.5px solid var(--color-fg)', position: 'relative' }}>
+              <div style={{ position: 'absolute', inset: 6, background: 'var(--color-accent)' }} />
+            </div>
+            <span className="em-label" style={{ fontSize: 14, letterSpacing: '0.2em' }}>Beacon · 2026</span>
+          </div>
+        </FadeUp>
+      </div>
+    </Sprite>
+  );
+}
+
+// ── Lower-third overlay (connective element demo) ────────────────────
+// Shown briefly during the content scene to demonstrate the lower-third pattern.
+function LowerThirdDemo() {
+  // appears at SCENE*8 + 1.2s, hides at SCENE*8 + 3.5s
+  const start = SCENE * 8 + 1.2;
+  const end   = SCENE * 8 + 3.5;
+  return (
+    <Sprite start={start} end={end}>
+      {({ localTime, duration }) => {
+        const inP  = clamp(localTime / 0.4, 0, 1);
+        const outP = clamp((duration - localTime) / 0.4, 0, 1);
+        const op   = EOUT(inP) * EOUT(outP);
+        return (
+          <div style={{
+            position: 'absolute',
+            left: 'var(--safe-x)', right: 'var(--safe-x)',
+            bottom: 140,
+            opacity: op, transform: `translateY(${(1 - inP) * 8}px)`,
+          }}>
+            <div style={{ height: 1, background: 'var(--color-border)', marginBottom: 16 }} />
+            <div className="em-label" style={{ fontSize: 16 }}>
+              Lower Third · Connective Element
+            </div>
+          </div>
+        );
+      }}
+    </Sprite>
+  );
+}
+
+// ── Scene labels for designer reference (small, top right) ───────────
+function SceneCounter() {
+  const labels = [
+    '01 · Title', '02 · Section header', '03 · Kinetic statement',
+    '04 · Bullet reveal', '05 · Stat card', '06 · Feature card',
+    '07 · Card grid', '08 · UI showcase', '09 · Content card', '10 · CTA / outro'
+  ];
+  const time = useTime();
+  const idx = Math.min(9, Math.floor(time / SCENE));
+  return (
+    <div style={{
+      position: 'absolute', top: 30, right: 'var(--safe-x)',
+      fontFamily: 'var(--font-mono)', fontSize: 14, letterSpacing: '0.16em',
+      textTransform: 'uppercase', color: 'var(--color-muted)',
+    }}>
+      {labels[idx]}
+    </div>
+  );
+}
+
+// ── Root ─────────────────────────────────────────────────────────────
+function App() {
+  const total = SCENE * 10;
+  return (
+    <Stage
+      width={1920}
+      height={1080}
+      duration={total}
+      background="var(--color-bg)"
+      persistKey="editorial-mono-ref"
+    >
+      <div className="em-canvas">
+        {/* persistent chrome */}
+        <PageChrome folio="Beacon · Vol. 01" right="" />
+        <SceneCounter />
+
+        <TitleScene />
+        <SectionScene />
+        <KineticScene />
+        <BulletScene />
+        <StatScene />
+        <FeatureScene />
+        <CardGridScene />
+        <UIShowcaseScene />
+        <ContentScene />
+        <LowerThirdDemo />
+        <CTAScene />
+      </div>
+    </Stage>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+</script>
+
+</body>
+</html>

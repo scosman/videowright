@@ -6,8 +6,8 @@
 - Constraints / hard guidelines: Keep it short (3 segments). Showcase style tokens and voiceover fields.
 
 ## Style
-- Active style: placeholder
-- Notes: Uses the placeholder style as a neutral baseline. Replace with a real style pack.
+- Active style: editorial-mono
+- Notes: Uses Editorial Mono as a clean, content-first default. Swap to any other built-in pack or create your own.
 
 ## Audio intent
 - Mode: voiceover
@@ -15,7 +15,7 @@
 
 ## Segment outline
 1. hello-intro -- Title card with animated entrance
-2. placeholder-sample -- Style showcase demonstrating token usage
+2. editorial-mono-sample-kinetic -- Style showcase demonstrating kinetic typography
 3. hello-outro -- Closing card with call to action
 
 ## Script (if applicable)
@@ -28,4 +28,4 @@ see voiceover/script.md
 ### YYYY-MM-DD -- Initial scaffold
 - Created via Videowright setup flow
 - 3 segments: intro, style sample, outro
-- Placeholder style applied via timeline.ts top-of-file import
+- Editorial Mono style applied via timeline.ts top-of-file import

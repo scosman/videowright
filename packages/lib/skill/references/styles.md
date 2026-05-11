@@ -16,19 +16,31 @@ Each style lives in `styles/<slug>/` at the consumer repo root. The slug is a ke
 
 ```
 styles/
-├── modern/
+├── editorial-mono/
 │   ├── STYLE.md            # description, rules, frontmatter (title, slug, picker_description, font_sources)
 │   ├── tokens.css           # CSS custom properties on :root
-│   ├── sample-segment/      # reference sample (stays here as a template)
-│   │   └── index.ts
-│   └── (optional extras)    # anything the user adds
-└── retro/
+│   ├── brand.md             # human-readable token rationale
+│   ├── reference/
+│   │   ├── scenes.html      # rendered scene mockups, browsable in a web browser
+│   │   └── animations.jsx   # motion vocabulary mockups
+│   └── sample/              # reference samples (one per scene type, stays here as templates)
+│       ├── title.ts
+│       ├── section.ts
+│       ├── kinetic.ts
+│       ├── bullet.ts
+│       ├── stat.ts
+│       ├── feature.ts
+│       ├── grid.ts
+│       ├── ui-showcase.ts
+│       ├── content.ts
+│       └── cta.ts
+└── risograph/
     ├── STYLE.md
     ├── tokens.css
     └── ...
 ```
 
-The `sample-segment/` folder inside a style is the source template. When installed, the sample is copied to `segments/<slug>-sample/index.ts` for use in videos. The source stays in the style folder as a reference.
+The `sample/` folder inside a style contains one TypeScript file per scene type. When installed, samples are copied to `segments/<slug>-sample-<scene>.ts` (flat files under `segments/`) for use in videos. The sources stay in the style folder as references.
 
 **Required files per style:**
 
@@ -62,13 +74,13 @@ The active style's `tokens.css` is loaded via a CSS import at the top of the vid
 
 ```ts
 // videos/my_video/timeline.ts
-import '../../styles/modern/tokens.css';  // path relative to this file
+import '../../styles/editorial-mono/tokens.css';  // path relative to this file
 import type { Timeline } from 'videowright';
 
 const timeline: Timeline = {
   meta: {
     title: 'My Video',
-    // style: 'modern',  // optional — falls back to config defaultStyle
+    // style: 'editorial-mono',  // optional — falls back to config defaultStyle
   },
   segments: [...],
 };
@@ -86,13 +98,13 @@ Vite (the dev server) and any bundler resolves the CSS import natively. The CSS 
 Set `meta.style` on the timeline to override the project default for one video:
 
 ```ts
-import '../../styles/retro/tokens.css';
+import '../../styles/risograph/tokens.css';
 import type { Timeline } from 'videowright';
 
 const timeline: Timeline = {
   meta: {
     title: 'January 2026 Launch',
-    style: 'retro',  // overrides config defaultStyle
+    style: 'risograph',  // overrides config defaultStyle
   },
   segments: [...],
 };

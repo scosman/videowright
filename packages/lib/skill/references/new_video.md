@@ -46,7 +46,7 @@ In this case, ask **only the missing questions**, grouped into a single round. D
 
 > Before I build the plan, a few things I need:
 > 1. What's this video for and who's the audience?
-> 2. Should we use the current default style (modern), or do you want something different?
+> 2. Should we use the current default style, or do you want something different?
 > 3. Audio: voiceover, music, or silent?
 
 ### Propose, don't interrogate

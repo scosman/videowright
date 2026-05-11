@@ -1,4 +1,4 @@
-import "../../styles/placeholder/tokens.css";
+import "../../styles/editorial-mono/tokens.css";
 import type { Timeline } from "videowright";
 
 const timeline: Timeline = {
@@ -7,7 +7,7 @@ const timeline: Timeline = {
 	},
 	segments: [
 		{ id: "hello-intro" },
-		{ id: "placeholder-sample", transition: "fade" },
+		{ id: "editorial-mono-sample-kinetic", transition: "fade" },
 		{ id: "hello-outro", transition: "fade" },
 	],
 };

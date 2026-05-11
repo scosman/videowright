@@ -26,6 +26,12 @@
 		}
 	},
 	"files": {
-		"ignore": ["node_modules", "dist", "package-lock.json"]
+		"ignore": [
+			"node_modules",
+			"dist",
+			"package-lock.json",
+			"**/skill/assets/styles/*/reference/*.html",
+			"**/skill/assets/styles/*/reference/*.jsx"
+		]
 	}
 }

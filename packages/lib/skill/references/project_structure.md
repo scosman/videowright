@@ -22,12 +22,18 @@ A Videowright project follows this directory structure:
 ├── transitions/                    # custom transition functions
 │   └── logo-morph.ts
 ├── styles/                         # style folders
-│   ├── modern/
+│   ├── editorial-mono/
 │   │   ├── STYLE.md
 │   │   ├── tokens.css
-│   │   └── sample-segment/
-│   │       └── index.ts
-│   └── retro/
+│   │   ├── brand.md
+│   │   ├── reference/
+│   │   │   ├── scenes.html
+│   │   │   └── animations.jsx
+│   │   └── sample/
+│   │       ├── title.ts
+│   │       ├── kinetic.ts
+│   │       └── ... (10 scene types)
+│   └── risograph/
 │       ├── STYLE.md
 │       └── tokens.css
 └── videos/                         # per-video folders
@@ -86,7 +92,7 @@ import { defineConfig } from 'videowright';
 
 export default defineConfig({
   projectStructure: 'v1',
-  defaultStyle: 'modern',
+  defaultStyle: 'editorial-mono',
   defaults: {
     resolution: [1920, 1080],
     fps: 60,
@@ -113,7 +119,7 @@ See [types.md](types.md) for the full `Config` type.
 
 ### Styles
 
-- Use `kebab-case` for style folder names: `modern`, `retro`, `animated-explainer`.
+- Use `kebab-case` for style folder names: `editorial-mono`, `swiss-console`, `risograph`.
 - The folder name is the style's slug — it must match the `slug` in `STYLE.md` frontmatter and the value in `defaultStyle` / `meta.style`.
 
 ## The reuse rule
