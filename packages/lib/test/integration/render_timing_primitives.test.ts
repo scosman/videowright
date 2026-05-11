@@ -48,10 +48,12 @@ hasBrowser = await canLaunchBrowser();
 
 /**
  * Create a fresh page with the time shim injected, navigate to a minimal
- * HTML document, and engage virtual time. Returns the page and context
- * ready for clock-advance assertions.
+ * HTML document, and optionally engage virtual time. When `engage` is true
+ * (the default), returns the page in driver-controlled mode ready for
+ * clock-advance assertions. When false, returns the page in passthrough
+ * mode so callers can schedule real timers before engaging.
  */
-async function createShimmedPage(bodyHtml = "") {
+async function createShimmedPage(bodyHtml = "", engage = true) {
 	const context = await browser.newContext({
 		viewport: { width: 800, height: 600 },
 		deviceScaleFactor: 1,
@@ -74,8 +76,10 @@ body { width: 800px; height: 600px; }
 			waitUntil: "domcontentloaded",
 		});
 
-		// Engage virtual time (switch from passthrough to driver-controlled)
-		await page.evaluate("window.__VW_ENGAGE_VIRTUAL_TIME__()");
+		if (engage) {
+			// Engage virtual time (switch from passthrough to driver-controlled)
+			await page.evaluate("window.__VW_ENGAGE_VIRTUAL_TIME__()");
+		}
 
 		return { page, context };
 	} catch (e) {
@@ -581,6 +585,141 @@ describe.skipIf(!hasBrowser)("time shim: primitive-level DOM assertions", () => 
 			expect(times[0]).toBe(baselineRounded + 34);
 			expect(times[1]).toBe(baselineRounded + 68);
 			expect(times[2]).toBe(baselineRounded + 102);
+		} finally {
+			await context.close();
+		}
+	});
+
+	it("passthrough hold survives engagement and resolves on virtual clock", async () => {
+		// Regression test for the first-segment hold hang: a hold() (setTimeout)
+		// scheduled during passthrough mode must be converted to a virtual timer
+		// at engagement time, not cancelled.
+		const { page, context } = await createShimmedPage(
+			'<div id="thing" style="opacity:0;"></div>',
+			false,
+		);
+
+		try {
+			// Start an async play()-like function while still in passthrough mode.
+			// The hold(500) creates a real setTimeout whose resolve callback must
+			// survive the passthrough-to-driver transition.
+			await page.evaluate(`
+				(function() {
+					function hold(ms) {
+						return new Promise(function(resolve) { setTimeout(resolve, ms); });
+					}
+					(async function() {
+						var el = document.getElementById("thing");
+						if (!el) return;
+						await hold(500);
+						el.animate(
+							[{ opacity: 0 }, { opacity: 1 }],
+							{ duration: 200, fill: 'forwards' }
+						);
+						await hold(1000);
+						el.dataset.done = "true";
+					})();
+				})()
+			`);
+
+			// Engage virtual time. The pending real setTimeout(resolve, 500) must
+			// be converted to a virtual timer rather than being cancelled.
+			// Engagement happens within a few ms (a single page.evaluate round-trip),
+			// well before the 500ms real timer fires in wall-clock time.
+			await page.evaluate("window.__VW_ENGAGE_VIRTUAL_TIME__()");
+
+			// Before advancing: thing should still be at opacity 0, not done
+			const opacityBefore = await page.evaluate(() => {
+				const el = document.getElementById("thing");
+				return el ? Number(getComputedStyle(el).opacity) : -1;
+			});
+			expect(opacityBefore).toBe(0);
+
+			// Advance past the first hold (500ms) and past the animation (200ms)
+			// Total: 800ms should show the animation completed (opacity 1)
+			const frameMs = 1000 / 60;
+			const framesFor800 = Math.ceil(800 / frameMs);
+			for (let i = 0; i < framesFor800; i++) {
+				await page.evaluate(`window.__VW_ADVANCE_CLOCK__(${frameMs})`);
+			}
+
+			const opacityAfterAnim = await page.evaluate(() => {
+				const el = document.getElementById("thing");
+				return el ? Number(getComputedStyle(el).opacity) : -1;
+			});
+			expect(opacityAfterAnim).toBeCloseTo(1, 0);
+
+			// Now advance past the second hold (1000ms more from the animation start)
+			// Second hold(1000) starts at ~700ms (after 500ms hold + 200ms anim), resolves at ~1700ms.
+			// Let's advance to 1600ms total to be safe
+			const totalAdvancedSoFar = framesFor800 * frameMs;
+			const remainingMs = 1600 - totalAdvancedSoFar;
+			const framesRemaining = Math.ceil(remainingMs / frameMs);
+			for (let i = 0; i < framesRemaining; i++) {
+				await page.evaluate(`window.__VW_ADVANCE_CLOCK__(${frameMs})`);
+			}
+
+			const done = await page.evaluate(() => {
+				return document.getElementById("thing")?.dataset.done;
+			});
+			expect(done).toBe("true");
+		} finally {
+			await context.close();
+		}
+	});
+
+	it("passthrough setInterval is converted to virtual interval at engagement", async () => {
+		const { page, context } = await createShimmedPage('<div id="interval-count">0</div>', false);
+
+		try {
+			// Start a setInterval during passthrough mode
+			await page.evaluate(() => {
+				let count = 0;
+				const el = document.getElementById("interval-count");
+				if (!el) return;
+				setInterval(() => {
+					count++;
+					el.textContent = String(count);
+				}, 100);
+			});
+
+			// Engage virtual time immediately -- the interval should be converted
+			await page.evaluate("window.__VW_ENGAGE_VIRTUAL_TIME__()");
+
+			expect(await page.locator("#interval-count").textContent()).toBe("0");
+
+			// Advance 300ms -- should fire 3 times (at 100ms, 200ms, 300ms).
+			// Engagement happens within ms of scheduling, so the first virtual
+			// fire is at ~100ms with negligible time elapsed in passthrough.
+			await page.evaluate("window.__VW_ADVANCE_CLOCK__(300)");
+			const count = await page.locator("#interval-count").textContent();
+			expect(Number(count)).toBe(3);
+		} finally {
+			await context.close();
+		}
+	});
+
+	it("passthrough rAF callback fires on first virtual clock advance", async () => {
+		const { page, context } = await createShimmedPage('<div id="raf-marker">before</div>', false);
+
+		try {
+			// Schedule an rAF during passthrough mode
+			await page.evaluate(() => {
+				requestAnimationFrame(() => {
+					const el = document.getElementById("raf-marker");
+					if (el) el.textContent = "after";
+				});
+			});
+
+			// Engage virtual time -- the rAF callback should be queued
+			await page.evaluate("window.__VW_ENGAGE_VIRTUAL_TIME__()");
+
+			// Before advancing, rAF should not have fired yet
+			expect(await page.locator("#raf-marker").textContent()).toBe("before");
+
+			// Advance one frame -- the converted rAF callback should fire
+			await page.evaluate("window.__VW_ADVANCE_CLOCK__(16)");
+			expect(await page.locator("#raf-marker").textContent()).toBe("after");
 		} finally {
 			await context.close();
 		}

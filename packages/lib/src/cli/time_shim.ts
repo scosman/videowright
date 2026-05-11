@@ -15,7 +15,8 @@
  *    loading, library init (lottie-web, echarts, three.js), and the render
  *    entry boot() function can complete normally. `performance.now()` and
  *    `Date.now()` return real elapsed time since shim install. Real timer
- *    IDs are tracked so they can be cancelled at mode switch.
+ *    IDs and metadata are tracked so they can be converted to virtual
+ *    timers at mode switch (preserving pending callbacks).
  *
  * 2. **Driver-controlled mode** (during render capture): The driver controls
  *    advancement via `__VW_ADVANCE_CLOCK__(deltaMs)`. Timers and RAF
@@ -63,10 +64,10 @@ export const TIME_SHIM_SOURCE = `
   // Wall-clock reference captured at shim install time
   var shimInstallPerf = realPerfNow();
   var shimInstallDate = realDateNow();
-  // Track real timer/RAF IDs so we can cancel them at mode switch
-  var realTimerIds = new Set();       // real setTimeout IDs
-  var realIntervalIds = new Set();    // real setInterval IDs
-  var realRafIds = new Set();         // real RAF IDs
+  // Track real timer/RAF IDs with metadata so we can convert them at mode switch
+  var realTimerMeta = new Map();      // real setTimeout ID -> { cb, args, fireAtRealMs }
+  var realIntervalMeta = new Map();   // real setInterval ID -> { cb, args, intervalMs, nextFireRealMs }
+  var realRafMeta = new Map();        // real RAF ID -> { cb }
 
   // ----- Driver-mode state -----
   var virtualMs = 0;
@@ -115,20 +116,23 @@ export const TIME_SHIM_SOURCE = `
   // ----- setTimeout / clearTimeout -----
   window.setTimeout = function(cb, ms) {
     if (typeof cb !== 'function') return 0;
+    var delay = (ms || 0);
+    var args = Array.prototype.slice.call(arguments, 2);
     if (mode === 'passthrough') {
-      var realId = realSetTimeout.apply(null, arguments);
-      realTimerIds.add(realId);
+      var fireAtRealMs = realPerfNow() + delay;
+      // Wrap the callback so that if the real timer fires before engagement,
+      // its metadata is removed -- preventing a double-fire at engagement.
+      var realId = realSetTimeout(function() { realTimerMeta.delete(realId); cb.apply(null, args); }, delay);
+      realTimerMeta.set(realId, { cb: cb, args: args, fireAtRealMs: fireAtRealMs });
       return realId;
     }
-    var delay = (ms || 0);
     var id = nextTimerId++;
-    var args = Array.prototype.slice.call(arguments, 2);
     timers.set(id, { fireAt: virtualMs + delay, cb: cb, args: args });
     return id;
   };
   window.clearTimeout = function(id) {
     if (mode === 'passthrough') {
-      realTimerIds.delete(id);
+      realTimerMeta.delete(id);
       realClearTimeout(id);
       return;
     }
@@ -139,8 +143,14 @@ export const TIME_SHIM_SOURCE = `
   window.setInterval = function(cb, ms) {
     if (typeof cb !== 'function') return 0;
     if (mode === 'passthrough') {
-      var realId = realSetInterval.apply(null, arguments);
-      realIntervalIds.add(realId);
+      var intervalMs = Math.max(ms || 0, 1);
+      var args = Array.prototype.slice.call(arguments, 2);
+      var meta = { cb: cb, args: args, intervalMs: intervalMs, nextFireRealMs: realPerfNow() + intervalMs };
+      // Wrap the callback to update nextFireRealMs each time the real interval
+      // fires, so that at engagement we compute an accurate remaining time
+      // instead of using the stale initial registration time.
+      var realId = realSetInterval(function() { meta.nextFireRealMs = realPerfNow() + intervalMs; cb.apply(null, args); }, intervalMs);
+      realIntervalMeta.set(realId, meta);
       return realId;
     }
     var interval = Math.max(ms || 0, 1);
@@ -151,7 +161,7 @@ export const TIME_SHIM_SOURCE = `
   };
   window.clearInterval = function(id) {
     if (mode === 'passthrough') {
-      realIntervalIds.delete(id);
+      realIntervalMeta.delete(id);
       realClearInterval(id);
       return;
     }
@@ -161,8 +171,10 @@ export const TIME_SHIM_SOURCE = `
   // ----- requestAnimationFrame / cancelAnimationFrame -----
   window.requestAnimationFrame = function(cb) {
     if (mode === 'passthrough') {
-      var realId = realRAF(cb);
-      realRafIds.add(realId);
+      // Wrap the callback so that if the real rAF fires before engagement,
+      // its metadata is removed -- preventing a double-fire at engagement.
+      var realId = realRAF(function(timestamp) { realRafMeta.delete(realId); cb(timestamp); });
+      realRafMeta.set(realId, { cb: cb });
       return realId;
     }
     var id = nextTimerId++;
@@ -171,7 +183,7 @@ export const TIME_SHIM_SOURCE = `
   };
   window.cancelAnimationFrame = function(id) {
     if (mode === 'passthrough') {
-      realRafIds.delete(id);
+      realRafMeta.delete(id);
       realCAF(id);
       return;
     }
@@ -227,16 +239,35 @@ export const TIME_SHIM_SOURCE = `
   window.__VW_ENGAGE_VIRTUAL_TIME__ = function() {
     if (mode === 'driver') return; // already engaged
 
-    // Cancel all outstanding real timers so they don't fire after switch
-    realTimerIds.forEach(function(id) { realClearTimeout(id); });
-    realTimerIds.clear();
-    realIntervalIds.forEach(function(id) { realClearInterval(id); });
-    realIntervalIds.clear();
-    realRafIds.forEach(function(id) { realCAF(id); });
-    realRafIds.clear();
-
     // Set virtual time to current real elapsed so animations don't jump
-    virtualMs = realPerfNow() - shimInstallPerf;
+    var nowReal = realPerfNow();
+    virtualMs = nowReal - shimInstallPerf;
+
+    // Convert pending real setTimeouts to virtual timers instead of discarding
+    realTimerMeta.forEach(function(meta, realId) {
+      realClearTimeout(realId);
+      var remaining = Math.max(0, meta.fireAtRealMs - nowReal);
+      var id = nextTimerId++;
+      timers.set(id, { fireAt: virtualMs + remaining, cb: meta.cb, args: meta.args });
+    });
+    realTimerMeta.clear();
+
+    // Convert pending real setIntervals to virtual intervals
+    realIntervalMeta.forEach(function(meta, realId) {
+      realClearInterval(realId);
+      var remaining = Math.max(0, meta.nextFireRealMs - nowReal);
+      var id = nextTimerId++;
+      timers.set(id, { fireAt: virtualMs + remaining, cb: meta.cb, args: meta.args, repeat: meta.intervalMs });
+    });
+    realIntervalMeta.clear();
+
+    // Convert pending real rAF callbacks into virtual RAF queue
+    realRafMeta.forEach(function(meta, realId) {
+      realCAF(realId);
+      var id = nextTimerId++;
+      rafCallbacks.push({ id: id, cb: meta.cb });
+    });
+    realRafMeta.clear();
 
     // Capture any WAAPI animations still running from boot and pause+track them
     try {
