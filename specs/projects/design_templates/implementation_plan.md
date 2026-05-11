@@ -10,7 +10,7 @@ status: complete
 
 - [x] **Phase 2: Swiss Console.** Adapt Swiss Console fully (STYLE.md frontmatter + tokens.css + brand.md + reference/ + 10 sample/<scene>.ts). Add `swiss-console` to STYLE_PACKS test list and to the Mode 4 hardcoded message. Verify Switzer font loads via Fontshare URL. All tests pass.
 
-- [ ] **Phase 3: Neon Terminal.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. Pay special attention to stepped-easing motion (`steps(8, end)`) and the phosphor-glow text-shadow on accent text — make sure samples are render-safe. All tests pass.
+- [x] **Phase 3: Neon Terminal.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. Pay special attention to stepped-easing motion (`steps(8, end)`) and the phosphor-glow text-shadow on accent text — make sure samples are render-safe. All tests pass.
 
 - [ ] **Phase 4: Motion Engineering.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. The HUD style relies on SVG dimension lines and crosshair geometry — sample-segments need careful SVG authoring. All tests pass.
 

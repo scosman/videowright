@@ -29,6 +29,7 @@ Present this message verbatim — do not rephrase or regenerate it:
 > 4. **Built-in style pack** — pick one of these ready-made styles:
 >    - **Editorial Mono** — Black ink on cream paper. One red accent. Reads like a magazine.
 >    - **Swiss Console** — Strict 12-column grid. Hairline rules. Tabular numerals. Micro-labels everywhere.
+>    - **Neon Terminal** — CRT terminal interface. Mono throughout. Phosphor-green on near-black, stepped motion.
 
 ### Mode 1 -- Ingest reference material
 

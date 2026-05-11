@@ -1,0 +1,39 @@
+/* Neon Terminal — design tokens
+ * Dark-mode native. Phosphor green on near-black. Mono dominant.
+ */
+:root {
+	--color-bg: #0a0e0b;
+	--color-fg: #d8f3d8;
+	--color-accent: #4ade80; /* phosphor green */
+
+	--color-muted: #5a6f5c;
+	--color-border: #1f2a21;
+	--color-surface: #11171210;
+
+	--font-display: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+	--font-body: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+	--space-sm: 12px;
+	--space-md: 24px;
+	--space-lg: 48px;
+	--space-xl: 96px;
+
+	--duration-fast: 100ms;
+	--duration-normal: 250ms;
+	--duration-slow: 600ms;
+
+	--radius-sm: 0px;
+	--radius-md: 2px;
+	--stagger: 40ms;
+	--ease-out: steps(8, end);
+	--ease-in: steps(8, end);
+	--scene-hold: 4s;
+
+	--safe-x: 96px;
+	--safe-y: 80px;
+
+	--glow: 0 0 12px rgba(74, 222, 128, 0.45);
+	--glow-soft: 0 0 24px rgba(74, 222, 128, 0.18);
+	--amber: #f59e0b;
+}

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Neon Terminal — Reference Scenes</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; font-family: var(--font-body); }
+  .nt-canvas { position: absolute; inset: 0; background: var(--color-bg); color: var(--color-fg); overflow: hidden; }
+  .nt-canvas::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(74, 222, 128, 0.04) 3px 4px);
+  }
+  .nt-canvas::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.45) 100%);
+  }
+  .nt-glow { text-shadow: 0 0 12px rgba(74,222,128,0.45); color: var(--color-accent); }
+  .nt-glow-amber { text-shadow: 0 0 12px rgba(245,158,11,0.45); color: var(--amber); }
+  .nt-muted { color: var(--color-muted); }
+  .nt-h1 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em; line-height: 1.0; }
+  .nt-frame { border: 1px solid var(--color-border); }
+  @keyframes nt-blink { 0%,49% { opacity: 1 } 50%,100% { opacity: 0 } }
+  .nt-cursor { display: inline-block; width: 0.6em; height: 1em; background: var(--color-accent); box-shadow: 0 0 12px rgba(74,222,128,0.7); vertical-align: text-bottom; animation: nt-blink 1s steps(2,end) infinite; margin-left: 4px; }
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<div id="root"></div>
+
+<script type="text/babel" src="animations.jsx"></script>
+<script type="text/babel">
+const SCENE = 4;
+
+// Typewriter — reveals N chars based on local time
+function Type({ text, at = 0, cps = 40, className = '', style = {}, cursor = false, glow = false }) {
+  const { localTime } = useSprite();
+  const t = Math.max(0, localTime - at);
+  const n = Math.min(text.length, Math.floor(t * cps));
+  const done = n >= text.length;
+  return (
+    <span className={className} style={{ ...style }}>
+      <span className={glow ? 'nt-glow' : ''}>{text.slice(0, n)}</span>
+      {cursor && (done || n > 0) && <span className="nt-cursor" />}
+    </span>
+  );
+}
+
+// FadeStep — stepped fade-in (for blocks rather than text)
+function Step({ at = 0, dur = 0.2, children, style = {} }) {
+  const { localTime } = useSprite();
+  const op = localTime < at ? 0 : localTime < at + dur ? Math.round(clamp((localTime - at)/dur, 0, 1) * 8) / 8 : 1;
+  return <div style={{ ...style, opacity: op }}>{children}</div>;
+}
+
+// Terminal window frame
+function Term({ title, status, children }) {
+  return (
+    <div className="nt-frame" style={{ position: 'absolute', inset: '80px 96px', background: 'rgba(10,14,11,0.6)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid var(--color-border)', gap: 12, fontSize: 14, color: 'var(--color-muted)' }}>
+        <span style={{ width: 10, height: 10, borderRadius: 5, background: 'var(--color-border)' }} />
+        <span style={{ width: 10, height: 10, borderRadius: 5, background: 'var(--color-border)' }} />
+        <span style={{ width: 10, height: 10, borderRadius: 5, background: 'var(--color-border)' }} />
+        <span style={{ marginLeft: 16 }}>{title}</span>
+        <span style={{ marginLeft: 'auto' }} className="nt-glow">{status}</span>
+      </div>
+      <div style={{ padding: '48px 56px', height: 'calc(100% - 48px)', overflow: 'hidden', position: 'relative' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Counter() {
+  const t = useTime();
+  const i = Math.min(9, Math.floor(t/SCENE));
+  const labels = ['boot','section','statement','findings','metric','feature','grid','tui','memo','cta'];
+  return <div style={{ position: 'absolute', right: 110, top: 22, fontSize: 12, color: 'var(--color-muted)', fontFamily: 'var(--font-mono)' }}>
+    [{String(i+1).padStart(2,'0')}/10] {labels[i]}
+  </div>;
+}
+
+// ── Scene 1 — Boot / Title ──────────────────────────────────────────
+function S1() {
+  return <Sprite start={0} end={SCENE}>
+    <Term title="beacon@console:~$" status="[ booting ]">
+      <div style={{ fontSize: 22 }}>
+        <div className="nt-muted">$ <Type text="beacon --launch" at={0} cps={20} glow /></div>
+        <div className="nt-muted" style={{ marginTop: 8 }}><Type text="initializing runtime..." at={1.0} cps={30} /></div>
+        <div className="nt-muted" style={{ marginTop: 6 }}><Type text="loaded 12 modules in 240ms" at={1.6} cps={50} /></div>
+        <Step at={2.2}>
+          <pre className="nt-h1 nt-glow" style={{ fontSize: 96, lineHeight: 1.1, margin: '40px 0 24px', whiteSpace: 'pre' }}>{
+`  ____  ___    ___    ___ ___  _  _
+ | __ )| __|  / __|  / __/ _ \\| \\| |
+ | _ \\| _|  | (__  | (_| (_) | .  |
+ |___/|___|  \\___|  \\___\\___/|_|\\_|`
+          }</pre>
+        </Step>
+        <Step at={2.8} style={{ marginTop: 28 }}>
+          <div className="nt-h1" style={{ fontSize: 28 }}>// long-running agents for research labs<span className="nt-cursor" /></div>
+        </Step>
+      </div>
+    </Term>
+    <Counter />
+  </Sprite>;
+}
+
+// ── Scene 2 — Section ───────────────────────────────────────────────
+function S2() {
+  return <Sprite start={SCENE} end={SCENE*2}>
+    <Term title="beacon@console:~$ section --part=02" status="[ chapter ]">
+      <div style={{ fontSize: 22 }}>
+        <div className="nt-muted"><Type text="── chapter 02 ────────────────────────────────────────────" at={0} cps={80} /></div>
+        <Step at={0.8} style={{ marginTop: 60 }}>
+          <div className="nt-h1" style={{ fontSize: 180 }}><span className="nt-glow">$</span> the architecture<span className="nt-cursor" /></div>
+        </Step>
+        <Step at={1.3} style={{ marginTop: 60 }}>
+          <div className="nt-muted" style={{ fontSize: 22 }}><Type text="── 3 primitives · memory · reasoning · recovery ──────────" at={1.3} cps={80} /></div>
+        </Step>
+      </div>
+    </Term>
+    <Counter />
+  </Sprite>;
+}
+
+// ── Scene 3 — Kinetic ───────────────────────────────────────────────
+function S3() {
+  return <Sprite start={SCENE*2} end={SCENE*3}>
+    <Term title="beacon@console:~$ statement --id=03" status="[ premise ]">
+      <div style={{ fontSize: 22 }}>
+        <div className="nt-muted">$ <Type text="echo statement.03" at={0} cps={40} /></div>
+        <Step at={1.0} style={{ marginTop: 60 }}>
+          <div className="nt-h1" style={{ fontSize: 100, lineHeight: 1.1, maxWidth: 1500 }}>
+            <Type text="Most agents fail" at={1.0} cps={20} />
+            <br />
+            <Type text="because they " at={2.0} cps={20} />
+            <Type text="forget." at={2.7} cps={20} glow cursor />
+          </div>
+        </Step>
+      </div>
+    </Term>
+    <Counter />
+  </Sprite>;
+}
+
+// ── Scene 4 — Bullet ────────────────────────────────────────────────
+function S4() {
+  const items = [
+    ['[01]','Context windows decay.','OK'],
+    ['[02]','Tool selection drifts.','OK'],
+    ['[03]','Plans go stale.','··'],
+    ['[04]','Errors compound.','··'],
+    ['[05]','Recovery requires restart.','!!'],
+  ];
+  return <Sprite start={SCENE*3} end={SCENE*4}>
+    <Term title="beacon@console:~$ failures --list" status="[ 5 findings ]">
+      <div style={{ fontSize: 22 }}>
+        <div className="nt-muted">$ <Type text="failures list --top=5" at={0} cps={40} /></div>
+        <div style={{ marginTop: 36 }}>
+          {items.map(([n, t, st], i) => (
+            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '14px 0', borderBottom: '1px solid var(--color-border)' }}>
+              <Type text={n} at={0.8 + i*0.25} cps={40} className="nt-glow" />
+              <span style={{ minWidth: 40 }}>
+                <Type text={t} at={0.95 + i*0.25} cps={40} style={{ fontSize: 30 }} />
+              </span>
+              <span style={{ marginLeft: 'auto', minWidth: 80, textAlign: 'right' }}>
+                <Type text={`[${st}]`} at={1.15 + i*0.25} cps={40} className={st === 'OK' ? 'nt-glow' : st === '!!' ? 'nt-glow-amber' : 'nt-muted'} />
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Term>
+    <Counter />
+  </Sprite>;
+}
+
+// ── Scene 5 — Stat ──────────────────────────────────────────────────
+function S5() {
+  return <Sprite start={SCENE*4} end={SCENE*5}>
+    {({ localTime }) => {
+      const t = Math.max(0, localTime - 0.6);
+      const v = Math.min(84, Math.floor(t * 100));
+      return <Term title="beacon@console:~$ metrics --id=03" status="[ Q1 2026 ]">
+        <div style={{ fontSize: 22 }}>
+          <div className="nt-muted">$ <Type text="metrics.failure_rate(step > 4)" at={0} cps={36} /></div>
+          <Step at={0.55} style={{ marginTop: 64 }}>
+            <div className="nt-h1 nt-glow" style={{ fontSize: 360, lineHeight: 0.95 }}>{String(v).padStart(2, '0')}%</div>
+          </Step>
+          <Step at={1.5} style={{ marginTop: 28 }}>
+            <div style={{ fontSize: 26, maxWidth: 1300 }}>
+              <span className="nt-muted">// </span>
+              of agent failures occur after the 4<span className="nt-muted">th</span> tool call.
+            </div>
+            <div className="nt-muted" style={{ fontSize: 18, marginTop: 16 }}>source: beacon.logs · n=12,840 sessions</div>
+          </Step>
+        </div>
+      </Term>;
+    }}
+  </Sprite>;
+}
+
+// ── Scene 6 — Feature ───────────────────────────────────────────────
+function S6() {
+  return <Sprite start={SCENE*5} end={SCENE*6}>
+    <Term title="beacon@console:~$ feature describe" status="[ 01 of 03 ]">
+      <div style={{ fontSize: 22 }}>
+        <div className="nt-muted">$ <Type text="feature describe --name=checkpoint-memory" at={0} cps={28} /></div>
+        <Step at={1.4} style={{ marginTop: 48 }}>
+          <div className="nt-h1" style={{ fontSize: 100, marginBottom: 28 }}><span className="nt-glow">▸</span> checkpoint memory</div>
+        </Step>
+        <Step at={1.7}>
+          <div className="nt-muted" style={{ fontSize: 22, maxWidth: 1400, lineHeight: 1.5, marginBottom: 36 }}>
+            Snapshots an agent's reasoning state at each tool boundary. When a plan goes stale, the agent rewinds — not to the start, but to the last point its model of the world was correct.
+          </div>
+        </Step>
+        <Step at={2.1}>
+          <pre style={{ fontSize: 18, lineHeight: 1.6, color: 'var(--color-muted)', margin: 0 }}>{
+`╭─ params ─────────────────────────────────╮
+│  snapshots/min  :  120                   │
+│  avg restore    :  9 ms                  │
+│  retention      :  14 d                  │
+╰──────────────────────────────────────────╯`
+          }</pre>
+        </Step>
+      </div>
+    </Term>
+    <Counter />
+  </Sprite>;
+}
+
+// ── Scene 7 — Card grid (3 mini terminals) ──────────────────────────
+function S7() {
+  const cards = [
+    { n: '01', name: 'memory',    cmd: 'memory.snap()',    d: 'Persistent state across long sessions.' },
+    { n: '02', name: 'reasoning', cmd: 'plan.revise()',    d: 'Plans that adapt to fresh evidence.' },
+    { n: '03', name: 'recovery',  cmd: 'rewind.to(t)',     d: 'Rewind to a last-known-good moment.' },
+  ];
+  return <Sprite start={SCENE*6} end={SCENE*7}>
+    <Term title="beacon@console:~$ architecture --primitives" status="[ 3 panes ]">
+      <div style={{ fontSize: 18 }}>
+        <div className="nt-muted">$ <Type text="arch.primitives()" at={0} cps={30} /></div>
+        <div style={{ marginTop: 36, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24 }}>
+          {cards.map((c, i) => (
+            <Step key={c.n} at={0.8 + i*0.2}>
+              <div className="nt-frame" style={{ padding: 24, minHeight: 360, background: 'rgba(74,222,128,0.03)' }}>
+                <div className="nt-glow" style={{ fontSize: 14, marginBottom: 20 }}>[{c.n}/03]</div>
+                <div className="nt-h1" style={{ fontSize: 48, marginBottom: 18 }}>{c.name}</div>
+                <div className="nt-muted" style={{ fontSize: 17, lineHeight: 1.5, marginBottom: 28 }}>{c.d}</div>
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 18 }}>
+                  <span className="nt-glow">$</span> <span style={{ fontSize: 17 }}>{c.cmd}</span>
+                </div>
+              </div>
+            </Step>
+          ))}
+        </div>
+      </div>
+    </Term>
+    <Counter />
+  </Sprite>;
+}
+
+// ── Scene 8 — TUI showcase ──────────────────────────────────────────
+function S8() {
+  return <Sprite start={SCENE*7} end={SCENE*8}>
+    <Term title="beacon@console:~$ tui --session=41ac" status="[ live ]">
+      <div style={{ fontSize: 16 }}>
+        <Step at={0.2}>
+          <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr 240px', height: 720, border: '1px solid var(--color-border)' }}>
+            <div style={{ padding: 16, borderRight: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className="nt-muted" style={{ fontSize: 12, marginBottom: 8 }}>── MENU ──</div>
+              {['run','memory','plan','tools','trace','eval'].map((x, i) => (
+                <div key={x} className={i === 2 ? 'nt-glow' : 'nt-muted'} style={{ padding: '6px 10px', background: i===2 ? 'rgba(74,222,128,0.08)' : 'transparent', fontSize: 16 }}>{i===2 ? '▸ ':'  '}{x}</div>
+              ))}
+              <div style={{ marginTop: 'auto' }} className="nt-muted">── status ──</div>
+              <div className="nt-glow" style={{ fontSize: 14 }}>● running 00:14:22</div>
+            </div>
+            <div style={{ padding: 20 }}>
+              <div className="nt-muted" style={{ fontSize: 14 }}>── PLAN · v3 ────────────────────────────</div>
+              {[['done','Read eval spec'],['done','Generate 12 candidate prompts'],['done','Score each against rubric'],['··','Select top-3 by F1'],['··','Iterate with reasoning trace'],['··','Submit batch to coordinator']].map(([st,t],i) => (
+                <div key={i} style={{ display: 'flex', gap: 14, padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
+                  <span style={{ minWidth: 20 }} className="nt-muted">{String(i+1).padStart(2,'0')}</span>
+                  <span style={{ flex: 1, fontSize: 16 }}>{t}</span>
+                  <span className={st === 'done' ? 'nt-glow' : 'nt-glow-amber'} style={{ minWidth: 60, textAlign: 'right' }}>[{st}]</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: 16, borderLeft: '1px solid var(--color-border)' }}>
+              <div className="nt-muted" style={{ fontSize: 14, marginBottom: 12 }}>── MEMORY ──</div>
+              <pre style={{ fontSize: 14, margin: 0, lineHeight: 1.7, color: 'var(--color-muted)' }}>{
+`t=00:02 ✓ snap_001
+t=00:05 ✓ snap_002
+t=00:09 ✓ snap_003`
+              }</pre>
+              <pre className="nt-glow" style={{ fontSize: 14, margin: 0, lineHeight: 1.7 }}>{`t=00:14 ● snap_004`}</pre>
+            </div>
+          </div>
+        </Step>
+      </div>
+    </Term>
+    <Counter />
+  </Sprite>;
+}
+
+// ── Scene 9 — Content ───────────────────────────────────────────────
+function S9() {
+  return <Sprite start={SCENE*8} end={SCENE*9}>
+    <Term title="beacon@console:~$ cat ./manifesto.txt" status="[ memo ]">
+      <div style={{ fontSize: 22, maxWidth: 1500 }}>
+        <div className="nt-muted">$ <Type text="cat ./manifesto.txt" at={0} cps={30} /></div>
+        <Step at={1.0} style={{ marginTop: 36 }}>
+          <div className="nt-h1" style={{ fontSize: 72, marginBottom: 32 }}>// what we believe</div>
+        </Step>
+        <Step at={1.4}>
+          <div style={{ fontSize: 24, lineHeight: 1.6, marginBottom: 24 }}>
+            <span className="nt-glow">&gt; </span>The next decade of AI infrastructure will be built around <span className="nt-glow">long</span> runs — agents that work for hours, not seconds.
+          </div>
+          <div className="nt-muted" style={{ fontSize: 22, lineHeight: 1.6 }}>
+            The bottleneck won't be the model. It will be everything around the model: memory, recovery, observability. The unglamorous parts. The parts we are building.
+          </div>
+        </Step>
+        <Step at={2.0} style={{ marginTop: 32 }}>
+          <div className="nt-muted">── beacon team · 2026.05</div>
+        </Step>
+      </div>
+    </Term>
+    <Counter />
+  </Sprite>;
+}
+
+// ── Scene 10 — CTA ──────────────────────────────────────────────────
+function S10() {
+  return <Sprite start={SCENE*9} end={SCENE*10}>
+    <Term title="beacon@console:~$ install" status="[ ready ]">
+      <div style={{ fontSize: 22 }}>
+        <div className="nt-muted">$ <Type text="curl -sSL beacon.run/install | sh" at={0} cps={28} cursor /></div>
+        <Step at={1.6} style={{ marginTop: 56 }}>
+          <div className="nt-h1 nt-glow" style={{ fontSize: 160, lineHeight: 1.0 }}>$ install beacon</div>
+        </Step>
+        <Step at={2.2} style={{ marginTop: 36, fontSize: 24 }}>
+          <div className="nt-muted">→ beacon.run · docs · github.com/beacon-ai</div>
+        </Step>
+        <Step at={2.6} style={{ marginTop: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 22, height: 22, border: '1.5px solid var(--color-fg)', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 5, background: 'var(--color-accent)', boxShadow: '0 0 12px rgba(74,222,128,0.7)' }} />
+          </div>
+          <span className="nt-muted" style={{ fontSize: 14, letterSpacing: '0.2em', textTransform: 'uppercase' }}>BEACON · 2026</span>
+        </Step>
+      </div>
+    </Term>
+    <Counter />
+  </Sprite>;
+}
+
+// Lower-third demo within scene 9
+function LT() {
+  const start = SCENE*8 + 1.0, end = SCENE*8 + 3.5;
+  return <Sprite start={start} end={end}>
+    {({ localTime, duration }) => {
+      const op = clamp(localTime/0.3, 0, 1) * clamp((duration-localTime)/0.3, 0, 1);
+      return <div style={{ position: 'absolute', left: 160, right: 160, bottom: 140, opacity: op, fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--color-muted)', borderTop: '1px solid var(--color-border)', paddingTop: 10 }}>
+        [ ▸ narration · 00:24 · lower-third ]
+      </div>;
+    }}
+  </Sprite>;
+}
+
+function App() {
+  return (
+    <Stage width={1920} height={1080} duration={SCENE*10} background="var(--color-bg)" persistKey="neon-terminal-ref">
+      <div className="nt-canvas">
+        <S1 /><S2 /><S3 /><S4 /><S5 /><S6 /><S7 /><S8 /><S9 /><LT /><S10 />
+      </div>
+    </Stage>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>
