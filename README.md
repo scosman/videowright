@@ -2,6 +2,9 @@
 
 **Compose animated explainer videos using any web technology.**
 
+https://github.com/user-attachments/assets/236ab8d1-d5ea-4fe9-b340-e07d9dbf90a4
+
+
 Videowright is a small library and agent skill for vibe-coding high-quality animated videos in HTML/CSS/JS. Describe what you want, the agent writes segments, you review in the player, you iterate.
 
 There is no custom animation DSL. Inside a segment you can use whatever the browser supports:
