@@ -6,7 +6,7 @@ You are preparing to generate a voiceover and need to understand the user's tone
 
 ## Purpose
 
-Style intake captures preferences that the agent **directly uses** when writing the provider script. It does NOT ask about attributes the user controls independently in the ElevenLabs portal or API (voice gender, accent, age, BPM, etc.) -- those are chosen by the user during voice selection, and the agent has no lever on them.
+Style intake captures preferences that the agent **directly uses** when writing the provider script: tone, emotional arc, and reference style. Voice selection (which voice to use, gender, accent, speaking rate) is handled separately -- in the ElevenLabs provider walkthrough for API-mode users, or visually in the portal UI for portal-mode users.
 
 ## Questions to ask
 
@@ -40,14 +40,12 @@ See [provider_script.md](provider_script.md) for the full v2 writing toolkit.
 
 ## What NOT to ask
 
-The following are controlled by the user in the ElevenLabs portal or API, not by the provider script. Do not ask about them during style intake:
+Voice attributes (gender, accent, age, speaking rate) are **not** part of style intake. They are chosen at voice-selection time:
 
-- **Voice gender** -- the user picks a voice directly.
-- **Accent or language** -- the user picks a voice with the desired accent.
-- **Age / warmth / breathiness** -- ElevenLabs voice characteristics, not script attributes.
-- **BPM / speaking rate** -- set via the speed slider in the portal or the `speed` parameter in the API, not via the script text.
+- **API-mode users** pick from a curated voice catalog during the ElevenLabs provider walkthrough (see [providers/elevenlabs.md](providers/elevenlabs.md)).
+- **Portal-mode users** select a voice visually in the ElevenLabs web UI.
 
-If the user volunteers any of these, acknowledge the preference and remind them to apply it when selecting a voice or adjusting settings.
+If the user volunteers voice preferences during style intake, acknowledge them and note that they will be applied during voice selection.
 
 ## When to skip style intake
 

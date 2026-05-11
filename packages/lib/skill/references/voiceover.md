@@ -26,23 +26,38 @@ When the user asks to "add a voiceover" or "generate a voiceover", ask:
 
 ### Flow A: AI generation (ElevenLabs)
 
-1. **Style intake.** Ask the user about tone and emotional arc preferences. See [voiceover/style_intake.md](voiceover/style_intake.md).
-2. **Script.** Write or integrate the VO script into PLAN.md. See [voiceover/script_writing.md](voiceover/script_writing.md).
-3. **Provider script.** Transform the PLAN script into `provider_script.md` with v2-targeted annotations (SSML `<break>` tags, punctuation-driven prosody -- no v3 emotion tags). See [voiceover/provider_script.md](voiceover/provider_script.md).
-4. **Mode selection & audio generation.** Present the user with API key vs. portal options. See [voiceover/providers/elevenlabs.md](voiceover/providers/elevenlabs.md).
-   - **API key path:** Agent runs a curl call that generates audio and returns per-word timing in one request.
-   - **Portal path:** User generates audio via TTS in the web UI, then runs it through STT to extract per-word timing as JSON.
-5. **Sync timing.** Read the provider timing JSON and compute a `Timing` object. See [voiceover/sync_algorithm.md](voiceover/sync_algorithm.md).
-6. **Default voiceover?** Ask whether to set this as the default. If yes, update `timeline.ts` and run a one-time animation sync. See [voiceover/animation_sync.md](voiceover/animation_sync.md).
-7. **Write `voiceover.ts`.** Create the typed module exporting a `Voiceover` object.
+1. **Approach and voice selection.** Ask API key vs. portal, then (API only) which voice from the curated catalog. See [voiceover/providers/elevenlabs.md](voiceover/providers/elevenlabs.md) for the mode selection prompt and [voice catalog](#curated-voice-catalog).
+2. **Style intake.** Ask the user about tone and emotional arc preferences. See [voiceover/style_intake.md](voiceover/style_intake.md).
+3. **Script.** Write or integrate the VO script into PLAN.md. See [voiceover/script_writing.md](voiceover/script_writing.md).
+4. **Provider script.** Transform the PLAN script into `provider_script.md` with v2-targeted annotations (SSML `<break>` tags, punctuation-driven prosody -- no v3 emotion tags). See [voiceover/provider_script.md](voiceover/provider_script.md).
+5. **Audio generation.** Follow the sub-flow for the approach chosen in step 1. See [voiceover/providers/elevenlabs.md](voiceover/providers/elevenlabs.md).
+6. **Sync timing.** Read the provider timing JSON and compute a `Timing` object. See [voiceover/sync_algorithm.md](voiceover/sync_algorithm.md).
+7. **Default voiceover?** Ask whether to set this as the default. If yes, update `timeline.ts` and run a one-time animation sync. See [voiceover/animation_sync.md](voiceover/animation_sync.md).
+8. **Write `voiceover.ts`.** Create the typed module exporting a `Voiceover` object.
+
+### Curated voice catalog
+
+When the user picks the **API key** approach in step 1, immediately present this catalog (default is **Asher** if no preference):
+
+| # | Voice | Description |
+|---|---|---|
+| 1 | **Asher** (`tMvyQtpCVQ0DkixuYm6J`) | Warm, conversational male voice with confident, grounded delivery. Good default for explainers, narration, and commercial reads. |
+| 2 | **Cecily** (`Uc7anshoV8mdBhDnEZEX`) | Warm middle-aged African-American female voice, West Coast. Engaging for ads, social, and brand storytelling. |
+| 3 | **Don** (`8IbUB2LiiCZ85IJAHNnZ`) | Young American male voice, casual and approachable. Great for social, storytelling, and audiobook-style narration. |
+| 4 | **Hanna** (`Hh0rE70WfnSFN80K8uJC`) | Professional American female voice. Best for informative narration, e-learning, and corporate voiceover. |
+| 5 | **Other** | User provides their own ElevenLabs voice ID (browse at https://elevenlabs.io/app/voice-library). |
+
+If the user does not pick, default to **Asher**. Add the selected voice ID to `.env` as `ELEVENLABS_VOICE_ID`.
+
+Portal users skip this catalog -- they pick a voice visually in the ElevenLabs UI during audio generation (step 5).
 
 ### Flow B: Manual (user-provided audio)
 
 1. **Get the audio.** Ask the user to provide or drop an audio file into `voiceovers/<slug>/`.
 2. **Generate transcript and timing.** Walk the user through ElevenLabs Speech-to-Text to get per-word timing data. See [voiceover/providers/manual.md](voiceover/providers/manual.md).
-3. **Sync timing.** Same as Flow A step 5.
-4. **Default voiceover?** Same as Flow A step 6.
-5. **Write `voiceover.ts`.** Same as Flow A step 7.
+3. **Sync timing.** Same as Flow A step 6.
+4. **Default voiceover?** Same as Flow A step 7.
+5. **Write `voiceover.ts`.** Same as Flow A step 8.
 
 ## File and folder conventions
 

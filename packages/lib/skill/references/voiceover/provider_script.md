@@ -107,7 +107,7 @@ Write the provider script as a single markdown file:
 # Provider Script
 
 > Provider: ElevenLabs v2 (eleven_multilingual_v2)
-> Voice: [user selects in portal or sets ELEVENLABS_VOICE_ID in .env]
+> Voice: [voice name and ID from selection, e.g. "Asher (tMvyQtpCVQ0DkixuYm6J)"]
 > Style notes: Conversational, warm
 
 ---

@@ -8,7 +8,7 @@ This reference also covers Speech-to-Text for the manual voiceover flow (Flow B)
 
 ## Mode selection
 
-Before starting audio generation, present the user with two options:
+This question is asked at the start of Flow A (before style intake). Present the user with two options:
 
 > Two ways to generate the voiceover with ElevenLabs:
 >
@@ -19,7 +19,7 @@ Before starting audio generation, present the user with two options:
 >
 > If you don't have an account: open https://elevenlabs.io and sign up first.
 
-After the user picks, dispatch into the appropriate sub-flow below.
+After the user picks, if they chose **API key**, immediately present the curated voice catalog (see [voiceover.md curated voice catalog](../voiceover.md#curated-voice-catalog)). Then continue with style intake and script writing. When it is time for audio generation, dispatch into the appropriate sub-flow below.
 
 ---
 
@@ -55,14 +55,9 @@ Guide the user:
 
 The agent reads the key via `process.env.ELEVENLABS_API_KEY` when running curl commands.
 
-### Step 3: Choose a voice
+### Step 3: Voice (already selected)
 
-The user needs a voice ID. Guide them:
-
-> 1. Browse voices at https://elevenlabs.io/app/voice-library or https://elevenlabs.io/app/voice-lab
-> 2. Preview voices and pick one that matches your preferred tone.
-> 3. Copy the **Voice ID** from the voice's settings panel.
-> 4. Add it to your `.env`: `ELEVENLABS_VOICE_ID=your-voice-id-here`
+The voice was chosen during approach selection (Flow A step 1). The selected voice ID should already be in `.env` as `ELEVENLABS_VOICE_ID`. No action needed here -- proceed to audio generation.
 
 ### Step 4: Generate audio with timestamps
 
@@ -138,6 +133,8 @@ Proceed to the sync algorithm: [../sync_algorithm.md](../sync_algorithm.md).
 The portal flow has two steps: TTS to generate audio, then STT to extract per-word timing.
 
 ### Step 1 -- Generate the audio (TTS)
+
+Portal users do **not** use the curated voice catalog -- they pick a voice visually in the ElevenLabs UI below.
 
 Guide the user:
 
