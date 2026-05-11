@@ -281,12 +281,16 @@ export const TIME_SHIM_SOURCE = `
   };
 
   // ----- Clock advance driver -----
-  window.__VW_ADVANCE_CLOCK__ = function(deltaMs) {
+  window.__VW_ADVANCE_CLOCK__ = async function(deltaMs) {
     if (mode === 'passthrough') return; // no-op during boot
 
     var target = virtualMs + deltaMs;
 
-    // Fire timers in chronological order up to target
+    // Fire timers in chronological order up to target.
+    // The function is async so that microtasks (e.g. Promise resolutions from
+    // ctx.hold) drain between timer fires. This ensures awaiting code resumes
+    // at virtualMs = fireAt (the timer's actual scheduled time) rather than at
+    // the frame boundary (target), eliminating per-hold rounding drift.
     var safety = 10000;
     while (safety-- > 0) {
       var earliestId = null;
@@ -311,6 +315,11 @@ export const TIME_SHIM_SOURCE = `
         timers.delete(earliestId);
       }
       try { earliestTimer.cb.apply(null, earliestTimer.args || []); } catch(e) { console.error('[VW shim] timer error:', e); }
+
+      // Drain microtasks so awaiting code (e.g. ctx.hold Promise resolution)
+      // resumes at virtualMs = fireAt and registers its next timer relative to
+      // fireAt, not target. Multiple awaits handle chained async continuations.
+      for (var d = 0; d < 8; d++) await Promise.resolve();
     }
 
     // Final advance to target

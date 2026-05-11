@@ -484,4 +484,105 @@ describe.skipIf(!hasBrowser)("time shim: primitive-level DOM assertions", () => 
 			await context.close();
 		}
 	});
+
+	it("chained ctx.hold does not accumulate frame-rounding drift", async () => {
+		// Regression test: before the async microtask-drain fix, chained holds
+		// whose durations don't align to frame boundaries would drift. Each hold
+		// would cost ceil(ms / frameMs) * frameMs instead of exactly ms, because
+		// awaiting code resumed at the frame boundary (target) rather than at
+		// the timer's actual fireAt.
+		//
+		// This test simulates 10 chained hold(34) calls advanced in 16.67ms
+		// frames (60fps). Without the fix, each hold(34) costs 3 frames (50ms)
+		// for a total of 500ms. With the fix, total should be 340ms.
+		const { page, context } = await createShimmedPage('<div id="drift-count">0</div>');
+
+		try {
+			// Launch async chain of 10 hold(34) calls, incrementing a counter after each
+			await page.evaluate(`
+				(function() {
+					function hold(ms) {
+						return new Promise(function(resolve) { setTimeout(resolve, ms); });
+					}
+					(async function() {
+						var el = document.getElementById("drift-count");
+						if (!el) return;
+						for (var i = 0; i < 10; i++) {
+							await hold(34);
+							el.textContent = String(i + 1);
+						}
+					})();
+				})()
+			`);
+
+			expect(await page.locator("#drift-count").textContent()).toBe("0");
+
+			// Advance 340ms in 16.67ms frames (approx 20.4 frames).
+			// With the fix, all 10 holds complete within 340ms of virtual time.
+			const frameMs = 1000 / 60;
+			const framesNeeded = Math.ceil(340 / frameMs); // 21 frames
+			for (let i = 0; i < framesNeeded; i++) {
+				await page.evaluate(`window.__VW_ADVANCE_CLOCK__(${frameMs})`);
+			}
+
+			// All 10 holds should have completed (no drift)
+			expect(await page.locator("#drift-count").textContent()).toBe("10");
+
+			// Verify that without the fix this would NOT have completed:
+			// 10 holds × 3 frames × 16.67ms = 500ms would be needed.
+			// We only advanced 21 frames (~350ms), proving drift is eliminated.
+		} finally {
+			await context.close();
+		}
+	});
+
+	it("chained ctx.hold registers next timer at fireAt, not frame boundary", async () => {
+		// Verifies the precise timing: a hold(34) starting at T=0 should
+		// resolve at T=34, and the next hold(34) should fire at T=68, not T=50+34=84.
+		const { page, context } = await createShimmedPage('<div id="fire-times"></div>');
+
+		try {
+			await page.evaluate(`
+				(function() {
+					function hold(ms) {
+						return new Promise(function(resolve) { setTimeout(resolve, ms); });
+					}
+					(async function() {
+						var el = document.getElementById("fire-times");
+						if (!el) return;
+						var times = [];
+						for (var i = 0; i < 3; i++) {
+							await hold(34);
+							times.push(Math.round(performance.now()));
+						}
+						el.textContent = times.join(",");
+					})();
+				})()
+			`);
+
+			// We need to know the baseline (virtualMs at engage time)
+			const baseline = (await page.evaluate("performance.now()")) as number;
+
+			// Advance enough frames to complete 3 holds of 34ms = 102ms total
+			const frameMs = 1000 / 60;
+			const framesNeeded = Math.ceil(102 / frameMs); // 7 frames
+			for (let i = 0; i < framesNeeded; i++) {
+				await page.evaluate(`window.__VW_ADVANCE_CLOCK__(${frameMs})`);
+			}
+
+			const text = await page.locator("#fire-times").textContent();
+			expect(text).toBeTruthy();
+			const times = (text ?? "").split(",").map(Number);
+			expect(times.length).toBe(3);
+
+			// Each hold(34) should fire at baseline+34, baseline+68, baseline+102
+			// (within 1ms tolerance for floating point)
+			const baselineRounded = Math.round(baseline);
+			expect(times[0]).toBe(baselineRounded + 34);
+			expect(times[1]).toBe(baselineRounded + 68);
+			expect(times[2]).toBe(baselineRounded + 102);
+		} finally {
+			await context.close();
+		}
+	});
 });
