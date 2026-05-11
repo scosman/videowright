@@ -66,9 +66,11 @@ Placeholder section for future style section with real assets
 <img width="947" height="536" alt="styles-2" src="https://github.com/user-attachments/assets/8e74fd1a-d966-40eb-924e-664581ad6629" />
 
 
-Same video script as above, with a different style selected:
+Same video script as above, with two different styles applied. Both generated in 1 prompt.
 
 https://github.com/user-attachments/assets/5df0bde1-b759-4ba8-aeef-4dddc8e60c24
+
+https://github.com/user-attachments/assets/1960c3e8-a3f2-4028-91ab-afbc79a53fca
 
 
 
