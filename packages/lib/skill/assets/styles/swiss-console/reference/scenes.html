@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Swiss Console — Reference Scenes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://api.fontshare.com/v2/css?f[]=switzer@300,400,500,600,700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; font-family: var(--font-body); }
+  .sc-canvas { position: absolute; inset: 0; background: var(--color-bg); color: var(--color-fg); overflow: hidden; }
+  .sc-label  { font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-muted); font-weight: 500; }
+  .sc-label.fg { color: var(--color-fg); }
+  .sc-label.acc { color: var(--color-accent); }
+  .sc-rule   { background: var(--color-border); height: 1px; width: 100%; }
+  .sc-h1     { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; line-height: 0.96; color: var(--color-fg); }
+  .sc-body   { font-family: var(--font-body); font-weight: 400; color: var(--color-fg); line-height: 1.4; font-variant-numeric: tabular-nums; }
+  .sc-num    { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .sc-acc    { color: var(--color-accent); }
+  .sc-muted  { color: var(--color-muted); }
+  .sc-page-rule { position: absolute; left: 96px; right: 96px; height: 1px; background: var(--color-border); }
+  .sc-page-rule.top    { top: 56px; }
+  .sc-page-rule.bottom { bottom: 56px; }
+  .sc-folio  { position: absolute; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-muted); top: 32px; }
+  .sc-folio.l { left: 96px; }  .sc-folio.r { right: 96px; }
+  .sc-foot   { position: absolute; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-muted); bottom: 32px; }
+  .sc-foot.l { left: 96px; }   .sc-foot.r { right: 96px; }
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<div id="root"></div>
+
+<script type="text/babel" src="animations.jsx"></script>
+<script type="text/babel">
+const SCENE = 3.8;
+const EOUT = Easing.easeOutQuart;
+
+// Slide-in from grid rail: combine subtle translate + fade
+function Slide({ children, at = 0, from = 'right', dist = 32, style = {}, className = '' }) {
+  const { localTime } = useSprite();
+  const t = clamp((localTime - at) / 0.45, 0, 1);
+  const k = EOUT(t);
+  const dx = from === 'right' ? (1 - k) * dist : from === 'left' ? -(1 - k) * dist : 0;
+  const dy = from === 'top' ? -(1 - k) * dist : from === 'bottom' ? (1 - k) * dist : 0;
+  // exit fade
+  const exitStart = SCENE - 0.18;
+  let op = k;
+  if (localTime > exitStart) op *= clamp((SCENE - localTime) / 0.18, 0, 1);
+  return <div className={className} style={{ ...style, opacity: op, transform: `translate(${dx}px, ${dy}px)` }}>{children}</div>;
+}
+
+function Chrome({ folio, foot }) {
+  return (
+    <Sprite start={0} end={SCENE * 10} keepMounted>
+      <div className="sc-page-rule top" />
+      <div className="sc-page-rule bottom" />
+      <div className="sc-folio l">{folio}</div>
+      <div className="sc-foot l">{foot}</div>
+    </Sprite>
+  );
+}
+
+function CounterUR() {
+  const time = useTime();
+  const idx = Math.min(9, Math.floor(time / SCENE));
+  const labels = ['Title','Section','Statement','List','Stat','Feature','Grid','Console','Content','End'];
+  return (
+    <div className="sc-folio r">{String(idx+1).padStart(2,'0')} / 10 · {labels[idx]}</div>
+  );
+}
+function ClockBR() {
+  const time = useTime();
+  const m = Math.floor(time/60); const s = Math.floor(time%60);
+  return <div className="sc-foot r sc-num">T+ {String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</div>;
+}
+
+/* 12-col grid helper at 1920 wide: 96 margin, 11 gutters of 24, 12 cols of 132 */
+const COL = (n) => 96 + (n-1) * (132 + 24); // start x of column n (1-indexed)
+const COLW = (span) => span * 132 + (span - 1) * 24;
+
+// ── Scene 1 — Title ─────────────────────────────────────────────────
+function S1() {
+  return <Sprite start={0} end={SCENE}>
+    <Slide at={0}    style={{ position: 'absolute', left: COL(1), top: 80 }} dist={0}>
+      <div className="sc-label fg">01 / Overview · Beacon Inc.</div>
+    </Slide>
+    <Slide at={0.1}  style={{ position: 'absolute', left: COL(1), top: COL(1) ? 360 : 360, width: COLW(10) }}>
+      <div className="sc-h1" style={{ fontSize: 220 }}>Beacon.<span className="sc-acc">/</span>console</div>
+    </Slide>
+    <Slide at={0.3} style={{ position: 'absolute', left: COL(1), top: 720, width: COLW(7) }}>
+      <div className="sc-body" style={{ fontSize: 32, color: 'var(--color-muted)' }}>
+        A workbench for long-running agents. Memory, recovery, observability.
+      </div>
+    </Slide>
+    <Slide at={0.4} from="bottom" style={{ position: 'absolute', left: COL(9), top: 720, width: COLW(4), borderTop: '1px solid var(--color-fg)', paddingTop: 14 }}>
+      <div className="sc-label fg sc-num">Build 2026.05.10 · v0.4.1</div>
+    </Slide>
+  </Sprite>;
+}
+
+// ── Scene 2 — Section ───────────────────────────────────────────────
+function S2() {
+  return <Sprite start={SCENE} end={SCENE*2}>
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', paddingLeft: COL(2), gap: 36 }}>
+      <Slide at={0}   dist={20} from="bottom"><div className="sc-label">Part 02 of 04</div></Slide>
+      <Slide at={0.1} dist={20} from="bottom"><div className="sc-h1 sc-num" style={{ fontSize: 320, lineHeight: 0.9, fontWeight: 500 }}>02</div></Slide>
+      <Slide at={0.25} dist={20} from="bottom"><div className="sc-h1" style={{ fontSize: 96, fontWeight: 500 }}>The Architecture<span className="sc-acc">.</span></div></Slide>
+      <Slide at={0.4} from="left" dist={120} style={{ width: COLW(6), height: 1, background: 'var(--color-fg)' }} />
+    </div>
+  </Sprite>;
+}
+
+// ── Scene 3 — Kinetic statement ─────────────────────────────────────
+function S3() {
+  const words = ['Most','agents','fail','because','they',{w:'forget.', acc:true}];
+  return <Sprite start={SCENE*2} end={SCENE*3}>
+    <Slide at={0} style={{ position: 'absolute', left: COL(1), top: 200 }}><div className="sc-label">Statement · 03</div></Slide>
+    <div style={{ position: 'absolute', left: COL(1), top: 320, width: COLW(10), display: 'flex', flexWrap: 'wrap', columnGap: 32, rowGap: 6 }}>
+      {words.map((w, i) => {
+        const t = typeof w === 'string' ? w : w.w;
+        const acc = typeof w === 'object' && w.acc;
+        return <Slide key={i} at={0.15 + i * 0.1} from="bottom" dist={20}>
+          <div className="sc-h1" style={{ fontSize: 140, color: acc ? 'var(--color-accent)' : 'var(--color-fg)', fontWeight: 500 }}>{t}</div>
+        </Slide>;
+      })}
+    </div>
+    <Slide at={1.0} style={{ position: 'absolute', left: COL(1), top: 880, width: COLW(5) }}>
+      <div className="sc-rule" style={{ marginBottom: 16 }} />
+      <div className="sc-label">Source: Beacon failure-mode taxonomy, internal · 2026Q1</div>
+    </Slide>
+  </Sprite>;
+}
+
+// ── Scene 4 — Bullet ────────────────────────────────────────────────
+function S4() {
+  const items = [
+    ['01','Context windows decay over long sessions.','Decay'],
+    ['02','Tool selection drifts from the original plan.','Drift'],
+    ['03','Plans go stale as the world changes.','Stale'],
+    ['04','Errors compound silently across calls.','Compound'],
+    ['05','Recovery requires restart, not rewind.','Restart'],
+  ];
+  return <Sprite start={SCENE*3} end={SCENE*4}>
+    <Slide at={0} style={{ position: 'absolute', left: COL(1), top: 140 }}><div className="sc-label">Findings · 5</div></Slide>
+    <Slide at={0.08} style={{ position: 'absolute', left: COL(1), top: 200, width: COLW(8) }}>
+      <div className="sc-h1" style={{ fontSize: 88, fontWeight: 500 }}>Where agents break.</div>
+    </Slide>
+    <div style={{ position: 'absolute', left: COL(1), top: 380, right: 96 }}>
+      <div className="sc-rule" />
+      {items.map(([n, t, tag], i) => (
+        <Slide key={n} at={0.35 + i * 0.08} from="left" dist={24}>
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 200px', gap: 24, alignItems: 'center', padding: '28px 0', borderBottom: '1px solid var(--color-border)' }}>
+            <div className="sc-label fg sc-num" style={{ fontSize: 16 }}>{n}</div>
+            <div className="sc-body" style={{ fontSize: 36, fontWeight: 500 }}>{t}</div>
+            <div className="sc-label" style={{ textAlign: 'right' }}>{tag}</div>
+          </div>
+        </Slide>
+      ))}
+    </div>
+  </Sprite>;
+}
+
+// ── Scene 5 — Stat ──────────────────────────────────────────────────
+function S5() {
+  return <Sprite start={SCENE*4} end={SCENE*5}>
+    {({ localTime }) => {
+      const cP = clamp((localTime - 0.15) / 0.7, 0, 1);
+      const value = Math.round(EOUT(cP) * 84);
+      return <>
+        <Slide at={0} style={{ position: 'absolute', left: COL(1), top: 140 }}>
+          <div className="sc-label">Finding 03 · Beacon Logs Q1 2026</div>
+        </Slide>
+        <div style={{ position: 'absolute', left: COL(1), top: 240, width: COLW(7), borderTop: '1px solid var(--color-fg)', paddingTop: 24 }}>
+          <Slide at={0.08} dist={0}>
+            <div className="sc-h1 sc-num" style={{ fontSize: 420, lineHeight: 0.9, fontWeight: 500 }}>{value}<span className="sc-acc">%</span></div>
+          </Slide>
+        </div>
+        <Slide at={0.3} from="right" style={{ position: 'absolute', left: COL(9), top: 280, width: COLW(4) }}>
+          <div className="sc-rule" style={{ marginBottom: 20 }} />
+          <div className="sc-label" style={{ marginBottom: 12 }}>Failure-after-step-4 rate</div>
+          <div className="sc-body" style={{ fontSize: 28, lineHeight: 1.4 }}>
+            of agent failures occur after the fourth tool call — when context, plan, and toolset have all drifted from the start.
+          </div>
+        </Slide>
+        {/* mini sparkline mock */}
+        <Slide at={0.5} from="bottom" style={{ position: 'absolute', left: COL(9), top: 640, width: COLW(4), height: 120 }}>
+          <div className="sc-label" style={{ marginBottom: 12 }}>Q1 ’25 → Q1 ’26</div>
+          <svg width="100%" height="80" viewBox="0 0 400 80" preserveAspectRatio="none">
+            <polyline points="0,60 50,55 100,52 150,48 200,40 250,32 300,25 350,18 400,12" stroke="var(--color-fg)" strokeWidth="1.5" fill="none" />
+            <circle cx="400" cy="12" r="4" fill="var(--color-accent)" />
+          </svg>
+        </Slide>
+      </>;
+    }}
+  </Sprite>;
+}
+
+// ── Scene 6 — Feature ───────────────────────────────────────────────
+function S6() {
+  return <Sprite start={SCENE*5} end={SCENE*6}>
+    <Slide at={0} style={{ position: 'absolute', left: COL(1), top: 140 }}><div className="sc-label">Feature · 01 of 03</div></Slide>
+    <div style={{ position: 'absolute', left: COL(1), top: 220, right: 96, display: 'grid', gridTemplateColumns: `${COLW(3)}px 1px 1fr`, gap: 48 }}>
+      <Slide at={0.1} from="left">
+        <div className="sc-label sc-num" style={{ fontSize: 18, marginBottom: 16 }}>F.01</div>
+        <div style={{ width: 160, height: 160, border: '1.5px solid var(--color-fg)', display: 'grid', placeItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 64, fontWeight: 500 }}>C</div>
+        <div className="sc-label" style={{ marginTop: 20 }}>Module: memory</div>
+      </Slide>
+      <div style={{ background: 'var(--color-border)' }} />
+      <div>
+        <Slide at={0.2}>
+          <div className="sc-h1" style={{ fontSize: 120, marginBottom: 32, fontWeight: 500 }}>Checkpoint memory<span className="sc-acc">.</span></div>
+        </Slide>
+        <Slide at={0.35} from="bottom">
+          <div className="sc-body" style={{ fontSize: 28, maxWidth: 920, lineHeight: 1.5, marginBottom: 32 }}>
+            Beacon snapshots an agent's reasoning state at each tool boundary. When a plan goes stale, the agent rewinds — not to the start, but to the last point its model of the world was correct.
+          </div>
+        </Slide>
+        <Slide at={0.5} from="bottom">
+          <div style={{ display: 'flex', gap: 48 }}>
+            {[['snapshots/min','120'],['avg restore','9 ms'],['retention','14 d']].map(([k,v]) => (
+              <div key={k}>
+                <div className="sc-label">{k}</div>
+                <div className="sc-h1 sc-num" style={{ fontSize: 48, fontWeight: 500, marginTop: 8 }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </Slide>
+      </div>
+    </div>
+  </Sprite>;
+}
+
+// ── Scene 7 — Card grid ─────────────────────────────────────────────
+function S7() {
+  const cards = [
+    ['01','Memory','Persistent state across long sessions.','memory.snap()'],
+    ['02','Reasoning','Plans that adapt to fresh evidence.','plan.revise()'],
+    ['03','Recovery','Rewind to a last-known-good moment.','rewind.to(t)'],
+  ];
+  return <Sprite start={SCENE*6} end={SCENE*7}>
+    <Slide at={0} style={{ position: 'absolute', left: COL(1), top: 140 }}><div className="sc-label">Architecture · 3 primitives</div></Slide>
+    <Slide at={0.1} style={{ position: 'absolute', left: COL(1), top: 200 }}>
+      <div className="sc-h1" style={{ fontSize: 88, fontWeight: 500 }}>Three primitives, one runtime.</div>
+    </Slide>
+    <div style={{ position: 'absolute', left: COL(1), top: 420, right: 96, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24 }}>
+      {cards.map(([n,name,d,api], i) => (
+        <Slide key={n} at={0.3 + i*0.1} from="bottom" dist={28}>
+          <div style={{ border: '1px solid var(--color-border)', padding: '28px 32px 32px', minHeight: 380, position: 'relative' }}>
+            <div className="sc-label sc-acc" style={{ fontSize: 16, marginBottom: 28 }}>{n} / 03</div>
+            <div className="sc-h1" style={{ fontSize: 56, marginBottom: 28, fontWeight: 600 }}>{name}</div>
+            <div className="sc-body" style={{ fontSize: 22, color: 'var(--color-muted)', marginBottom: 32, lineHeight: 1.45 }}>{d}</div>
+            <div className="sc-rule" style={{ marginBottom: 12 }} />
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--color-fg)' }}>{api}</div>
+          </div>
+        </Slide>
+      ))}
+    </div>
+  </Sprite>;
+}
+
+// ── Scene 8 — UI showcase ───────────────────────────────────────────
+function S8() {
+  return <Sprite start={SCENE*7} end={SCENE*8}>
+    {({ localTime }) => {
+      const a1 = clamp((localTime-0.9)/0.4, 0, 1);
+      const a2 = clamp((localTime-1.2)/0.4, 0, 1);
+      return <>
+        <Slide at={0} style={{ position: 'absolute', left: COL(1), top: 120 }}><div className="sc-label">Fig. 03 · the console</div></Slide>
+        <Slide at={0.1} style={{ position: 'absolute', left: COL(1), top: 170 }}>
+          <div className="sc-h1" style={{ fontSize: 56, fontWeight: 500 }}>One view of one run.</div>
+        </Slide>
+        <Slide at={0.2} dist={0}>
+          {/* product mock */}
+          <div style={{ position: 'absolute', left: 360, top: 320, width: 1200, height: 660, background: 'var(--color-bg)', border: '1px solid var(--color-fg)' }}>
+            <div style={{ height: 40, borderBottom: '1px solid var(--color-fg)', display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px' }}>
+              <div style={{ width: 10, height: 10, border: '1px solid var(--color-fg)' }} />
+              <div style={{ width: 10, height: 10, border: '1px solid var(--color-fg)' }} />
+              <div style={{ width: 10, height: 10, border: '1px solid var(--color-fg)' }} />
+              <span style={{ marginLeft: 16, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--color-muted)' }}>BEACON · session 41ac.run</span>
+              <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--color-muted)' }}>00:14:22</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr 280px', height: 'calc(100% - 40px)' }}>
+              <div style={{ borderRight: '1px solid var(--color-border)', padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {['Run','Memory','Plan','Tools','Trace','Eval'].map((x,i) => (
+                  <div key={x} style={{ fontSize: 14, padding: '8px 12px', background: i===2 ? 'var(--color-surface)':'transparent', color: i===2 ? 'var(--color-fg)' : 'var(--color-muted)', fontFamily: 'var(--font-body)', fontWeight: i===2 ? 500 : 400 }}>{x}</div>
+                ))}
+              </div>
+              <div style={{ padding: 24 }}>
+                <div className="sc-label">Plan · v3 (revised 14:22)</div>
+                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {['Read eval spec','Generate 12 candidate prompts','Score each against rubric','Select top-3 by F1','Iterate with reasoning trace','Submit batch to coordinator'].map((s,i) => (
+                    <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline', paddingBottom: 8, borderBottom: '1px solid var(--color-border)' }}>
+                      <span className="sc-label sc-num" style={{ minWidth: 28 }}>{String(i+1).padStart(2,'0')}</span>
+                      <span style={{ fontSize: 16 }}>{s}</span>
+                      <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 12, color: i < 3 ? 'var(--color-accent)' : 'var(--color-muted)' }}>{i < 3 ? 'done' : 'queued'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ borderLeft: '1px solid var(--color-border)', padding: 16 }}>
+                <div className="sc-label">Memory · snapshots</div>
+                <div style={{ marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1.6, color: 'var(--color-muted)' }}>
+                  <div>t=00:02 ✓ snap_001</div>
+                  <div>t=00:05 ✓ snap_002</div>
+                  <div>t=00:09 ✓ snap_003</div>
+                  <div style={{ color: 'var(--color-accent)' }}>t=00:14 ● snap_004</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Slide>
+        {/* callouts */}
+        <div style={{ position: 'absolute', left: 96, top: 540, width: 240, opacity: a1 }}>
+          <div className="sc-label sc-acc">A / Plan</div>
+          <div className="sc-body" style={{ fontSize: 18, marginTop: 6, lineHeight: 1.4 }}>Versioned. Diff-able. Replayable.</div>
+          <div style={{ height: 1, width: `${a1*180}px`, background: 'var(--color-accent)', marginTop: 12 }} />
+        </div>
+        <div style={{ position: 'absolute', left: 1600, top: 760, width: 220, opacity: a2, textAlign: 'right' }}>
+          <div className="sc-label sc-acc">B / Memory</div>
+          <div className="sc-body" style={{ fontSize: 18, marginTop: 6, lineHeight: 1.4 }}>Snapshot per tool boundary.</div>
+          <div style={{ height: 1, width: `${a2*180}px`, background: 'var(--color-accent)', marginTop: 12, marginLeft: 'auto' }} />
+        </div>
+      </>;
+    }}
+  </Sprite>;
+}
+
+// ── Scene 9 — Content ───────────────────────────────────────────────
+function S9() {
+  return <Sprite start={SCENE*8} end={SCENE*9}>
+    <Slide at={0} style={{ position: 'absolute', left: COL(1), top: 140 }}><div className="sc-label">On the Record · 09</div></Slide>
+    <div style={{ position: 'absolute', left: COL(1), top: 240, right: 96, display: 'grid', gridTemplateColumns: `${COLW(4)}px 1fr`, gap: 96 }}>
+      <Slide at={0.1}>
+        <div className="sc-h1" style={{ fontSize: 88, fontWeight: 500, lineHeight: 1.0 }}>What we believe<span className="sc-acc">.</span></div>
+      </Slide>
+      <div>
+        <Slide at={0.25}>
+          <div className="sc-body" style={{ fontSize: 28, lineHeight: 1.5, marginBottom: 36 }}>
+            The next decade of AI infrastructure will be built around <span style={{ fontWeight: 600 }}>long</span> runs — agents that work for hours, not seconds. The bottleneck will not be the model. It will be everything around the model.
+          </div>
+        </Slide>
+        <Slide at={0.4}>
+          <div className="sc-body sc-muted" style={{ fontSize: 22, lineHeight: 1.55, maxWidth: 720 }}>
+            Beacon is a workbench for that world: memory, recovery, observability. Built for research engineers at labs, founders shipping product, evaluators who need to know what their model just did and why.
+          </div>
+        </Slide>
+        <Slide at={0.55} from="bottom" style={{ marginTop: 48 }}>
+          <div className="sc-rule" style={{ marginBottom: 16 }} />
+          <div className="sc-label">— Beacon team · May 2026</div>
+        </Slide>
+      </div>
+    </div>
+  </Sprite>;
+}
+
+// ── Scene 10 — CTA ──────────────────────────────────────────────────
+function S10() {
+  return <Sprite start={SCENE*9} end={SCENE*10}>
+    <Slide at={0} style={{ position: 'absolute', left: COL(1), top: 140 }}><div className="sc-label">End · 10 / 10</div></Slide>
+    <div style={{ position: 'absolute', left: COL(1), top: 320, right: 96, width: COLW(11) }}>
+      <Slide at={0.1}><div className="sc-h1" style={{ fontSize: 200, fontWeight: 600, letterSpacing: '-0.03em' }}>Read the spec<span className="sc-acc">.</span></div></Slide>
+    </div>
+    <Slide at={0.3} from="bottom" style={{ position: 'absolute', left: COL(1), top: 720, width: COLW(11) }}>
+      <div className="sc-rule" style={{ marginBottom: 24 }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 28, height: 28, border: '1.5px solid var(--color-fg)', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 6, background: 'var(--color-accent)' }} />
+          </div>
+          <span className="sc-label fg" style={{ fontSize: 14 }}>Beacon · 2026</span>
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 56, fontWeight: 500, letterSpacing: '-0.02em' }}>
+          beacon.run/spec <span className="sc-acc">→</span>
+        </div>
+      </div>
+    </Slide>
+  </Sprite>;
+}
+
+// ── Lower-third demo ────────────────────────────────────────────────
+function LT() {
+  const start = SCENE*8 + 1.0; const end = SCENE*8 + 3.0;
+  return <Sprite start={start} end={end}>
+    {({ localTime, duration }) => {
+      const inP = clamp(localTime/0.3, 0, 1);
+      const outP = clamp((duration-localTime)/0.3, 0, 1);
+      const op = EOUT(inP) * EOUT(outP);
+      return <div style={{ position: 'absolute', left: 96, right: 96, bottom: 110, opacity: op }}>
+        <div className="sc-rule" style={{ marginBottom: 12 }} />
+        <div className="sc-label" style={{ fontSize: 14 }}>Lower third · connective element · narration overlay</div>
+      </div>;
+    }}
+  </Sprite>;
+}
+
+function App() {
+  return (
+    <Stage width={1920} height={1080} duration={SCENE*10} background="var(--color-bg)" persistKey="swiss-console-ref">
+      <div className="sc-canvas">
+        <Chrome folio="Beacon /console · 2026" foot="Doc rev. 0.4.1" />
+        <CounterUR />
+        <ClockBR />
+        <S1 /><S2 /><S3 /><S4 /><S5 /><S6 /><S7 /><S8 /><S9 /><LT /><S10 />
+      </div>
+    </Stage>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>

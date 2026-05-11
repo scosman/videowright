@@ -1,0 +1,39 @@
+/* Swiss Console — design tokens
+ * White paper, graphite ink, single red accent. Strict 12-col grid.
+ * Information-dense, micro-labels, tabular numerals.
+ */
+:root {
+	--color-bg: #ffffff;
+	--color-fg: #0a0a0a;
+	--color-accent: #e0301e; /* signal red */
+
+	--color-muted: #6b7280;
+	--color-border: #e5e5e5;
+	--color-surface: #f6f6f6;
+
+	--font-display: "Switzer", "Helvetica Neue", system-ui, sans-serif;
+	--font-body: "Switzer", "Helvetica Neue", system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+	--space-sm: 12px;
+	--space-md: 24px;
+	--space-lg: 48px;
+	--space-xl: 96px;
+
+	--duration-fast: 180ms;
+	--duration-normal: 360ms;
+	--duration-slow: 720ms;
+
+	--radius-sm: 0px; /* no rounding */
+	--radius-md: 0px;
+	--stagger: 60ms;
+	--ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--ease-in: cubic-bezier(0.4, 0, 1, 1);
+	--rule-weight: 1px;
+	--scene-hold: 3.5s;
+
+	--safe-x: 96px;
+	--safe-y: 80px;
+	--grid-cols: 12;
+	--grid-gutter: 24px;
+}

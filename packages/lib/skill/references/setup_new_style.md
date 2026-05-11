@@ -28,6 +28,7 @@ Present this message verbatim — do not rephrase or regenerate it:
 > 3. **Describe it** — give me a short description and I'll generate a style. Example: "Neo-brutalist, Inter font, yellow accent color."
 > 4. **Built-in style pack** — pick one of these ready-made styles:
 >    - **Editorial Mono** — Black ink on cream paper. One red accent. Reads like a magazine.
+>    - **Swiss Console** — Strict 12-column grid. Hairline rules. Tabular numerals. Micro-labels everywhere.
 
 ### Mode 1 -- Ingest reference material
 
