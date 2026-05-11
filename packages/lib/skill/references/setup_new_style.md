@@ -31,6 +31,7 @@ Present this message verbatim — do not rephrase or regenerate it:
 >    - **Swiss Console** — Strict 12-column grid. Hairline rules. Tabular numerals. Micro-labels everywhere.
 >    - **Neon Terminal** — CRT terminal interface. Mono throughout. Phosphor-green on near-black, stepped motion.
 >    - **Motion Engineering** — Aerospace HUD / blueprint. Charcoal canvas, cyan-white type, amber accent. Dimension lines and crosshairs.
+>    - **Iso Diagram** — Pencil-and-paper explainer aesthetic. Hand-drawn lines, pastel fills, isometric drawings.
 
 ### Mode 1 -- Ingest reference material
 

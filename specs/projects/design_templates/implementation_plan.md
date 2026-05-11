@@ -14,6 +14,6 @@ status: complete
 
 - [x] **Phase 4: Motion Engineering.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. The HUD style relies on SVG dimension lines and crosshair geometry — sample-segments need careful SVG authoring. All tests pass.
 
-- [ ] **Phase 5: Iso Diagram.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. Hand-drawn aesthetic + SVG stroke-dashoffset draw-on animations are the central motion vocabulary. All tests pass.
+- [x] **Phase 5: Iso Diagram.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. Hand-drawn aesthetic + SVG stroke-dashoffset draw-on animations are the central motion vocabulary. All tests pass.
 
 - [ ] **Phase 6: Risograph + final cleanup.** Adapt Risograph fully (last pack — stepped easing, color-channel misregistration, grain layer). Append to STYLE_PACKS and Mode 4 message. Final doc grep across `packages/lib/skill/` for any old-pack slugs — fix any stragglers. Delete `videowright_design/` source folder. Run the full test suite. Confirm Mode 4 hardcoded message lists all 6 packs in STYLE_ROSTER order.

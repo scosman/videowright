@@ -1,0 +1,40 @@
+/* Iso Diagram — design tokens
+ * Pencil-and-paper aesthetic, soft pastel fills, hand-built but precise.
+ */
+:root {
+	--color-bg: #faf7f2; /* paper */
+	--color-fg: #2a2620; /* graphite */
+	--color-accent: #1f6fb3; /* pencil blue */
+
+	--color-muted: #8b8174;
+	--color-border: #2a2620;
+	--color-surface: #ffffff;
+
+	--fill-blue: #c8deef;
+	--fill-pink: #f4cfcb;
+	--fill-yellow: #f5e4a8;
+	--fill-green: #c9dec6;
+	--fill-lavender: #dcd3e8;
+
+	--font-display: "Caveat", "Marker Felt", cursive;
+	--font-body: "Nunito", "Inter", system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+	--space-sm: 12px;
+	--space-md: 24px;
+	--space-lg: 48px;
+	--space-xl: 96px;
+
+	--duration-fast: 220ms;
+	--duration-normal: 480ms;
+	--duration-slow: 900ms;
+
+	--stroke: 2.4px;
+	--stagger: 80ms;
+	--ease-out: cubic-bezier(0.34, 1.2, 0.64, 1); /* soft overshoot */
+	--ease-in: cubic-bezier(0.4, 0, 1, 1);
+	--scene-hold: 4.5s;
+
+	--safe-x: 120px;
+	--safe-y: 96px;
+}

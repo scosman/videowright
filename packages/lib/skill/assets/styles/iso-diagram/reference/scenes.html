@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Iso Diagram — Reference Scenes</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #2A2620; font-family: var(--font-body); }
+  .iso-canvas { position: absolute; inset: 0; background: var(--color-bg); color: var(--color-fg); overflow: hidden; }
+  .iso-canvas::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(circle, rgba(42,38,32,0.10) 1px, transparent 1.6px);
+    background-size: 32px 32px;
+  }
+  .iso-display { font-family: var(--font-display); font-weight: 500; line-height: 1.0; letter-spacing: 0.005em; }
+  .iso-body    { font-family: var(--font-body); }
+  .iso-mono    { font-family: var(--font-mono); }
+  .iso-muted   { color: var(--color-muted); }
+  .iso-accent  { color: var(--color-accent); }
+  /* draw-on stroke util */
+  .iso-stroke { stroke: var(--color-fg); stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .iso-stroke-accent { stroke: var(--color-accent); }
+  .iso-pencil { color: var(--color-fg); }
+</style>
+</head>
+<body>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<div id="root"></div>
+<script type="text/babel" src="animations.jsx"></script>
+<script type="text/babel">
+const SCENE = 4.5;
+const ease = Easing.easeOutCubic;
+
+// Stroke-draw on a path/line/rect — animates stroke-dashoffset from len → 0
+function DrawPath({ d, len = 1000, at = 0, dur = 0.7, stroke = 'var(--color-fg)', sw = 2.4, fill = 'none', dash = '' }) {
+  const { localTime } = useSprite();
+  const p = clamp((localTime - at) / dur, 0, 1);
+  const off = (1 - ease(p)) * len;
+  return <path d={d} stroke={stroke} strokeWidth={sw} fill={fill} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={dash || len} strokeDashoffset={off} />;
+}
+
+// Flood-fill — fades a fill in
+function Fill({ at = 0, dur = 0.4, children }) {
+  const { localTime } = useSprite();
+  const op = clamp((localTime - at) / dur, 0, 1);
+  return <g opacity={op}>{children}</g>;
+}
+
+// Slight rotate-in label
+function LabelIn({ at = 0, dur = 0.35, style = {}, children, rot = -2 }) {
+  const { localTime } = useSprite();
+  const p = clamp((localTime - at) / dur, 0, 1);
+  const e = ease(p);
+  return <div style={{ ...style, opacity: e, transform: `rotate(${rot * (1 - e)}deg) translateY(${(1 - e) * 12}px)` }}>{children}</div>;
+}
+
+// Iso cube (front, top, right faces)
+function IsoCube({ x = 0, y = 0, size = 80, at = 0, fill = 'var(--fill-blue)' }) {
+  const s = size, h = s * 0.5;
+  return <g transform={`translate(${x},${y})`}>
+    <Fill at={at + 0.4}><polygon points={`0,${h} ${s},0 ${s*2},${h} ${s},${s}`} fill={fill} opacity="0.95" /></Fill>
+    <Fill at={at + 0.5}><polygon points={`0,${h} ${s},${s} ${s},${s*2} 0,${s*1.5}`} fill={fill} opacity="0.7" /></Fill>
+    <Fill at={at + 0.5}><polygon points={`${s},${s} ${s*2},${h} ${s*2},${s*1.5} ${s},${s*2}`} fill={fill} opacity="0.55" /></Fill>
+    <DrawPath d={`M0,${h} L${s},0 L${s*2},${h} L${s},${s} Z`}        at={at} dur={0.4} len={s*4} />
+    <DrawPath d={`M0,${h} L${s},${s} L${s},${s*2} L0,${s*1.5} Z`}    at={at + 0.15} dur={0.4} len={s*4} />
+    <DrawPath d={`M${s},${s} L${s*2},${h} L${s*2},${s*1.5} L${s},${s*2} Z`} at={at + 0.15} dur={0.4} len={s*4} />
+  </g>;
+}
+
+// Curly leader line — bezier
+function CurlyLeader({ x1, y1, x2, y2, at = 0, dur = 0.5, stroke = 'var(--color-fg)' }) {
+  const mx = (x1 + x2) / 2 + 30;
+  const my = (y1 + y2) / 2 - 30;
+  const d = `M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`;
+  const len = Math.hypot(x2-x1, y2-y1) * 1.5;
+  return <DrawPath d={d} len={len} at={at} dur={dur} stroke={stroke} />;
+}
+
+// Sketchy underline — wavy line under text
+function Underline({ at = 0, width = 300, color = 'var(--color-accent)' }) {
+  const d = `M 0 6 q ${width*0.16} -8 ${width*0.33} 0 t ${width*0.33} 0 t ${width*0.33} 0`;
+  return <svg width={width} height="14" style={{ display: 'block' }}>
+    <DrawPath d={d} len={width * 1.2} at={at} dur={0.5} stroke={color} sw={2.5} />
+  </svg>;
+}
+
+// Sketchy ellipse around content
+function SketchEllipse({ cx, cy, rx, ry, at = 0, stroke = 'var(--color-accent)' }) {
+  const d = `M ${cx-rx} ${cy} q 0 ${-ry*1.05} ${rx} ${-ry*1.05} t ${rx} ${ry*1.05} t ${-rx} ${ry*1.05} t ${-rx} ${-ry*1.05} Z`;
+  return <DrawPath d={d} len={(rx + ry) * 4} at={at} dur={0.7} stroke={stroke} sw={2.5} />;
+}
+
+// Ticker that counts up
+function Ticker({ to, at = 0, dur = 1.0, suffix = '' }) {
+  const { localTime } = useSprite();
+  const p = clamp((localTime - at) / dur, 0, 1);
+  return <span>{Math.round(to * ease(p))}{suffix}</span>;
+}
+
+function Counter() {
+  const t = useTime();
+  const i = Math.min(9, Math.floor(t / SCENE));
+  return <div className="iso-display iso-muted" style={{ position: 'absolute', right: 96, top: 36, fontSize: 28, transform: 'rotate(-2deg)' }}>
+    ~ scene {i+1} of 10 ~
+  </div>;
+}
+
+// ─── Scene 1 — Title ─────────────────────────────────────────────
+function S1() {
+  return <Sprite start={0} end={SCENE}>
+    {/* Small iso cube top-left */}
+    <svg style={{ position: 'absolute', left: 120, top: 100, width: 180, height: 180, overflow: 'visible' }}>
+      <g transform="translate(0,20)"><IsoCube x={0} y={0} size={60} at={0.2} fill="var(--fill-yellow)" /></g>
+    </svg>
+    <LabelIn at={0.8} style={{ position: 'absolute', left: 120, top: 320 }}>
+      <div className="iso-mono iso-muted" style={{ fontSize: 22, letterSpacing: '0.1em', marginBottom: 24 }}>BEACON · v0.4</div>
+    </LabelIn>
+    <LabelIn at={1.1} style={{ position: 'absolute', left: 120, top: 380 }}>
+      <div className="iso-display" style={{ fontSize: 320, color: 'var(--color-accent)' }}>Beacon.</div>
+    </LabelIn>
+    <LabelIn at={1.7} style={{ position: 'absolute', left: 120, top: 740 }}>
+      <div className="iso-body" style={{ fontSize: 44, fontWeight: 600 }}>Long-running agents,</div>
+      <div className="iso-body" style={{ fontSize: 44, fontWeight: 400, color: 'var(--color-muted)' }}>that don't forget where they were.</div>
+    </LabelIn>
+    <div style={{ position: 'absolute', left: 120, top: 870, width: 580 }}>
+      <Underline at={2.0} width={580} color="var(--color-accent)" />
+    </div>
+    <Counter />
+  </Sprite>;
+}
+
+// ─── Scene 2 — Section ───────────────────────────────────────────
+function S2() {
+  return <Sprite start={SCENE} end={SCENE*2}>
+    <LabelIn at={0.3} style={{ position: 'absolute', left: 120, top: 180 }} rot={-3}>
+      <div className="iso-display iso-muted" style={{ fontSize: 80 }}>Chapter</div>
+    </LabelIn>
+    <LabelIn at={0.7} style={{ position: 'absolute', left: 120, top: 260 }}>
+      <div className="iso-display iso-accent" style={{ fontSize: 460, lineHeight: 0.9 }}>02</div>
+    </LabelIn>
+    <LabelIn at={1.3} style={{ position: 'absolute', left: 520, top: 380 }}>
+      <div className="iso-display" style={{ fontSize: 180 }}>The architecture.</div>
+    </LabelIn>
+    <div style={{ position: 'absolute', left: 520, top: 600, width: 720 }}>
+      <Underline at={1.8} width={720} />
+    </div>
+    <LabelIn at={2.0} style={{ position: 'absolute', left: 520, top: 660 }} rot={-1}>
+      <div className="iso-body iso-muted" style={{ fontSize: 32 }}>three primitives → memory · reasoning · recovery</div>
+    </LabelIn>
+    <Counter />
+  </Sprite>;
+}
+
+// ─── Scene 3 — Kinetic ───────────────────────────────────────────
+function S3() {
+  const words = ['Most','agents','fail','because','they','forget.'];
+  return <Sprite start={SCENE*2} end={SCENE*3}>
+    <div style={{ position: 'absolute', left: 140, top: 260, width: 1640 }}>
+      {words.map((w, i) => (
+        <LabelIn key={i} at={0.4 + i * 0.22} rot={(i%2===0?-1.5:1.5)} style={{ display: 'inline-block', marginRight: 32 }}>
+          <span className="iso-display" style={{ fontSize: 220, color: i === words.length-1 ? 'var(--color-accent)' : 'var(--color-fg)', position: 'relative', display: 'inline-block' }}>
+            {w}
+            {i === words.length - 1 && (
+              <svg style={{ position: 'absolute', inset: -28, width: 'calc(100% + 56px)', height: 'calc(100% + 56px)', overflow: 'visible' }}>
+                <SketchEllipse cx="50%" cy="50%" rx={w.length * 55 + 20} ry={130} at={0.4 + i * 0.22 + 0.4} />
+              </svg>
+            )}
+          </span>
+        </LabelIn>
+      ))}
+    </div>
+    <Counter />
+  </Sprite>;
+}
+
+// ─── Scene 4 — Bullet ────────────────────────────────────────────
+function S4() {
+  const items = [
+    'Context windows decay.',
+    'Tool selection drifts.',
+    'Plans go stale.',
+    'Errors compound.',
+    'Recovery requires restart.',
+  ];
+  return <Sprite start={SCENE*3} end={SCENE*4}>
+    <LabelIn at={0.3} style={{ position: 'absolute', left: 140, top: 140 }}>
+      <div className="iso-display" style={{ fontSize: 130 }}>Where agents break.</div>
+      <div style={{ width: 580, marginTop: 8 }}><Underline at={0.7} width={580} /></div>
+    </LabelIn>
+    <div style={{ position: 'absolute', left: 180, top: 420, right: 180 }}>
+      {items.map((t, i) => (
+        <LabelIn key={i} at={0.9 + i*0.2} rot={0} style={{ display: 'flex', alignItems: 'center', gap: 36, marginBottom: 40 }}>
+          {/* Hand-drawn checkbox */}
+          <svg width="64" height="64" style={{ flexShrink: 0 }}>
+            <DrawPath d="M 8 8 L 56 8 L 56 56 L 8 56 Z" len={200} at={0.95 + i*0.2} dur={0.4} sw={2.4} />
+            <DrawPath d="M 16 32 L 28 48 L 52 16" len={80} at={1.25 + i*0.2} dur={0.4} stroke="var(--color-accent)" sw={3} />
+          </svg>
+          <span className="iso-body" style={{ fontSize: 50, fontWeight: 600 }}>{t}</span>
+          <span className="iso-display iso-muted" style={{ fontSize: 44, marginLeft: 'auto' }}>0{i+1}.</span>
+        </LabelIn>
+      ))}
+    </div>
+    <Counter />
+  </Sprite>;
+}
+
+// ─── Scene 5 — Stat ──────────────────────────────────────────────
+function S5() {
+  return <Sprite start={SCENE*4} end={SCENE*5}>
+    <LabelIn at={0.3} style={{ position: 'absolute', left: 140, top: 160 }}>
+      <div className="iso-body iso-muted" style={{ fontSize: 28, letterSpacing: '0.05em' }}>BEACON · failure data, Q1 2026</div>
+    </LabelIn>
+    <div style={{ position: 'absolute', left: 0, right: 0, top: 280, textAlign: 'center' }}>
+      <svg style={{ position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)', width: 800, height: 800, overflow: 'visible' }}>
+        {/* Hand-drawn concentric circles */}
+        <DrawPath d="M 400 100 a 300 300 0 1 0 0.1 0 Z" len={1900} at={0.5} dur={1.0} stroke="var(--color-accent)" sw={2.5} />
+        <DrawPath d="M 400 160 a 240 240 0 1 0 0.1 0 Z" len={1520} at={0.8} dur={1.0} stroke="var(--color-muted)" sw={1.8} />
+      </svg>
+      <LabelIn at={0.9} style={{ position: 'relative', zIndex: 1, paddingTop: 200 }}>
+        <div className="iso-display iso-accent" style={{ fontSize: 380, lineHeight: 0.9 }}>
+          <Ticker to={84} at={1.0} dur={1.0} />%
+        </div>
+      </LabelIn>
+    </div>
+    <LabelIn at={2.0} style={{ position: 'absolute', left: 0, right: 0, bottom: 200, textAlign: 'center' }} rot={-1}>
+      <div className="iso-body" style={{ fontSize: 36, maxWidth: 1200, margin: '0 auto', fontWeight: 600 }}>
+        of agent failures happen <span style={{ color: 'var(--color-accent)' }}>after</span> the 4th tool call.
+      </div>
+      <div className="iso-mono iso-muted" style={{ fontSize: 18, marginTop: 14 }}>n=12,840 sessions</div>
+    </LabelIn>
+    <Counter />
+  </Sprite>;
+}
+
+// ─── Scene 6 — Feature ───────────────────────────────────────────
+function S6() {
+  return <Sprite start={SCENE*5} end={SCENE*6}>
+    {/* Left: iso illustration — stack of memory blocks */}
+    <svg style={{ position: 'absolute', left: 140, top: 200, width: 800, height: 700, overflow: 'visible' }}>
+      {/* Stack of cubes */}
+      {[0,1,2,3].map(i => (
+        <g key={i} transform={`translate(${200},${500 - i*90})`}>
+          <Fill at={0.6 + i*0.2}><polygon points={`0,40 160,-40 320,40 160,120`} fill={i === 3 ? 'var(--fill-pink)' : 'var(--fill-blue)'} opacity="0.9" /></Fill>
+          <Fill at={0.7 + i*0.2}><polygon points={`0,40 160,120 160,180 0,100`} fill={i === 3 ? 'var(--fill-pink)' : 'var(--fill-blue)'} opacity="0.65" /></Fill>
+          <Fill at={0.7 + i*0.2}><polygon points={`160,120 320,40 320,100 160,180`} fill={i === 3 ? 'var(--fill-pink)' : 'var(--fill-blue)'} opacity="0.5" /></Fill>
+          <DrawPath d="M 0 40 L 160 -40 L 320 40 L 160 120 Z" len={750} at={0.5 + i*0.2} dur={0.5} />
+          <DrawPath d="M 0 40 L 160 120 L 160 180 L 0 100 Z" len={750} at={0.6 + i*0.2} dur={0.5} />
+          <DrawPath d="M 160 120 L 320 40 L 320 100 L 160 180 Z" len={750} at={0.6 + i*0.2} dur={0.5} />
+        </g>
+      ))}
+      {/* Rewind arrow */}
+      <CurlyLeader x1={600} y1={180} x2={300} y2={140} at={2.0} stroke="var(--color-accent)" />
+      <Fill at={2.5}>
+        <polygon points="300,140 318,128 318,152" fill="var(--color-accent)" />
+        <text x="470" y="120" fontFamily="var(--font-display)" fontSize="40" fill="var(--color-accent)" transform="rotate(-6 470 120)">rewind ↶</text>
+      </Fill>
+    </svg>
+    {/* Right: copy */}
+    <LabelIn at={0.4} style={{ position: 'absolute', right: 120, top: 180, width: 720 }}>
+      <div className="iso-mono iso-muted" style={{ fontSize: 18, letterSpacing: '0.1em', marginBottom: 16 }}>FEATURE 01 / 03</div>
+    </LabelIn>
+    <LabelIn at={0.7} style={{ position: 'absolute', right: 120, top: 240, width: 720 }}>
+      <div className="iso-display" style={{ fontSize: 130, color: 'var(--color-accent)', marginBottom: 16 }}>Checkpoint memory.</div>
+      <Underline at={1.3} width={520} />
+    </LabelIn>
+    <LabelIn at={1.4} style={{ position: 'absolute', right: 120, top: 540, width: 720 }}>
+      <div className="iso-body" style={{ fontSize: 28, lineHeight: 1.5, marginBottom: 32 }}>
+        Snapshots the agent's reasoning at each tool boundary. When a plan goes stale, the agent rewinds to the last point its world model was correct.
+      </div>
+    </LabelIn>
+    <LabelIn at={1.8} style={{ position: 'absolute', right: 120, top: 780, width: 720, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, paddingTop: 24, borderTop: '2px solid var(--color-fg)' }}>
+      <div><div className="iso-mono iso-muted" style={{ fontSize: 13, letterSpacing: '0.15em' }}>SNAP/MIN</div><div className="iso-display" style={{ fontSize: 80 }}><Ticker to={120} at={1.9} /></div></div>
+      <div><div className="iso-mono iso-muted" style={{ fontSize: 13, letterSpacing: '0.15em' }}>RESTORE</div><div className="iso-display" style={{ fontSize: 80 }}><Ticker to={9} at={1.9} suffix=" ms" /></div></div>
+    </LabelIn>
+    <Counter />
+  </Sprite>;
+}
+
+// ─── Scene 7 — 3 mini iso cards ──────────────────────────────────
+function S7() {
+  const cards = [
+    { name: 'Memory',    fill: 'var(--fill-blue)',     desc: 'remembers' },
+    { name: 'Reasoning', fill: 'var(--fill-yellow)',   desc: 'revises' },
+    { name: 'Recovery',  fill: 'var(--fill-green)',    desc: 'rewinds' },
+  ];
+  return <Sprite start={SCENE*6} end={SCENE*7}>
+    <LabelIn at={0.3} style={{ position: 'absolute', left: 140, top: 140 }}>
+      <div className="iso-display" style={{ fontSize: 130 }}>Three primitives.</div>
+      <Underline at={0.7} width={520} />
+    </LabelIn>
+    <div style={{ position: 'absolute', left: 140, right: 140, top: 420, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 56 }}>
+      {cards.map((c, i) => (
+        <LabelIn key={c.name} at={0.9 + i*0.2}>
+          <div style={{ position: 'relative', height: 540 }}>
+            {/* Hand-drawn frame */}
+            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+              <DrawPath d="M 8 8 L 528 12 L 524 528 L 12 524 Z" len={2100} at={1.0 + i*0.2} dur={0.6} sw={2.4} />
+            </svg>
+            {/* Iso cube */}
+            <svg width="100%" height="280" style={{ overflow: 'visible' }}>
+              <g transform="translate(170,80)"><IsoCube x={0} y={0} size={90} at={1.2 + i*0.2} fill={c.fill} /></g>
+            </svg>
+            <div className="iso-display" style={{ fontSize: 80, textAlign: 'center', marginTop: 24 }}>{c.name}</div>
+            <div className="iso-display iso-muted" style={{ fontSize: 40, textAlign: 'center', marginTop: -4 }}>~ {c.desc} ~</div>
+          </div>
+        </LabelIn>
+      ))}
+    </div>
+    <Counter />
+  </Sprite>;
+}
+
+// ─── Scene 8 — UI exploded view ──────────────────────────────────
+function S8() {
+  return <Sprite start={SCENE*7} end={SCENE*8}>
+    <LabelIn at={0.3} style={{ position: 'absolute', left: 140, top: 140 }}>
+      <div className="iso-display" style={{ fontSize: 110 }}>Beacon Console.</div>
+      <Underline at={0.7} width={480} />
+    </LabelIn>
+    {/* Exploded iso layers */}
+    <svg style={{ position: 'absolute', left: 240, top: 360, width: 1100, height: 700, overflow: 'visible' }}>
+      {[
+        { y: 360, fill: 'var(--fill-blue)',     label: 'TIMELINE' },
+        { y: 240, fill: 'var(--fill-yellow)',   label: 'MEMORY' },
+        { y: 120, fill: 'var(--fill-pink)',     label: 'TRACES' },
+        { y: 0,   fill: 'var(--fill-green)',    label: 'AGENT' },
+      ].map((layer, i) => (
+        <g key={i} transform={`translate(80,${layer.y})`}>
+          <Fill at={0.8 + i*0.25}><polygon points="0,80 360,-80 720,80 360,240" fill={layer.fill} opacity="0.85" /></Fill>
+          <DrawPath d="M 0 80 L 360 -80 L 720 80 L 360 240 Z" len={1800} at={0.7 + i*0.25} dur={0.5} />
+          <Fill at={1.0 + i*0.25}>
+            <text x={760} y={70} fontFamily="var(--font-display)" fontSize="44" fill="var(--color-fg)">{layer.label}</text>
+          </Fill>
+          <DrawPath d={`M 740 60 L 800 60`} len={60} at={1.0 + i*0.25} dur={0.3} stroke="var(--color-accent)" />
+        </g>
+      ))}
+    </svg>
+    <LabelIn at={2.5} style={{ position: 'absolute', right: 140, bottom: 180, width: 480 }} rot={-2}>
+      <div className="iso-body" style={{ fontSize: 26, fontWeight: 600 }}>
+        Four layers, one console.
+      </div>
+      <div className="iso-body iso-muted" style={{ fontSize: 22, marginTop: 8 }}>
+        Each layer is independently inspectable — and pinnable to the timeline.
+      </div>
+    </LabelIn>
+    <Counter />
+  </Sprite>;
+}
+
+// ─── Scene 9 — Content with inline drawing ───────────────────────
+function S9() {
+  return <Sprite start={SCENE*8} end={SCENE*9}>
+    <LabelIn at={0.3} style={{ position: 'absolute', left: 140, top: 180 }}>
+      <div className="iso-display" style={{ fontSize: 130 }}>What we believe.</div>
+      <Underline at={0.7} width={520} />
+    </LabelIn>
+    <div style={{ position: 'absolute', left: 140, right: 140, top: 440, display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 64 }}>
+      <LabelIn at={0.8}>
+        <div className="iso-body" style={{ fontSize: 34, lineHeight: 1.5 }}>
+          The next decade of AI is not about <span style={{ position: 'relative', display: 'inline-block' }}>
+            bigger models<svg style={{ position: 'absolute', left: 0, right: 0, bottom: -10, width: '100%' }} height="14"><DrawPath d="M 4 8 q 60 -8 120 0 t 120 0" len={300} at={1.3} stroke="var(--color-accent)" sw={2.8} /></svg>
+          </span>.
+        </div>
+        <div className="iso-body iso-muted" style={{ fontSize: 30, lineHeight: 1.5, marginTop: 32 }}>
+          It's about agents that can <span style={{ color: 'var(--color-accent)' }}>run long enough to matter</span> — and the unglamorous infrastructure that lets them.
+        </div>
+      </LabelIn>
+      {/* small iso illustration */}
+      <LabelIn at={1.4}>
+        <svg width="100%" height="380" style={{ overflow: 'visible' }}>
+          <g transform="translate(120,80)">
+            <IsoCube x={0} y={0} size={80} at={1.4} fill="var(--fill-blue)" />
+            <IsoCube x={80} y={40} size={80} at={1.6} fill="var(--fill-yellow)" />
+            <IsoCube x={-80} y={40} size={80} at={1.6} fill="var(--fill-pink)" />
+          </g>
+          <CurlyLeader x1={280} y1={260} x2={420} y2={340} at={2.2} stroke="var(--color-accent)" />
+          <Fill at={2.7}>
+            <text x="430" y="345" fontFamily="var(--font-display)" fontSize="40" fill="var(--color-accent)" transform="rotate(-3 430 345)">us, building.</text>
+          </Fill>
+        </svg>
+      </LabelIn>
+    </div>
+    <Counter />
+  </Sprite>;
+}
+
+// ─── Scene 10 — CTA ──────────────────────────────────────────────
+function S10() {
+  return <Sprite start={SCENE*9} end={SCENE*10}>
+    <LabelIn at={0.2} style={{ position: 'absolute', left: 0, right: 0, top: 240, textAlign: 'center' }} rot={-1}>
+      <div className="iso-display iso-muted" style={{ fontSize: 56 }}>Try it →</div>
+    </LabelIn>
+    <div style={{ position: 'absolute', left: '50%', top: 400, transform: 'translateX(-50%)' }}>
+      <svg width="1100" height="280" style={{ overflow: 'visible' }}>
+        <DrawPath d="M 20 40 L 1080 30 L 1060 240 L 30 230 Z" len={3000} at={0.5} dur={0.9} stroke="var(--color-accent)" sw={3.5} />
+      </svg>
+      <LabelIn at={1.2} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="iso-display" style={{ fontSize: 160, color: 'var(--color-accent)' }}>beacon.run</div>
+      </LabelIn>
+    </div>
+    {/* small iso below */}
+    <svg style={{ position: 'absolute', left: '50%', top: 740, transform: 'translateX(-50%)', width: 240, height: 240, overflow: 'visible' }}>
+      <g transform="translate(40,40)"><IsoCube x={0} y={0} size={70} at={1.6} fill="var(--fill-yellow)" /></g>
+    </svg>
+    <LabelIn at={2.2} style={{ position: 'absolute', left: 0, right: 0, bottom: 100, textAlign: 'center' }} rot={-2}>
+      <div className="iso-display iso-muted" style={{ fontSize: 40 }}>~ beacon · may 2026 ~</div>
+    </LabelIn>
+    <Counter />
+  </Sprite>;
+}
+
+function App() {
+  return (
+    <Stage width={1920} height={1080} duration={SCENE*10} background="var(--color-bg)" persistKey="iso-diagram-ref">
+      <div className="iso-canvas">
+        <S1 /><S2 /><S3 /><S4 /><S5 /><S6 /><S7 /><S8 /><S9 /><S10 />
+      </div>
+    </Stage>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
