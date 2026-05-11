@@ -70,6 +70,12 @@ export class Player {
 	private audioEl: HTMLAudioElement | null = null;
 	private _playbackMode: "idle" | "playing" = "idle";
 	private autoAdvanceTimer: ReturnType<typeof setTimeout> | null = null;
+	/**
+	 * Generation counter incremented each time enterPlaying() starts a segment
+	 * restart. Used to detect stale async restarts that should be abandoned
+	 * because the user paused or navigated before the restart completed.
+	 */
+	private playbackRestartGen = 0;
 	/** Drift tolerance in ms: snap audio if it drifts beyond this threshold. */
 	private static readonly DRIFT_TOLERANCE_MS = 200;
 
@@ -191,6 +197,8 @@ export class Player {
 	}
 
 	destroy(): void {
+		// Invalidate any pending async playback restart
+		this.playbackRestartGen++;
 		// Stop auto-advance and audio
 		this.cancelAutoAdvance();
 		if (this.audioEl) {
@@ -271,7 +279,106 @@ export class Player {
 		if (this.state === "ended") return;
 		this._playbackMode = "playing";
 
-		// Sync audio to current logical position and play
+		// Restart the current segment from beat 0 so animation and audio
+		// begin together. Without this, the animation may already be
+		// partway through when the user presses play, causing desync.
+		// The restart is async (segment remount). A generation counter
+		// detects stale restarts if the user pauses or navigates before
+		// the restart completes.
+		const gen = ++this.playbackRestartGen;
+		this.restartCurrentSegmentForPlayback(gen).catch((e) => {
+			// Only surface the error if this restart is still current
+			if (this.playbackRestartGen === gen) {
+				const segId = this.getCurrentSlot().runner?.segment.id ?? "unknown";
+				this.handleLifecycleError(segId, e);
+			}
+		});
+	}
+
+	/**
+	 * Remount the current segment at beat 0 and start audio from the
+	 * corresponding logical time. Called by enterPlaying() to ensure
+	 * animation and audio are synchronized from the segment start.
+	 *
+	 * @param gen - generation counter from enterPlaying(). If the counter
+	 *   has advanced past this value at any async boundary, the restart is
+	 *   stale and is abandoned so it doesn't interfere with the user's
+	 *   subsequent navigation.
+	 */
+	private async restartCurrentSegmentForPlayback(gen: number): Promise<void> {
+		const slot = this.getCurrentSlot();
+		if (!slot.runner || !this.timeline || !this.segmentLoaders) {
+			// Nothing to restart -- just schedule auto-advance
+			if (this.playbackRestartGen === gen) this.syncAudioAndSchedule();
+			return;
+		}
+
+		const index = slot.timelineIndex;
+		const entry = this.timeline.segments[index];
+		if (!entry) {
+			if (this.playbackRestartGen === gen) this.syncAudioAndSchedule();
+			return;
+		}
+
+		// Load the segment module before touching the slot, so the old
+		// runner stays alive if the user cancels (nav/pause) mid-load.
+		const loader = this.segmentLoaders.get(entry.id);
+		if (!loader) throw new Error(`No loader for segment "${entry.id}"`);
+		const mod = await loader();
+
+		// If this restart was superseded or the player destroyed, bail out
+		if (this.playbackRestartGen !== gen || !slot.runner) return;
+
+		const segment = mod.default;
+
+		// Now swap: unmount old runner, mount fresh one
+		const oldRunner = slot.runner;
+		oldRunner.unmount();
+
+		const runnerMode = this.options.renderMode ? "render" : "interactive";
+		const runner = new SegmentRunner(segment, { mode: runnerMode });
+		slot.runner = runner;
+		// timelineIndex is unchanged (restart targets the same segment)
+
+		const slotContent = getSlotContent(slot.el);
+		slotContent.innerHTML = "";
+		slot.el.style.visibility = "visible";
+
+		await runner.mount(slotContent);
+
+		if (this.playbackRestartGen !== gen) {
+			// Restart was superseded (user paused/navigated/destroyed during
+			// mount). Clean up the orphaned runner so it doesn't sit in
+			// "mounted but never playing" state in the slot.
+			// Note: slot.runner still references this now-unmounted runner.
+			// This is an intentional intermediate state -- the superseding
+			// code path (next enterPlaying, transitionTo, or destroy) will
+			// replace or clear it.
+			runner.unmount();
+			return;
+		}
+
+		// Don't await: the old runner is already unmounted so there's no
+		// outgoing play promise to drain (unlike transitionTo which must
+		// await the outgoing runner's play promise before completing).
+		const playPromise = runner.startPlay();
+		playPromise.catch((e) => {
+			if (this.playbackRestartGen === gen) {
+				this.handleLifecycleError(entry.id, e);
+			}
+		});
+
+		hashRouter.write({ segmentId: entry.id, beat: 0 });
+
+		// Now sync audio and schedule auto-advance
+		this.syncAudioAndSchedule();
+	}
+
+	/**
+	 * Sync audio position and schedule auto-advance.
+	 * Extracted to avoid duplication between the restart path and edge-case fallback.
+	 */
+	private syncAudioAndSchedule(): void {
 		if (this.audioEl) {
 			const logicalTime = this.computeLogicalAudioTime();
 			this.audioEl.currentTime = logicalTime;
@@ -287,6 +394,8 @@ export class Player {
 
 	private enterIdle(): void {
 		this._playbackMode = "idle";
+		// Invalidate any pending async playback restart
+		this.playbackRestartGen++;
 		this.cancelAutoAdvance();
 
 		if (this.audioEl) {
@@ -354,7 +463,13 @@ export class Player {
 
 		// Next advance index = currentBeat (0-based: beat 0 means advance[0] fires next)
 		if (currentBeat >= advances.length) {
-			// Segment exhausted -- this shouldn't happen if handleNext transitions properly
+			// All scheduled beats consumed. Fire one final tick so handleNext()
+			// sees triggerNext() return false and transitions to the next segment.
+			// Use setTimeout(0) to yield to the event loop for the segment's
+			// play() promise to settle first.
+			this.autoAdvanceTimer = setTimeout(() => {
+				this.autoAdvanceTick();
+			}, 0);
 			return;
 		}
 

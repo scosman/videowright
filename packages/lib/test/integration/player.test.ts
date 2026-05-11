@@ -899,4 +899,415 @@ describe("Player playback mode", () => {
 		player.destroy();
 		await flush();
 	});
+
+	it("play_restarts_segment_from_beat_zero", async () => {
+		// When the user presses play, the current segment should restart
+		// from beat 0 so animation and audio are synchronized.
+		const mountCalls: string[] = [];
+
+		const seg = makeSegment({
+			id: "seg-0",
+			advances: [2],
+			mount() {
+				mountCalls.push("seg-0");
+			},
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [2] },
+		});
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		expect(mountCalls).toEqual(["seg-0"]);
+
+		// Manually advance one beat
+		pressKey("ArrowRight");
+		await flush();
+		expect(location.hash).toBe("#/seg-0/1");
+
+		// Press play -- should restart from beat 0
+		player.togglePlayback();
+		await flush(20);
+
+		// Segment should have been remounted (mounted a second time)
+		expect(mountCalls).toEqual(["seg-0", "seg-0"]);
+		// Hash should be back at beat 0
+		expect(location.hash).toBe("#/seg-0/0");
+		expect(player.playbackMode).toBe("playing");
+
+		player.destroy();
+	});
+
+	it("play_restarts_first_segment_and_auto_advances", async () => {
+		// Regression test: play on the first segment should start auto-advance.
+		// Previously, pressing play on the first segment did not start auto-play.
+		vi.useFakeTimers();
+
+		try {
+			const seg0 = makeSegment({
+				id: "seg-0",
+				advances: [0.5],
+				async play(ctx) {
+					await ctx.waitForNext();
+				},
+			});
+			const seg1 = makeSegment({
+				id: "seg-1",
+				async play() {},
+			});
+
+			const player = new Player(host, {
+				resolvedTiming: { "seg-0": [0.5], "seg-1": [1] },
+			});
+			await player.load(
+				makeTimeline(["seg-0", "seg-1"]),
+				makeLoader([seg0, seg1]),
+				makeTransitionLoaders(),
+			);
+			await player.start();
+			await flush();
+
+			expect(player.currentSegmentId).toBe("seg-0");
+
+			// Press play on the first segment
+			player.togglePlayback();
+			// Wait for the async restart to complete
+			await flush(20);
+			expect(player.playbackMode).toBe("playing");
+
+			// After restart, seg-0 is at beat 0. The auto-advance timer
+			// should fire after 0.5s and advance the beat.
+			vi.advanceTimersByTime(600);
+			await flush(20);
+
+			// The auto-advance should have resolved waitForNext, advancing beat to 1
+			expect(location.hash).toBe("#/seg-0/1");
+
+			player.destroy();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("play_pause_leaves_segment_navigable", async () => {
+		// When play is toggled on then off (with enough time for restart to
+		// complete), the segment should remain functional for manual navigation.
+		const seg0 = makeSegment({
+			id: "seg-0",
+			advances: [1, 2],
+			async play(ctx) {
+				await ctx.waitForNext();
+				await ctx.waitForNext();
+			},
+		});
+		const seg1 = makeSegment({ id: "seg-1", async play() {} });
+
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [1, 2], "seg-1": [1] },
+		});
+		await player.load(
+			makeTimeline(["seg-0", "seg-1"]),
+			makeLoader([seg0, seg1]),
+			makeTransitionLoaders(),
+		);
+		await player.start();
+		await flush();
+
+		// Toggle play on
+		player.togglePlayback();
+		// Let the restart complete before pausing
+		await flush(20);
+		expect(player.playbackMode).toBe("playing");
+
+		// Now pause
+		player.togglePlayback();
+		await flush(20);
+
+		expect(player.playbackMode).toBe("idle");
+		expect(player.currentSegmentId).toBe("seg-0");
+		// After restart, hash should be at beat 0
+		expect(location.hash).toBe("#/seg-0/0");
+
+		// Manual nav should still work -- advance a beat
+		pressKey("ArrowRight");
+		await flush();
+		expect(location.hash).toBe("#/seg-0/1");
+
+		player.destroy();
+	});
+
+	it("play_on_second_segment_restarts_that_segment", async () => {
+		// When the user navigates to the second segment and presses play,
+		// the second segment should restart from beat 0.
+		const mountCalls: string[] = [];
+
+		const seg0 = makeSegment({
+			id: "seg-0",
+			async play() {},
+		});
+		const seg1 = makeSegment({
+			id: "seg-1",
+			advances: [2],
+			mount() {
+				mountCalls.push("seg-1");
+			},
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [1], "seg-1": [2] },
+		});
+		await player.load(
+			makeTimeline(["seg-0", "seg-1"]),
+			makeLoader([seg0, seg1]),
+			makeTransitionLoaders(),
+		);
+		await player.start();
+		await flush();
+
+		// Navigate to seg-1
+		pressKey("ArrowRight");
+		await flush(20);
+		expect(player.currentSegmentId).toBe("seg-1");
+		expect(mountCalls).toEqual(["seg-1"]);
+
+		// Press play -- should restart seg-1 from beat 0 (remount)
+		player.togglePlayback();
+		await flush(20);
+
+		expect(mountCalls).toEqual(["seg-1", "seg-1"]);
+		expect(location.hash).toBe("#/seg-1/0");
+		expect(player.playbackMode).toBe("playing");
+
+		player.destroy();
+	});
+
+	it("auto_advance_transitions_to_next_segment", async () => {
+		// Regression test: when playing, auto-advance should transition to
+		// the next segment after exhausting all beats in the current one.
+		// Previously, scheduleNextAutoAdvance() returned early when
+		// currentBeat >= advances.length, leaving the player stuck on the
+		// finished segment while audio continued.
+		vi.useFakeTimers();
+
+		try {
+			const mountCalls: string[] = [];
+			const unmountCalls: string[] = [];
+
+			const seg0 = makeSegment({
+				id: "seg-0",
+				advances: [0.5],
+				mount() {
+					mountCalls.push("seg-0");
+				},
+				unmount() {
+					unmountCalls.push("seg-0");
+				},
+				async play(ctx) {
+					await ctx.waitForNext();
+				},
+			});
+			const seg1 = makeSegment({
+				id: "seg-1",
+				advances: [1],
+				mount() {
+					mountCalls.push("seg-1");
+				},
+				async play(ctx) {
+					await ctx.waitForNext();
+				},
+			});
+
+			const player = new Player(host, {
+				resolvedTiming: { "seg-0": [0.5], "seg-1": [1] },
+			});
+			await player.load(
+				makeTimeline(["seg-0", "seg-1"]),
+				makeLoader([seg0, seg1]),
+				makeTransitionLoaders(),
+			);
+			await player.start();
+			await flush();
+
+			expect(player.currentSegmentId).toBe("seg-0");
+			expect(mountCalls).toEqual(["seg-0"]);
+
+			// Press play -- restarts seg-0 from beat 0
+			player.togglePlayback();
+			await flush(20);
+			expect(player.playbackMode).toBe("playing");
+			expect(player.currentSegmentId).toBe("seg-0");
+
+			// Advance past seg-0's duration (0.5s). The first auto-advance
+			// fires and resolves waitForNext (beat 0 -> 1). Then a follow-up
+			// tick detects that all beats are consumed and transitions to seg-1.
+			vi.advanceTimersByTime(600);
+			await flush(20);
+
+			// Give the segment-end transition tick time to fire
+			vi.advanceTimersByTime(100);
+			await flush(20);
+
+			// seg-0 should be unmounted and seg-1 should be mounted and playing
+			expect(unmountCalls).toContain("seg-0");
+			expect(mountCalls).toContain("seg-1");
+			expect(player.currentSegmentId).toBe("seg-1");
+			expect(player.playbackMode).toBe("playing");
+
+			player.destroy();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("rapid_play_pause_bails_out_before_mount", async () => {
+		// Exercise the pre-mount bail-out path: togglePlayback() on then
+		// immediately off is synchronous, so the gen counter is already
+		// stale by the time await loader() resolves. The restart bails
+		// before unmounting the old runner or mounting a new one, leaving
+		// the original runner intact.
+		const mountCalls: string[] = [];
+		const unmountCalls: string[] = [];
+
+		const seg = makeSegment({
+			id: "seg-0",
+			advances: [2],
+			mount() {
+				mountCalls.push("seg-0");
+			},
+			unmount() {
+				unmountCalls.push("seg-0");
+			},
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [2] },
+		});
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		expect(mountCalls).toEqual(["seg-0"]);
+		expect(unmountCalls).toEqual([]);
+
+		// Toggle play on then immediately off before the restart can complete.
+		// Both calls are synchronous, so by the time the async restart's
+		// first await (loader()) resolves, the gen counter is already stale.
+		player.togglePlayback();
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("idle");
+
+		// Let all pending microtasks drain
+		await flush(20);
+
+		// Pre-mount bail-out: the restart never reached the unmount/mount
+		// phase, so the original runner is untouched. Zero unmounts is the
+		// correct cleanup outcome for this path.
+		expect(mountCalls).toEqual(["seg-0"]);
+		expect(unmountCalls).toEqual([]);
+
+		// The player should be idle with seg-0 still current
+		expect(player.currentSegmentId).toBe("seg-0");
+		expect(player.currentState).toBe("playing"); // player state, not playback mode
+
+		// Manual navigation should still work
+		pressKey("ArrowRight");
+		await flush();
+		expect(location.hash).toBe("#/seg-0/1");
+
+		player.destroy();
+	});
+
+	it("pause_during_mount_unmounts_orphaned_runner", async () => {
+		// Exercise the post-mount bail-out path (line 349 in index.ts):
+		// The loader resolves while gen is still current, so the restart
+		// proceeds past the pre-mount check (line 330), unmounts the old
+		// runner, creates and mounts a new one. But mount() is async and
+		// the user pauses while mount is in-flight. When mount completes,
+		// the gen check on line 349 fires and the orphaned runner must be
+		// unmounted so it doesn't sit in "mounted but never playing" state.
+		const mountCalls: string[] = [];
+		const unmountCalls: string[] = [];
+
+		// Deferred mount: the mount() call returns a promise that we
+		// resolve manually, giving us control over when mount completes.
+		// Wrapped in an object so TS doesn't narrow the closure variable
+		// to `never` across the async boundary.
+		const deferred = { resolve: null as (() => void) | null };
+		let mountCallCount = 0;
+
+		const seg = makeSegment({
+			id: "seg-0",
+			advances: [2],
+			async mount() {
+				mountCallCount++;
+				mountCalls.push("seg-0");
+				// Only defer the second mount (the restart's mount).
+				// The first mount (player.start) resolves immediately.
+				if (mountCallCount >= 2) {
+					await new Promise<void>((resolve) => {
+						deferred.resolve = resolve;
+					});
+				}
+			},
+			unmount() {
+				unmountCalls.push("seg-0");
+			},
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [2] },
+		});
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		expect(mountCalls).toEqual(["seg-0"]);
+		expect(unmountCalls).toEqual([]);
+
+		// Start playback -- the restart begins its async sequence.
+		player.togglePlayback();
+
+		// Let loader() resolve and the old runner unmount. The restart
+		// proceeds to mount the new runner, which defers (mountCallCount=2).
+		await flush(20);
+
+		// The old runner was unmounted, and mount of the new runner is
+		// in-flight (deferred). Verify the deferred mount is pending.
+		expect(mountCalls).toEqual(["seg-0", "seg-0"]);
+		expect(unmountCalls).toEqual(["seg-0"]); // old runner unmounted
+		expect(deferred.resolve).toBeTruthy();
+
+		// Now pause while mount is still in-flight. This increments the
+		// gen counter, making the restart stale.
+		player.togglePlayback();
+		expect(player.playbackMode).toBe("idle");
+
+		// Resolve the deferred mount. The restart code resumes at the
+		// post-mount gen check (line 349) and sees the stale gen.
+		deferred.resolve?.();
+		await flush(20);
+
+		// The orphaned runner should have been unmounted by the post-mount
+		// bail-out cleanup (runner.unmount() on line 353).
+		expect(unmountCalls.length).toBe(2);
+
+		// The player should not be in an error state
+		expect(player.currentState).not.toBe("errored");
+
+		player.destroy();
+	});
 });
