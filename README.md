@@ -57,6 +57,22 @@ npx videowright dev
 
 Navigate with arrow keys (`->` next, `<-` back), `R` to restart, `H` to toggle the dev HUD, `1`-`9` to jump to a segment.
 
+## Styles
+
+Placeholder section for future style section with real assets
+
+6 styles to choose from (or create your own):
+
+<img width="947" height="536" alt="styles-2" src="https://github.com/user-attachments/assets/8e74fd1a-d966-40eb-924e-664581ad6629" />
+
+
+Same video script as above, with a different style selected:
+
+https://github.com/user-attachments/assets/5df0bde1-b759-4ba8-aeef-4dddc8e60c24
+
+
+
+
 ## How it works
 
 Four abstractions, each small enough to hold in your head.
