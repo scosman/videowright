@@ -68,11 +68,11 @@ Walk through the provider timing JSON word by word. For each segment's script se
 
 ### Step 2: Find segment boundaries
 
-For each segment, identify the timestamp where its narration ends:
+For each segment, identify the timestamp where the segment should transition to the next:
 
-- Find the last word in the segment's script section.
-- The `end` timestamp of that word is the segment's audio end time.
-- Add a small buffer (0.3-0.5 seconds) after the last word for natural trailing silence.
+- **Align to the next segment's VO onset, not the current segment's VO offset.** Each segment's final advance should land just *before* the next segment's first spoken word, so the voiceover starts right after the transition -- not after a dead-air pause. The transition is a lead-in to the next VO, not a tail-out from the previous one.
+- Find the first word of the *next* segment's script section. Place the segment boundary 0.1-0.3 seconds before that word's `start` timestamp, so the transition finishes right as the new narration begins.
+- For the **last segment** (no next segment), find the last word in the segment's script section and add a small buffer (0.3-0.5 seconds) after its `end` timestamp.
 
 ### Step 3: Convert to segment-relative advances
 
@@ -83,7 +83,7 @@ segment_start = sum of all previous segments' durations
 advance_time = absolute_timestamp - segment_start
 ```
 
-For the last advance of each segment (the one that transitions to the next segment), set it to the segment's total duration (end of its audio content, segment-relative).
+For the last advance of each segment (the one that transitions to the next segment), set it so the transition lands just before the next segment's first VO word (per Step 2).
 
 ### Step 4: Handle multi-advance segments
 
@@ -94,7 +94,8 @@ Segments with multiple advances have internal beats (`waitForNext()` calls in th
    - `[pause for animation]` markers in the PLAN.md script.
    - Sentence boundaries that align with visual transitions (check the segment's `notes` or code).
    - Content transition cues: "Next,...", "And now,...", "Finally,...", "Moving on,...".
-3. **Place advances** at the timestamps corresponding to these break points. Each advance should land at the end of the narration chunk before the next visual beat.
+3. **Place internal advances** at the timestamps corresponding to these break points. Each internal advance should land at the end of the narration chunk before the next visual beat.
+4. **Place the final advance** (the segment transition) just before the next segment's first VO word, per Step 2.
 
 Example for a segment with 4 advances:
 
@@ -105,7 +106,7 @@ Advances array length: 4 (3 internal beats + 1 final transition)
 advance[0] = end of "First feature" + buffer   (first waitForNext resolves)
 advance[1] = end of "Second feature" + buffer  (second waitForNext resolves)
 advance[2] = end of "Third feature" + buffer   (third waitForNext resolves)
-advance[3] = total segment duration             (transition to next segment)
+advance[3] = just before next segment's first VO word (transition to next segment)
 ```
 
 ### Step 5: Apply the "audio always wins" rule
@@ -131,7 +132,7 @@ Proposed timing:
     [0] 2.1s -- "...across devices." (end of collaboration section)
     [1] 5.8s -- "...in one view." (end of analytics section)
     [2] 9.3s -- "...and more." (end of integrations section)
-    [3] 12.0s -- transition to next segment
+    [3] 12.0s -- transition (next VO starts at ~12.2s)
 
   outro (1 advance):
     [0] 3.5s -- "...Thanks for watching." (end of video)
