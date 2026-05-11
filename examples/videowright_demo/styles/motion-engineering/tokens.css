@@ -1,0 +1,40 @@
+/* Motion Engineering — design tokens
+ * Aerospace HUD / blueprint. Charcoal canvas, cyan-white type, amber accent.
+ */
+:root {
+	--color-bg: #0e141a;
+	--color-fg: #e8eef5;
+	--color-accent: #ff8800; /* HUD amber */
+
+	--color-muted: #6f8294;
+	--color-border: #1e2a36;
+	--color-surface: #131c25;
+
+	--font-display: "Space Grotesk", "Helvetica Neue", system-ui, sans-serif;
+	--font-body: "Space Grotesk", "Helvetica Neue", system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+	--space-sm: 12px;
+	--space-md: 24px;
+	--space-lg: 48px;
+	--space-xl: 96px;
+
+	--duration-fast: 180ms;
+	--duration-normal: 360ms;
+	--duration-slow: 720ms;
+
+	--radius-sm: 0px;
+	--radius-md: 2px;
+	--stagger: 50ms;
+	--ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--ease-in: cubic-bezier(0.4, 0, 1, 1);
+	--rule-weight: 1px;
+	--scene-hold: 4s;
+
+	--safe-x: 96px;
+	--safe-y: 80px;
+
+	--cyan: #4fd1e0;
+	--warn: #ffb800;
+	--grid-line: rgba(232, 238, 245, 0.06);
+}
