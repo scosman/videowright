@@ -217,7 +217,7 @@ describe("skill file structure", () => {
 		expect(content).toContain("transition");
 	});
 
-	const STYLE_PACKS = ["editorial-mono", "swiss-console", "neon-terminal"] as const;
+	const STYLE_PACKS = ["editorial-mono", "swiss-console", "neon-terminal", "motion-engineering"] as const;
 
 	const SAMPLE_SCENES = [
 		"title",

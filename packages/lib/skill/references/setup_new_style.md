@@ -30,6 +30,7 @@ Present this message verbatim — do not rephrase or regenerate it:
 >    - **Editorial Mono** — Black ink on cream paper. One red accent. Reads like a magazine.
 >    - **Swiss Console** — Strict 12-column grid. Hairline rules. Tabular numerals. Micro-labels everywhere.
 >    - **Neon Terminal** — CRT terminal interface. Mono throughout. Phosphor-green on near-black, stepped motion.
+>    - **Motion Engineering** — Aerospace HUD / blueprint. Charcoal canvas, cyan-white type, amber accent. Dimension lines and crosshairs.
 
 ### Mode 1 -- Ingest reference material
 

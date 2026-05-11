@@ -12,7 +12,7 @@ status: complete
 
 - [x] **Phase 3: Neon Terminal.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. Pay special attention to stepped-easing motion (`steps(8, end)`) and the phosphor-glow text-shadow on accent text — make sure samples are render-safe. All tests pass.
 
-- [ ] **Phase 4: Motion Engineering.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. The HUD style relies on SVG dimension lines and crosshair geometry — sample-segments need careful SVG authoring. All tests pass.
+- [x] **Phase 4: Motion Engineering.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. The HUD style relies on SVG dimension lines and crosshair geometry — sample-segments need careful SVG authoring. All tests pass.
 
 - [ ] **Phase 5: Iso Diagram.** Adapt fully. Append to STYLE_PACKS and Mode 4 message. Hand-drawn aesthetic + SVG stroke-dashoffset draw-on animations are the central motion vocabulary. All tests pass.
 
