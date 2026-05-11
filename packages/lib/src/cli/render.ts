@@ -442,7 +442,9 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 
 						// Fire renderAdvance (starts transition, does not await completion --
 						// WAAPI transitions are driven by the shim's clock advance)
-						const hasMore = (await page.evaluate("window.__VW_RENDER_ADVANCE__()")) as boolean;
+						const hasMore = (await page.evaluate(
+							`window.__VW_RENDER_ADVANCE__(${entry.isLast})`,
+						)) as boolean;
 
 						// Check for errors after advance
 						const renderError = (await page.evaluate("window.__VW_RENDER_ERROR__")) as

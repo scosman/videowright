@@ -411,17 +411,16 @@ export class Player {
 	 * Advance one beat in render mode. Returns false when the timeline is exhausted.
 	 * Only valid when the player was constructed with renderMode: true.
 	 *
-	 * This method:
-	 * 1. Tries to advance a beat within the current segment.
-	 * 2. If the segment is exhausted, starts a transition to the next segment.
-	 * 3. Returns false when the timeline is fully exhausted.
+	 * @param isLast - true when this is the final scheduled advance for the
+	 *   current segment. On the last beat the method always transitions to the
+	 *   next segment (after draining any pending waitForNext resolver).
 	 *
 	 * Transitions are NOT awaited — WAAPI animations are driven by the JS time
 	 * shim's virtual clock, so they complete as the render driver advances time.
 	 * Awaiting transition completion here would deadlock because the transition's
 	 * `.finished` promises only resolve when the shim advances the clock.
 	 */
-	async renderAdvance(): Promise<boolean> {
+	async renderAdvance(isLast: boolean): Promise<boolean> {
 		if (!this.options.renderMode) {
 			throw new Error("renderAdvance() is only valid in render mode");
 		}
@@ -432,13 +431,21 @@ export class Player {
 		const slot = this.getCurrentSlot();
 		if (!slot.runner) return false;
 
-		// Try to advance a beat within the current segment
-		const consumed = slot.runner.triggerNext();
-		if (consumed) {
+		// Always drain any pending waitForNext resolver for this beat.
+		const drained = slot.runner.triggerNext();
+
+		if (!isLast) {
+			if (!drained) {
+				const segId = this.timeline?.segments[slot.timelineIndex]?.id ?? "unknown";
+				console.debug(
+					`[renderAdvance] triggerNext() had no pending resolver for segment "${segId}" — advances may exceed waitForNext calls`,
+				);
+			}
+			// Internal beat — stay in this segment.
 			return true;
 		}
 
-		// Segment didn't consume -- advance to next segment
+		// Last beat for this segment — transition out.
 		const nextIndex = slot.timelineIndex + 1;
 		if (!this.timeline || nextIndex >= this.timeline.segments.length) {
 			this.state = "ended";

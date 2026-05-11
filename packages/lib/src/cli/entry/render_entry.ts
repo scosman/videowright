@@ -26,7 +26,7 @@ declare global {
 	interface Window {
 		__VW_RENDER__: boolean;
 		__VW_RENDER_READY__: boolean;
-		__VW_RENDER_ADVANCE__: () => Promise<boolean>;
+		__VW_RENDER_ADVANCE__: (isLast: boolean) => Promise<boolean>;
 		__VW_RENDER_ERROR__: string | null;
 		__VW_SEGMENT_ADVANCES__: Record<string, number[]>;
 		__VW_SEGMENTS_LOADED__: boolean;
@@ -102,9 +102,9 @@ async function boot() {
 	await player.start();
 
 	// Expose render control globals for page.evaluate
-	window.__VW_RENDER_ADVANCE__ = async () => {
+	window.__VW_RENDER_ADVANCE__ = async (isLast: boolean) => {
 		try {
-			return await player.renderAdvance();
+			return await player.renderAdvance(isLast);
 		} catch (e) {
 			window.__VW_RENDER_ERROR__ = e instanceof Error ? e.message : String(e);
 			return false;
