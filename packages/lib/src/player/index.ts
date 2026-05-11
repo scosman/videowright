@@ -258,11 +258,18 @@ export class Player {
 	togglePlayback(): void {
 		if (this.options.renderMode) return;
 		if (this.state === "errored") return;
-		if (this.transitioning) return;
 
 		if (this._playbackMode === "idle") {
+			// enterPlaying triggers a segment restart via transitionTo, which
+			// sets transitioning=true. If we're already mid-transition (e.g. the
+			// user presses Play during a forward nav), skip — the transition
+			// will complete and the user can try again.
+			if (this.transitioning) return;
 			this.enterPlaying();
 		} else {
+			// Pausing is always safe — it just stops audio/timers. We allow it
+			// even during the brief restart transition so the user can immediately
+			// cancel a Play they just started.
 			this.enterIdle();
 		}
 	}
@@ -270,19 +277,34 @@ export class Player {
 	private enterPlaying(): void {
 		if (this.state === "ended") return;
 		this._playbackMode = "playing";
-
-		// Sync audio to current logical position and play
-		if (this.audioEl) {
-			const logicalTime = this.computeLogicalAudioTime();
-			this.audioEl.currentTime = logicalTime;
-			this.audioEl.play().catch(() => {
-				// Browser may block autoplay; the user clicked play so it should work.
-				// If it fails, we still auto-advance silently.
-			});
-		}
-
-		this.scheduleNextAutoAdvance();
 		this.updateHud();
+
+		// Restart the current segment from beat 0 so animation and audio are
+		// aligned from the beginning. Uses transitionTo which handles the
+		// dual-slot swap cleanly (including same-segment unmount-first ordering).
+		const currentIndex = this.getCurrentSlot().timelineIndex;
+		this.transitionTo(currentIndex, "forward")
+			.then(() => {
+				// After restart, only proceed if we're still in playing mode
+				// (user may have toggled back to idle during the await).
+				if (this._playbackMode !== "playing") return;
+
+				// Sync audio to the start of the current segment and play
+				if (this.audioEl) {
+					const logicalTime = this.computeLogicalAudioTime();
+					this.audioEl.currentTime = logicalTime;
+					this.audioEl.play().catch(() => {
+						// Browser may block autoplay; the user clicked play so it should work.
+						// If it fails, we still auto-advance silently.
+					});
+				}
+
+				this.scheduleNextAutoAdvance();
+			})
+			.catch((e) => {
+				const segId = this.timeline?.segments[currentIndex]?.id ?? "unknown";
+				this.handleLifecycleError(segId, e);
+			});
 	}
 
 	private enterIdle(): void {
@@ -600,12 +622,32 @@ export class Player {
 		const incomingSlot = this.getOtherSlot();
 		const entry = this.timeline.segments[targetIndex];
 
+		// Detect same-segment transition (restart). When the outgoing segment
+		// module is the same object (Vite caches imports), we must unmount the
+		// outgoing BEFORE mounting the incoming. Otherwise the new mount() sets
+		// module-level state (e.g. `host = el`), and the subsequent unmount()
+		// nulls it, leaving the new play() with torn-down state.
+		const outgoingEntryId = this.timeline.segments[outgoingSlot.timelineIndex]?.id;
+		const isSameSegment = outgoingSlot.runner != null && outgoingEntryId === entry.id;
+
 		try {
 			// Load segment module
 			const loader = this.segmentLoaders.get(entry.id);
 			if (!loader) throw new Error(`No loader for segment "${entry.id}"`);
 			const mod = await loader();
 			const segment = mod.default;
+
+			const outgoingRunner = outgoingSlot.runner;
+
+			// For same-segment transitions, unmount outgoing FIRST to avoid
+			// the cached-module shared-state conflict described above.
+			if (isSameSegment && outgoingRunner) {
+				outgoingRunner.unmount();
+				outgoingSlot.runner = null;
+				if (outgoingRunner.playPromise) {
+					await outgoingRunner.playPromise;
+				}
+			}
 
 			// Create runner and mount
 			const runnerMode = this.options.renderMode ? "render" : "interactive";
@@ -624,11 +666,9 @@ export class Player {
 			// Start play on incoming (don't await -- it resolves when segment finishes)
 			const incomingPlayPromise = runner.startPlay();
 
-			// Unmount outgoing before awaiting its play promise.
-			// Unmount rejects pending resolvers with AbortError, which the runner's
-			// internal .catch() swallows, so the play promise resolves cleanly.
-			const outgoingRunner = outgoingSlot.runner;
-			if (outgoingRunner) {
+			// For different-segment transitions, unmount outgoing AFTER mounting
+			// incoming (standard dual-slot crossfade ordering).
+			if (!isSameSegment && outgoingRunner) {
 				outgoingRunner.unmount();
 				outgoingSlot.runner = null;
 				if (outgoingRunner.playPromise) {
@@ -636,13 +676,16 @@ export class Player {
 				}
 			}
 
-			// Run transition
-			const transitionFn = await this.resolveTransition(entry, direction);
-			if (transitionFn && outgoingRunner) {
-				await transitionFn(outgoingSlot.el, incomingSlot.el, {
-					direction,
-					duration: this.getTransitionDuration(entry),
-				});
+			// Run transition (skip for same-segment restarts -- no visual
+			// transition needed when restarting the current segment)
+			if (!isSameSegment) {
+				const transitionFn = await this.resolveTransition(entry, direction);
+				if (transitionFn && outgoingRunner) {
+					await transitionFn(outgoingSlot.el, incomingSlot.el, {
+						direction,
+						duration: this.getTransitionDuration(entry),
+					});
+				}
 			}
 
 			// Clear transition animations on both slots after transition completes.

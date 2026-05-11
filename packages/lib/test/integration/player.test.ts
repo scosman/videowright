@@ -709,11 +709,15 @@ describe("Player playback mode", () => {
 		player.togglePlayback();
 		expect(player.playbackMode).toBe("playing");
 
+		// Play triggers an async segment restart (transitionTo). Wait for
+		// the restart AND for the new play() to park on its first waitForNext.
+		await flush(10);
+
 		// Manual nav (ArrowRight) should pause playback and advance a beat
 		pressKey("ArrowRight");
 		await flush();
 		expect(player.playbackMode).toBe("idle");
-		// Verify the nav actually happened (beat advanced from 0 to 1)
+		// After restart + nav: segment restarted to beat 0, then advanced to beat 1
 		expect(location.hash).toBe("#/seg-0/1");
 
 		player.destroy();
@@ -730,6 +734,9 @@ describe("Player playback mode", () => {
 
 		player.togglePlayback();
 		expect(player.playbackMode).toBe("playing");
+
+		// Play triggers an async segment restart. Wait for it to complete.
+		await flush();
 
 		// Manually advance to end (play() has no beats, so next advances to end)
 		pressKey("ArrowRight");
@@ -863,6 +870,9 @@ describe("Player playback mode", () => {
 		player.togglePlayback();
 		expect(player.playbackMode).toBe("idle");
 
+		// Wait for the restart transition triggered by togglePlayback to complete
+		await flush();
+
 		// Now advance to seg-b
 		pressKey("ArrowRight");
 		await flush(20);
@@ -898,5 +908,157 @@ describe("Player playback mode", () => {
 		// Destroy should clean up without errors
 		player.destroy();
 		await flush();
+	});
+
+	it("play_restarts_segment_from_beat_zero", async () => {
+		// Bug 2: pressing Play mid-segment should restart the segment so
+		// animation and audio start aligned from beat 0.
+		const mountCalls: string[] = [];
+		const seg = makeSegment({
+			id: "seg-0",
+			advances: [1, 2, 3],
+			mount() {
+				mountCalls.push("seg-0");
+			},
+			async play(ctx) {
+				await ctx.waitForNext();
+				await ctx.waitForNext();
+				await ctx.waitForNext();
+			},
+		});
+		const seg1 = makeSegment({ id: "seg-1", async play() {} });
+
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [1, 2, 3], "seg-1": [1] },
+		});
+		await player.load(
+			makeTimeline(["seg-0", "seg-1"]),
+			makeLoader([seg, seg1]),
+			makeTransitionLoaders(),
+		);
+		await player.start();
+		await flush();
+
+		expect(mountCalls).toEqual(["seg-0"]);
+
+		// Advance two beats manually (simulates user navigating mid-segment)
+		pressKey("ArrowRight");
+		await flush();
+		pressKey("ArrowRight");
+		await flush();
+		expect(location.hash).toBe("#/seg-0/2");
+
+		// Now press Play -- should restart the segment from beat 0
+		player.togglePlayback();
+		await flush(10);
+
+		// Segment should have been remounted (restart = unmount + fresh mount)
+		expect(mountCalls).toEqual(["seg-0", "seg-0"]);
+		// Hash should be reset to beat 0
+		expect(location.hash).toBe("#/seg-0/0");
+		expect(player.playbackMode).toBe("playing");
+
+		player.destroy();
+	});
+
+	it("play_auto_advance_works_on_first_segment", async () => {
+		// Bug 1: auto-advance should fire on segment 0 just like any other segment.
+		// Use fake timers so we can control the auto-advance timer precisely.
+		vi.useFakeTimers();
+
+		const mountCalls: string[] = [];
+		const seg0 = makeSegment({
+			id: "seg-0",
+			advances: [1],
+			mount() {
+				mountCalls.push("seg-0");
+			},
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+		const seg1 = makeSegment({
+			id: "seg-1",
+			mount() {
+				mountCalls.push("seg-1");
+			},
+			async play() {},
+		});
+
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [0.05], "seg-1": [1] },
+		});
+		await player.load(
+			makeTimeline(["seg-0", "seg-1"]),
+			makeLoader([seg0, seg1]),
+			makeTransitionLoaders(),
+		);
+		await player.start();
+		await flush();
+
+		expect(player.currentSegmentId).toBe("seg-0");
+
+		// Press Play -- should restart seg-0 and schedule auto-advance
+		player.togglePlayback();
+		await flush(10);
+		expect(player.playbackMode).toBe("playing");
+
+		// The first advance time is 50ms. Advance the fake timer past it.
+		vi.advanceTimersByTime(100);
+		await flush(20);
+
+		// Auto-advance should have fired: triggerNext drains the waitForNext
+		// resolver, advancing the beat.
+		const hash = location.hash;
+		const advanced = hash === "#/seg-0/1" || hash === "#/seg-1/0";
+		expect(advanced).toBe(true);
+
+		player.destroy();
+		vi.useRealTimers();
+	});
+
+	it("same_segment_transition_handles_module_state", async () => {
+		// Verify that same-segment transitionTo (used by Play restart and
+		// handleRestart) correctly handles Vite-cached modules with shared
+		// module-level state. The old unmount must happen BEFORE the new mount.
+		let hostRef: HTMLElement | null = null;
+		const seg = makeSegment({
+			id: "seg-0",
+			mount(el) {
+				hostRef = el;
+			},
+			unmount() {
+				hostRef = null;
+			},
+			async play(ctx) {
+				// Use hostRef -- if unmount ran after mount, this is null
+				if (hostRef) {
+					// Create some DOM to prove we have a live host
+					const div = document.createElement("div");
+					div.className = "alive-marker";
+					hostRef.appendChild(div);
+				}
+				await ctx.waitForNext();
+			},
+		});
+
+		const player = new Player(host);
+		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
+		await player.start();
+		await flush();
+
+		expect(hostRef).not.toBeNull();
+		expect(host.querySelector(".alive-marker")).toBeTruthy();
+
+		// Restart (same-segment transition)
+		pressKey("R");
+		await flush(10);
+
+		// After restart, hostRef should still be valid (not null)
+		// because unmount ran BEFORE the new mount
+		expect(hostRef).not.toBeNull();
+		expect(host.querySelector(".alive-marker")).toBeTruthy();
+
+		player.destroy();
 	});
 });
