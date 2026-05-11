@@ -379,12 +379,18 @@ export class Player {
 		if (this._playbackMode !== "playing") return;
 		if (this.state === "ended" || this.state === "errored") return;
 
+		const indexBefore = this.getCurrentSlot().timelineIndex;
+
 		// Fire next advance (may transition state to "ended")
 		await this.handleNext();
 
+		const segmentChanged = this.getCurrentSlot().timelineIndex !== indexBefore;
+
 		// Check audio drift after the advance so the expected time reflects
 		// the post-advance position, not the pre-advance one.
-		if (this.audioEl && this.options.resolvedTiming) {
+		// Skip on forward-pass segment transitions: the audio is already
+		// playing continuously and re-seeking causes an audible blip.
+		if (this.audioEl && this.options.resolvedTiming && !segmentChanged) {
 			const expectedTime = this.computeLogicalAudioTime();
 			const actualTime = this.audioEl.currentTime;
 			const drift = Math.abs(actualTime - expectedTime);
