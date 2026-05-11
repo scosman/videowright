@@ -210,9 +210,10 @@ The default authoring pattern for new videos with voiceover intent:
 
 1. **Write the script first.** Draft the full VO copy organized by segment in PLAN.md.
 2. **Scaffold segments from the script.** Each segment's content and timing follow from its VO text. A 30-word section suggests ~12s; a 100-word section suggests ~40s (based on ~150 WPM).
-3. **Set `voiceover` on each segment** to its section of the script.
-4. **Generate the audio** using one of the two flows above.
-5. **Sync timing** to align segment advances with the audio.
+3. **Use `waitForNext()` for every VO-aligned beat.** Each content reveal that a voiceover line should cue must be gated by `waitForNext()`, not `hold()`. This is what makes voiceover-swapping possible — different voiceovers supply different advance timings, and segments respond by advancing at the right moment without code changes. Use `hold()` only for animation lead-in or fixed internal pauses within a beat.
+4. **Set `voiceover` on each segment** to its section of the script.
+5. **Generate the audio** using one of the two flows above.
+6. **Sync timing** to align segment advances with the audio.
 
 ## `videowright script` CLI
 

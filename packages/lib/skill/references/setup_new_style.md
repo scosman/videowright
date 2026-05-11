@@ -113,6 +113,7 @@ font_sources:
 ## Aesthetic rules
 - [Bullet rules the agent honors when authoring segments in this style]
 - [Typography, color, motion density, layout patterns]
+- [Sizing guidance: specify minimum font sizes for headings and body text, container widths, and how much of the frame content should fill. Defaults from authoring_segment.md apply (body 36px+, headings 64px+, containers 80-90%+ width) — override here only if the style demands different sizing.]
 
 ## Motion vocabulary
 - [How elements enter, exit, and transition]
@@ -121,6 +122,8 @@ font_sources:
 ## Don'ts
 - [Things to avoid when using this style]
 ```
+
+**Sizing rules in STYLE.md.** Every style's aesthetic rules section should specify how content fills the frame. The baseline from [authoring_segment.md](authoring_segment.md) applies unless the style explicitly overrides it: body text 36px+ at 1080p, headings 64px+, primary containers spanning 80-90%+ of the video width. Styles that intentionally use generous whitespace (e.g., editorial layouts) should document that choice and still ensure text remains legible.
 
 ## tokens.css shape
 

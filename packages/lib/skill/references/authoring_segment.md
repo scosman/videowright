@@ -73,9 +73,13 @@ The `ctx` object passed to `mount` and `play`:
 
 ### Timing: `waitForNext` vs. `hold`
 
-Use **`ctx.waitForNext()`** for interactive beats — points where the user (or the export driver) advances the video. This creates a pause that the user steps through with Space / Right Arrow in dev mode, and the export pipeline drives with the `advances` timing.
+Use **`ctx.waitForNext()`** for content beats — points where the visual advances to match a voiceover cue (or the user's manual advance in dev mode). This creates a pause that the user steps through with Space / Right Arrow in dev mode, and the export pipeline drives with the `advances` timing.
 
-Use **`ctx.hold(ms)`** for timed pauses that gate control flow — waiting before a `waitForNext()`, or inserting a gap between logical phases of a segment. In dev mode, `hold` waits real time. In render mode, `hold` resolves when the virtual clock advances past the delay — identical semantics to dev mode but driven by the deterministic frame clock.
+**`waitForNext()` is the voiceover alignment primitive.** Place a `waitForNext()` at every point where the visual should sync to a voiceover cue — each section reveal, each bullet point, each stat highlight. This decouples segment authoring from any specific voiceover recording: swapping narration only requires new timing data (a different `Timing` in the voiceover), not rewriting the segment code. If you instead bake VO-specific durations into `hold()` calls, the segment is married to one narration and must be re-authored to accommodate a different voice, pacing, or language.
+
+**Rule of thumb:** if you are deciding between `waitForNext()` and `hold()` for a content reveal, ask: "Would a different voiceover want to trigger this at a different time?" If yes, use `waitForNext()`.
+
+Use **`ctx.hold(ms)`** for timed pauses that are internal to a beat — entrance animation lead-in, dwell time after a reveal before the next interactive point, or inserting a gap between logical phases that should always take the same amount of time regardless of voiceover. In dev mode, `hold` waits real time. In render mode, `hold` resolves when the virtual clock advances past the delay — identical semantics to dev mode but driven by the deterministic frame clock.
 
 `ctx.hold(ms)` is deterministic in render mode, so `for...await ctx.hold(N)` mutation loops fire across distinct frames as expected. For smooth sub-frame interpolation (eased motion), WAAPI or CSS animations remain preferred — hold-driven loops are best for stepped/discrete state changes.
 
@@ -375,6 +379,28 @@ mount(el) {
   shadow.innerHTML = `<style>/* scoped styles */</style><div>...</div>`;
 }
 ```
+
+## Visual sizing — fill the frame
+
+Video is not a web page. There is no scrolling, no responsive reflow, no "above the fold." Every frame is a fixed canvas (typically 1920x1080) and the viewer sees exactly what is rendered. Treat every pixel as valuable.
+
+### Rules
+
+- **Text must be legible at playback size.** If a viewer watching the video at its native resolution cannot comfortably read the text, it is too small. Headings, stats, labels, and body copy should be generously sized. A good baseline: body text should be at least 36px at 1080p; headings should be 64px or larger. These are minimums — go bigger when the content allows.
+- **Use the full canvas.** Content should fill the frame. Avoid excessive margins, padding, or whitespace that pushes the visual into a small centered region. A segment showing a single stat or a short heading should scale that content up to dominate the frame, not float it in the middle at web-scale sizes.
+- **If text is too small to matter, remove it.** Tiny footnotes, fine-print labels, or decorative micro-text that cannot be read serve no purpose in a video. Either make the text large enough to read or omit it. Small decorative labels are acceptable only when they are an intentional style element (e.g., a HUD aesthetic with tertiary metadata), not a default choice.
+- **Margins are intentional design, not defaults.** When a style calls for breathing room (e.g., editorial layouts with generous whitespace), that is a deliberate aesthetic choice documented in the style's STYLE.md. The default posture is to fill the frame, and whitespace should be a conscious decision, not an accident of web-scale CSS habits.
+- **Test at actual video resolution.** Run `npx videowright dev` and check whether the content fills the player viewport. If elements look small or lost in empty space, increase sizes.
+
+### Common mistakes
+
+| Mistake | Fix |
+|---|---|
+| `font-size: 16px` or `1rem` on body text | Use `36px`+ for body, `64px`+ for headings at 1080p |
+| `max-width: 800px; margin: 0 auto` (web-page centering) | Remove max-width constraints or set them close to the video width. Use `width: 90%` or `padding: 40px` instead. |
+| Small centered card with large empty background | Scale the card to fill 80-90% of the frame, or use the background intentionally (texture, animation, gradient) |
+| Bullet list with small text and huge line spacing | Increase font size, reduce line count if needed, fill the frame |
+| Container widths set too conservatively | Use `width: 80%`+ for primary content containers; `90%`+ is often appropriate. Prefer `%` over `vw`/`vh` for consistency with the rules above. |
 
 ## Using style tokens
 

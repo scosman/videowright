@@ -38,25 +38,29 @@ For each segment in the outline:
 
 1. **Check if a segment with that id already exists** in `segments/<id>/index.ts`. If it does and is reusable for this video, use it. Do not duplicate.
 2. **Create `segments/<id>/index.ts`** using `defineSegment`. Follow the rules in [authoring_segment.md](authoring_segment.md):
-   - Use `ctx.waitForNext()` for interactive beats and `ctx.hold(ms)` for control-flow pauses. Prefer WAAPI (`.animate()` with `delay`) or CSS animations for smooth visual motion (smoother easing, less code). Timer-based patterns (`setTimeout`, `setInterval`, hold loops) also work deterministically under the render shim. See the render-safe animation patterns in [authoring_segment.md](authoring_segment.md).
+   - **Fill the frame.** Size text and visuals for a video canvas, not a web page. Body text 36px+ at 1080p, headings 64px+. Content containers should span 80-90%+ of the video width. See the "Visual sizing" section in [authoring_segment.md](authoring_segment.md).
+   - **`waitForNext()` for VO-aligned beats.** Place a `waitForNext()` at every content reveal that a voiceover should cue. Use `ctx.hold(ms)` only for animation lead-in or fixed internal pauses. This keeps segments decoupled from any single voiceover — swapping narration only requires new timing data, not segment rewrites.
+   - Prefer WAAPI (`.animate()` with `delay`) or CSS animations for smooth visual motion (smoother easing, less code). Timer-based patterns (`setTimeout`, `setInterval`, hold loops) also work deterministically under the render shim. See the render-safe animation patterns in [authoring_segment.md](authoring_segment.md).
    - Set the `advances` array to match the timing — one entry per beat, including the final advance that transitions to the next segment (see [authoring_segment.md](authoring_segment.md) for details on how `advances` maps to `waitForNext` and `hold` calls).
    - If audio intent is voiceover, set the `voiceover` field to the segment's VO text (from the script or drafted to match the segment's purpose). For music or silent videos, leave `voiceover` empty — use code comments to document what the segment shows.
    - Use CSS variables from the active style: `var(--color-accent)`, `var(--font-display)`, etc. Do not import tokens.css in segments — the timeline-level import provides them.
 3. **Use any web tech.** Three.js, GSAP, Lottie, animated SVG, shadcn, echarts — all welcome inside segments. Pick the right tool for the visual.
 
-### Step 2b — Review each segment (render-safety CR)
+### Step 2b — Review each segment (render-safety and design CR)
 
-After writing each segment, perform a focused code review before moving on. This catches style issues and ensures idiomatic use of render-safe patterns.
+After writing each segment, perform a focused code review before moving on. This catches style issues, visual sizing problems, timing anti-patterns, and ensures idiomatic use of render-safe patterns.
 
 **Checklist -- review the segment code for:**
 
-1. **Prefer WAAPI for DOM animation** (smoother easing, less code). Timer-based patterns (`setTimeout`, `setInterval`, rAF loops, `performance.now`) all work deterministically under the render shim but WAAPI provides smoother sub-frame interpolation.
-2. **`ctx.hold` loops are fine for stepped/discrete changes** (e.g., typing out characters). For eased motion, prefer WAAPI with per-element `delay`.
-3. **`ctx.clock()` used** for any code that needs the current render time (Three.js rotation, Lottie frame drive, shader uniforms, etc.).
-4. **WAAPI / CSS animations used** for DOM animations. Staggered entrances prefer WAAPI `delay` parameter over `ctx.hold()` between `.animate()` calls (less code, smoother easing).
-5. **Lottie uses manual frame drive** -- `autoplay: false` with `anim.goToAndStop(ctx.clock(), false)` per tick.
-6. **Three.js reads `ctx.clock()`** for time-derived values (preferred for clarity; `performance.now()` also works under the shim).
-7. **Imports, types, and segment shape** match project conventions (see [authoring_segment.md](authoring_segment.md)).
+1. **Visual sizing — content fills the frame.** Text, cards, stats, and key visuals should be large and legible. Body text should be at least 36px at 1080p; headings 64px+. No `max-width: 800px` web-page centering. Primary containers should span 80-90%+ of the video width. If the segment would look like a small island surrounded by empty space, increase sizes. See the "Visual sizing" section in [authoring_segment.md](authoring_segment.md).
+2. **`waitForNext()` used for VO-aligned beats.** Every content reveal that a voiceover might want to cue differently should be gated by `waitForNext()`, not `hold()`. `hold()` is for animation lead-in or fixed internal pauses. If a different voiceover would want to trigger a reveal at a different time, it must be `waitForNext()`. See the timing guidance in [authoring_segment.md](authoring_segment.md).
+3. **Prefer WAAPI for DOM animation** (smoother easing, less code). Timer-based patterns (`setTimeout`, `setInterval`, rAF loops, `performance.now`) all work deterministically under the render shim but WAAPI provides smoother sub-frame interpolation.
+4. **`ctx.hold` loops are fine for stepped/discrete changes** (e.g., typing out characters). For eased motion, prefer WAAPI with per-element `delay`.
+5. **`ctx.clock()` used** for any code that needs the current render time (Three.js rotation, Lottie frame drive, shader uniforms, etc.).
+6. **WAAPI / CSS animations used** for DOM animations. Staggered entrances prefer WAAPI `delay` parameter over `ctx.hold()` between `.animate()` calls (less code, smoother easing).
+7. **Lottie uses manual frame drive** -- `autoplay: false` with `anim.goToAndStop(ctx.clock(), false)` per tick.
+8. **Three.js reads `ctx.clock()`** for time-derived values (preferred for clarity; `performance.now()` also works under the shim).
+9. **Imports, types, and segment shape** match project conventions (see [authoring_segment.md](authoring_segment.md)).
 
 **If any issue is found:** fix the segment code, then re-check the full checklist before continuing. A segment is ready only after a clean pass.
 
