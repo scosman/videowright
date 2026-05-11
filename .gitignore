@@ -7,9 +7,6 @@ node_modules/
 # Build output
 dist/
 *.tsbuildinfo
-# TODO: remove after Phase 6 cleanup -- source template directory is deleted in the final phase
-videowright_design/
-
 # Test coverage
 coverage/
 

@@ -1,0 +1,39 @@
+/* Risograph — design tokens
+ * Two-color screen print. Fluorescent pink + ink blue on cream.
+ * Visible grain, slight misregistration, paper warmth.
+ */
+:root {
+	--color-bg: #f2ebdc; /* warm uncoated cream */
+	--color-fg: #1a2a6a; /* riso ink blue */
+	--color-accent: #ff4f8b; /* fluorescent pink */
+
+	--color-muted: #4f5b8e;
+	--color-border: #1a2a6a;
+	--color-second: #ffc83d; /* riso yellow, sparingly */
+
+	--font-display: "Archivo Black", "Druk", sans-serif;
+	--font-body: "Archivo", "Inter", system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+	--space-sm: 12px;
+	--space-md: 24px;
+	--space-lg: 48px;
+	--space-xl: 96px;
+
+	--duration-fast: 140ms;
+	--duration-normal: 320ms;
+	--duration-slow: 640ms;
+
+	--radius-sm: 0px;
+	--radius-md: 0px;
+	--stagger: 70ms;
+	--ease-out: steps(6, end); /* stop-motion frames */
+	--ease-in: steps(6, end);
+	--scene-hold: 4s;
+
+	--safe-x: 120px;
+	--safe-y: 96px;
+
+	--misreg: 3px; /* color channel offset */
+	--grain-opacity: 0.18;
+}

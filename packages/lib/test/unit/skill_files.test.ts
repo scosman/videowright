@@ -223,6 +223,7 @@ describe("skill file structure", () => {
 		"neon-terminal",
 		"motion-engineering",
 		"iso-diagram",
+		"risograph",
 	] as const;
 
 	const SAMPLE_SCENES = [

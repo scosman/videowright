@@ -32,6 +32,7 @@ Present this message verbatim — do not rephrase or regenerate it:
 >    - **Neon Terminal** — CRT terminal interface. Mono throughout. Phosphor-green on near-black, stepped motion.
 >    - **Motion Engineering** — Aerospace HUD / blueprint. Charcoal canvas, cyan-white type, amber accent. Dimension lines and crosshairs.
 >    - **Iso Diagram** — Pencil-and-paper explainer aesthetic. Hand-drawn lines, pastel fills, isometric drawings.
+>    - **Risograph** — Two-color screen-print on warm paper. Pink + ink-blue, visible grain, stop-motion cadence.
 
 ### Mode 1 -- Ingest reference material
 
