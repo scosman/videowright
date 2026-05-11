@@ -105,7 +105,7 @@ This helps future editors understand the magic number.
 
 ### Step 5: Render-safety review
 
-After adjusting each segment, run the render-safety CR checklist from [create_or_edit_video.md](../create_or_edit_video.md) (Step 2b) against the modified code. The sync pass may introduce or reveal patterns that break in render mode -- for example, a `ctx.hold()` loop used for a typing effect, or a `performance.now()` read driving a Three.js scene. Fix any issues before moving to the next segment.
+After adjusting each segment, run the render-safety CR checklist from [create_or_edit_video.md](../create_or_edit_video.md) (Step 2b) against the modified code. The sync pass may introduce or reveal non-idiomatic patterns -- for example, animations that depend on external network fetches or non-deterministic input. Fix any issues before moving to the next segment.
 
 ## Tradeoffs
 

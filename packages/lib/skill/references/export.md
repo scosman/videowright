@@ -11,7 +11,7 @@ Videowright has two commands for producing video output:
 
 ## `videowright render`
 
-Deterministic CDP-driven frame-by-frame export. The player runs in render mode with no wall-clock dependence.
+Deterministic frame-by-frame export. The player runs in render mode with no wall-clock dependence.
 
 ```bash
 npx videowright render
@@ -30,7 +30,7 @@ npx videowright render videos/my_video/timeline.ts
 
 ### Characteristics
 
-- **Mode**: render (`ctx.mode === 'render'`). `hold()` resolves immediately; `clock()` returns deterministic time based on frame count.
+- **Mode**: render (`ctx.mode === 'render'`). All timer primitives are virtualized; `clock()` returns deterministic time based on frame count.
 - **Default fps**: 60.
 - **Determinism**: Fully deterministic -- frames are byte-identical across runs.
 - **Best for**: Final exports, CI pipelines, videos where reproducibility matters.
@@ -160,7 +160,7 @@ During rendering, the driver checks for coherence issues:
 
 | Issue | Explanation |
 |---|---|
-| Video looks different from dev mode | `render` uses render mode where `hold()` resolves immediately and `clock()` is deterministic. If a segment branches on timing or uses `ctx.mode`, its behavior may differ. Test in both modes. |
+| Video looks different from dev mode | `render` uses render mode where all timing is driven by the deterministic virtual clock. If a segment branches on `ctx.mode`, its behavior may differ. Test in both modes. |
 | ffmpeg not found | Install ffmpeg and ensure it is on your PATH. |
 | Chromium not installed | Run `npx playwright install chromium`. |
 | Export takes a long time | `render` at 60fps captures every frame individually. A 30-second video = 1800 frames. Use `--verbose` to see progress. |

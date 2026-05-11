@@ -66,7 +66,7 @@ The `ctx` object passed to `mount` and `play`:
 | Method/Property | Purpose |
 |---|---|
 | `ctx.waitForNext()` | Pauses `play()` until the next user advance (interactive mode) or scheduled beat (render mode). Returns a `Promise<void>`. |
-| `ctx.hold(ms)` | Pauses `play()` for the given duration in milliseconds. In render mode, resolves immediately (no wall-clock delay — the deterministic clock handles timing). Returns a `Promise<void>`. |
+| `ctx.hold(ms)` | Pauses `play()` for the given duration in milliseconds. In render mode, resolves when the virtual clock advances past the requested duration (deterministic, no wall-clock dependence). Returns a `Promise<void>`. |
 | `ctx.signal` | `AbortSignal` — aborted when the segment is unmounted. Wire this to fetch calls, animation loops, or anything that should stop when the segment leaves. |
 | `ctx.mode` | `'interactive'` (dev server) or `'render'` (export pipeline). Segments can branch on this if needed. |
 | `ctx.clock()` | Milliseconds since this segment was mounted. In render mode, returns deterministic time based on frame count. In interactive mode, returns wall-clock elapsed. |
@@ -75,42 +75,42 @@ The `ctx` object passed to `mount` and `play`:
 
 Use **`ctx.waitForNext()`** for interactive beats — points where the user (or the export driver) advances the video. This creates a pause that the user steps through with Space / Right Arrow in dev mode, and the export pipeline drives with the `advances` timing.
 
-Use **`ctx.hold(ms)`** for timed pauses that gate control flow — waiting before a `waitForNext()`, or inserting a gap between logical phases of a segment. In dev mode, `hold` waits real time. In render mode, `hold` resolves immediately; the deterministic clock in render mode handles time via frame counting.
+Use **`ctx.hold(ms)`** for timed pauses that gate control flow — waiting before a `waitForNext()`, or inserting a gap between logical phases of a segment. In dev mode, `hold` waits real time. In render mode, `hold` resolves when the virtual clock advances past the delay — identical semantics to dev mode but driven by the deterministic frame clock.
 
-**`ctx.hold(ms)` is NOT an animation primitive.** Because `hold` resolves immediately in render mode, any pattern that mutates DOM state in a `hold`-driven loop (e.g., typing out characters one by one) will run all iterations on the first render frame and show only the final state. Use WAAPI or CSS animations for visual motion — see "Render-safe animation patterns" below.
+`ctx.hold(ms)` is deterministic in render mode, so `for...await ctx.hold(N)` mutation loops fire across distinct frames as expected. For smooth sub-frame interpolation (eased motion), WAAPI or CSS animations remain preferred — hold-driven loops are best for stepped/discrete state changes.
 
-**Never use `setTimeout` or `setInterval` in segments.** They break render-mode clock control because render mode does not use wall-clock time.
+`setTimeout`/`setInterval` are virtualized by the render shim and fire deterministically; you may use them freely. Prefer `ctx.hold(ms)` for control-flow pauses since it participates in the structured `play()` flow and respects segment teardown.
 
 ### Render-safe animation patterns
 
-Render mode uses a **virtual clock** that the render driver advances frame by frame between captured screenshots. The Web Animations API (WAAPI) and CSS animations integrate with this virtual clock because they run on the document timeline, which the render driver controls. Raw `performance.now()`, `Date.now()`, `setTimeout`, and `setInterval` read wall-clock time and do **not** integrate with the virtual clock — they produce incorrect results in render mode.
+Render mode uses a **virtual clock** that the render driver advances frame by frame between captured screenshots. The render shim virtualizes all timer primitives: `performance.now()`, `Date.now()`, `setTimeout`, `setInterval`, and `requestAnimationFrame` all reflect deterministic virtual time. WAAPI and CSS animations also run on the document timeline, which the render driver controls.
 
-#### Forbidden patterns
+#### Patterns and recommendations
 
-These patterns work in dev mode but break in render mode. **Never use them for animation.**
+All of the following patterns work deterministically under the render shim. WAAPI is preferred for DOM animation because it provides smoother sub-frame interpolation and requires less code, but these alternatives are acceptable — especially for stepped/discrete state changes.
 
-**1. `await ctx.hold(N)` in a mutation loop** — the hold resolves immediately in render mode, so all iterations fire on the first frame:
+**1. `await ctx.hold(N)` in a mutation loop** — works deterministically; each iteration fires on a distinct frame. Prefer WAAPI for smooth eased animation (e.g., typing effects with per-character opacity fade), but hold loops are fine for discrete state changes:
 ```ts
-// BAD: typing animation that skips to end in render mode
+// Works: typing animation with hold loop (stepped reveal, no easing)
 async play(ctx) {
   const el = host!.querySelector('[data-ref="text"]') as HTMLElement;
   const text = 'Hello, world!';
   for (let i = 0; i <= text.length; i++) {
     el.textContent = text.slice(0, i);
-    await ctx.hold(50); // resolves immediately in render → all chars appear at once
+    await ctx.hold(50); // each iteration advances virtual time by 50ms
   }
 }
 ```
 
-**2. `setTimeout` / `setInterval`** — wall-clock timers, invisible to the render driver:
+**2. `setTimeout` / `setInterval`** — virtualized by the render shim, fires at the correct virtual time. Prefer `ctx.hold(ms)` for control-flow pauses (abort-signal integration), but `setTimeout` is fine for fire-and-forget scheduling:
 ```ts
-// BAD: animation driven by setTimeout
+// Works: delayed class addition via setTimeout
 setTimeout(() => el.classList.add('visible'), 500);
 ```
 
-**3. `performance.now()` / `Date.now()` for animation progress** — reads wall clock, not virtual clock:
+**3. `performance.now()` / `Date.now()` for animation progress** — virtualized by the shim; returns deterministic virtual time. `ctx.clock()` is preferred for semantic clarity (it clearly communicates "time since segment mount"), but raw timer reads also work:
 ```ts
-// BAD: manual rAF loop with wall-clock time
+// Works: manual rAF loop with performance.now()
 const start = performance.now();
 function tick() {
   const t = (performance.now() - start) / 1000;
@@ -120,14 +120,14 @@ function tick() {
 requestAnimationFrame(tick);
 ```
 
-**4. Custom `requestAnimationFrame` loops that compute their own deltaTime** — same wall-clock problem:
+**4. Custom `requestAnimationFrame` loops with deltaTime** — rAF timestamps are virtualized, so deltaTime calculations produce correct deterministic results. `ctx.clock()` is still preferred for Three.js/WebGL scenes (clearer intent):
 ```ts
-// BAD: deltaTime from rAF timestamps
+// Works: deltaTime from rAF timestamps
 let last = 0;
 function tick(now: number) {
   const dt = now - last;
   last = now;
-  position += velocity * dt; // dt is wall-clock, not virtual
+  position += velocity * dt; // dt reflects virtual time
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
@@ -147,7 +147,7 @@ el.animate(
 );
 ```
 
-Use WAAPI `delay` to stagger multiple animations instead of `ctx.hold()` between them:
+Prefer WAAPI `delay` to stagger multiple animations over `ctx.hold()` between them (less code, smoother easing):
 ```ts
 // GOOD: staggered entrance using WAAPI delay — render-safe
 const items = host!.querySelectorAll('.item');
@@ -229,20 +229,20 @@ async play(ctx) {
 }
 ```
 
-**6. Three.js — use `ctx.clock()` instead of `performance.now()`** for all time-derived values (rotation, position, shader uniforms):
+**6. Three.js — prefer `ctx.clock()` over `performance.now()`** for time-derived values (rotation, position, shader uniforms). `performance.now()` also works under the shim; `ctx.clock()` is preferred for semantic clarity (segment-relative time):
 ```ts
 // GOOD: Three.js scene driven by deterministic clock
 const t = ctx.clock() / 1000;
 mesh.position.y = Math.sin(t * 2) * 0.5;
 ```
 
-#### When `ctx.hold()` is still appropriate
+#### When `ctx.hold()` is the right choice
 
-`ctx.hold()` is fine for **control-flow pauses** that do not drive animation:
-- Waiting a fixed time before calling `ctx.waitForNext()`.
-- Inserting a gap between two logical phases of a segment (e.g., hold 2 seconds after all animations finish before play resolves).
+`ctx.hold()` is idiomatic for:
+- **Control-flow pauses** — waiting a fixed time before calling `ctx.waitForNext()`, or inserting a gap between logical phases of a segment.
+- **Stepped/discrete state changes** — typing out characters, revealing list items one by one, or any mutation loop where each step is a distinct visual state rather than a smoothly interpolated motion.
 
-In render mode, these holds resolve immediately, which is correct — the segment proceeds without waiting, and the `advances` array controls when the driver fires the next beat.
+For smooth eased animation (opacity fades, position tweens), prefer WAAPI — it provides sub-frame interpolation that hold-driven loops cannot.
 
 ## The `advances` array
 

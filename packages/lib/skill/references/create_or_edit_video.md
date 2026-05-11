@@ -13,7 +13,7 @@ This is a single file because the underlying mechanics — segments, timeline co
 
 These reference files cover the building blocks. Load them as needed — do not re-read this section's summaries when the full reference is available.
 
-- **[authoring_segment.md](authoring_segment.md)** — segment lifecycle (`mount`/`play`/`unmount`), `defineSegment`, timing with `ctx.waitForNext()` and `ctx.hold(ms)`, render-safe animation patterns (WAAPI, `ctx.clock()`, forbidden patterns), idempotency, any-web-tech guidance.
+- **[authoring_segment.md](authoring_segment.md)** — segment lifecycle (`mount`/`play`/`unmount`), `defineSegment`, timing with `ctx.waitForNext()` and `ctx.hold(ms)`, render-safe animation patterns (WAAPI, `ctx.clock()`, patterns and recommendations), idempotency, any-web-tech guidance.
 - **[voiceover.md](voiceover.md)** — voiceover flows (AI-generated and manual), the `voiceover` field on segments, VO-first authoring pattern, `videowright script` CLI, file conventions, CLI usage (`--voiceover`).
 - **[styles.md](styles.md)** — style folder structure, how segments consume tokens via CSS variables, switching styles, the timeline.ts import convention.
 - **[project_structure.md](project_structure.md)** — consumer repo layout, file-ownership rules (top-level dirs are shared, per-video files live in `videos/<name>/`).
@@ -38,7 +38,7 @@ For each segment in the outline:
 
 1. **Check if a segment with that id already exists** in `segments/<id>/index.ts`. If it does and is reusable for this video, use it. Do not duplicate.
 2. **Create `segments/<id>/index.ts`** using `defineSegment`. Follow the rules in [authoring_segment.md](authoring_segment.md):
-   - Use `ctx.waitForNext()` for interactive beats and `ctx.hold(ms)` for control-flow pauses. Use WAAPI (`.animate()` with `delay`) or CSS animations for visual motion -- never `setTimeout`, `setInterval`, or `ctx.hold()` mutation loops. See the render-safe animation patterns in [authoring_segment.md](authoring_segment.md).
+   - Use `ctx.waitForNext()` for interactive beats and `ctx.hold(ms)` for control-flow pauses. Prefer WAAPI (`.animate()` with `delay`) or CSS animations for smooth visual motion (smoother easing, less code). Timer-based patterns (`setTimeout`, `setInterval`, hold loops) also work deterministically under the render shim. See the render-safe animation patterns in [authoring_segment.md](authoring_segment.md).
    - Set the `advances` array to match the timing — one entry per beat, including the final advance that transitions to the next segment (see [authoring_segment.md](authoring_segment.md) for details on how `advances` maps to `waitForNext` and `hold` calls).
    - If audio intent is voiceover, set the `voiceover` field to the segment's VO text (from the script or drafted to match the segment's purpose). For music or silent videos, leave `voiceover` empty — use code comments to document what the segment shows.
    - Use CSS variables from the active style: `var(--color-accent)`, `var(--font-display)`, etc. Do not import tokens.css in segments — the timeline-level import provides them.
@@ -46,23 +46,21 @@ For each segment in the outline:
 
 ### Step 2b — Review each segment (render-safety CR)
 
-After writing each segment, perform a focused code review before moving on. This catches animation patterns that work in dev mode but break in render mode.
+After writing each segment, perform a focused code review before moving on. This catches style issues and ensures idiomatic use of render-safe patterns.
 
 **Checklist -- review the segment code for:**
 
-1. **No `setTimeout` / `setInterval`** for animation timing.
-2. **No raw `performance.now()` / `Date.now()` reads** for animation progress.
-3. **No custom `requestAnimationFrame` loops** that compute their own deltaTime or read wall-clock time.
-4. **No `for ... await ctx.hold(N)` mutation loops** -- these fire all iterations on the first render frame because `hold()` resolves immediately in render mode.
-5. **`ctx.clock()` used** for any code that needs the current render time (Three.js rotation, Lottie frame drive, shader uniforms, etc.).
-6. **WAAPI / CSS animations used** for DOM animations. Staggered entrances use WAAPI `delay` parameter, not `ctx.hold()` between `.animate()` calls.
-7. **Lottie uses manual frame drive** -- `autoplay: false` with `anim.goToAndStop(ctx.clock(), false)` per tick.
-8. **Three.js reads `ctx.clock()`** instead of `performance.now()` for time-derived values.
-9. **Imports, types, and segment shape** match project conventions (see [authoring_segment.md](authoring_segment.md)).
+1. **Prefer WAAPI for DOM animation** (smoother easing, less code). Timer-based patterns (`setTimeout`, `setInterval`, rAF loops, `performance.now`) all work deterministically under the render shim but WAAPI provides smoother sub-frame interpolation.
+2. **`ctx.hold` loops are fine for stepped/discrete changes** (e.g., typing out characters). For eased motion, prefer WAAPI with per-element `delay`.
+3. **`ctx.clock()` used** for any code that needs the current render time (Three.js rotation, Lottie frame drive, shader uniforms, etc.).
+4. **WAAPI / CSS animations used** for DOM animations. Staggered entrances prefer WAAPI `delay` parameter over `ctx.hold()` between `.animate()` calls (less code, smoother easing).
+5. **Lottie uses manual frame drive** -- `autoplay: false` with `anim.goToAndStop(ctx.clock(), false)` per tick.
+6. **Three.js reads `ctx.clock()`** for time-derived values (preferred for clarity; `performance.now()` also works under the shim).
+7. **Imports, types, and segment shape** match project conventions (see [authoring_segment.md](authoring_segment.md)).
 
 **If any issue is found:** fix the segment code, then re-check the full checklist before continuing. A segment is ready only after a clean pass.
 
-See the "Render-safe animation patterns" section in [authoring_segment.md](authoring_segment.md) for the full list of forbidden and prescribed patterns with examples.
+See the "Render-safe animation patterns" section in [authoring_segment.md](authoring_segment.md) for the full list of patterns and recommendations with examples.
 
 ### Step 3 — Write timeline.ts
 
