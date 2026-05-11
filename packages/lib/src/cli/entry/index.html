@@ -6,12 +6,146 @@
 	<title>Videowright Dev</title>
 	<style>
 		* { margin: 0; padding: 0; box-sizing: border-box; }
-		html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
-		#player-host { width: 100vw; height: 100vh; }
+		html, body { width: 100%; height: 100%; background: #111; overflow: hidden; }
+
+		/*
+		 * Two-row grid layout filling the viewport:
+		 *   Row 1 (1fr): video area — scaled frame centered with minimal padding
+		 *   Row 2 (80px): HUD strip — fixed-height bar at viewport bottom
+		 *
+		 * HUD height is a rigid constant (80px). It must never change based on
+		 * content so the video position stays stable during screen recording.
+		 */
+		#dev-layout {
+			display: grid;
+			grid-template-rows: 1fr 80px;
+			width: 100vw;
+			height: 100vh;
+		}
+
+		/* Video area: centers the scaled frame with minimal padding for trim marks */
+		#dev-video-area {
+			display: grid;
+			place-items: center;
+			overflow: hidden;
+			padding: 12px;
+		}
+
+		/* Scale container: sized to scaled frame dimensions via JS */
+		#dev-scale-container {
+			position: relative;
+			/* Allow crop marks to render outside the frame bounds */
+			overflow: visible;
+		}
+
+		/* The player host renders at native resolution; CSS transform scales it down */
+		#player-host {
+			transform-origin: top left;
+			/* width, height, and transform set by dev_frame.ts */
+		}
+
+		/*
+		 * HUD strip: strictly fixed-height bar at the bottom of the viewport.
+		 * Height must never change based on content — screen recording depends
+		 * on the video position remaining stable. Content that exceeds the
+		 * strip height is clipped.
+		 */
+		#dev-hud-container {
+			background: rgba(0, 0, 0, 0.85);
+			height: 80px;
+			min-height: 80px;
+			max-height: 80px;
+			overflow: hidden;
+		}
+		/* Override HUD overlay styles when relocated outside the frame */
+		#dev-hud-container .vw-hud {
+			position: relative;
+			inset: auto;
+		}
+		#dev-hud-container .vw-hud-inner {
+			position: relative;
+		}
+		/* Ended badge: relative in the HUD strip, not absolute overlay */
+		#dev-hud-container .vw-hud-ended {
+			position: relative;
+			top: auto;
+			right: auto;
+			display: inline-block;
+			margin-bottom: 4px;
+		}
+		/* Error overlay: contained within HUD strip, not overlaying the frame */
+		#dev-hud-container .vw-hud-error-overlay {
+			position: relative;
+			inset: auto;
+		}
+
+		/*
+		 * Crop/trim marks: print-style edge-aligned strokes OUTSIDE the frame.
+		 *
+		 * 8 strokes total, 2 per corner (one horizontal, one vertical).
+		 * Each stroke is aligned with one edge of the frame and sits outside
+		 * the adjacent edge with an 8px gap. The two strokes per corner do
+		 * NOT meet — this matches real print trim mark conventions.
+		 *
+		 * Top-left example:
+		 *   Horizontal stroke: same Y as frame top edge, to the LEFT of the
+		 *     frame, 8px gap before frame's left edge.
+		 *   Vertical stroke: same X as frame left edge, ABOVE the frame,
+		 *     8px gap before frame's top edge.
+		 *
+		 * Positioning math (stroke length 18px, gap 8px):
+		 *   offset = -(gap + length) = -(8 + 18) = -26px
+		 */
+		.vw-crop-marks {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			pointer-events: none;
+			overflow: visible;
+		}
+		.vw-crop-mark {
+			position: absolute;
+			background: rgba(255, 255, 255, 0.25);
+		}
+
+		/* Top-left corner */
+		.vw-crop-mark--tl-h { top: 0; left: -26px; width: 18px; height: 1px; }
+		.vw-crop-mark--tl-v { top: -26px; left: 0; width: 1px; height: 18px; }
+
+		/* Top-right corner */
+		.vw-crop-mark--tr-h { top: 0; right: -26px; width: 18px; height: 1px; }
+		.vw-crop-mark--tr-v { top: -26px; right: 0; width: 1px; height: 18px; }
+
+		/* Bottom-left corner */
+		.vw-crop-mark--bl-h { bottom: 0; left: -26px; width: 18px; height: 1px; }
+		.vw-crop-mark--bl-v { bottom: -26px; left: 0; width: 1px; height: 18px; }
+
+		/* Bottom-right corner */
+		.vw-crop-mark--br-h { bottom: 0; right: -26px; width: 18px; height: 1px; }
+		.vw-crop-mark--br-v { bottom: -26px; right: 0; width: 1px; height: 18px; }
 	</style>
 </head>
 <body>
-	<div id="player-host"></div>
+	<div id="dev-layout">
+		<div id="dev-video-area">
+			<div id="dev-scale-container">
+				<div id="player-host"></div>
+				<div class="vw-crop-marks">
+					<div class="vw-crop-mark vw-crop-mark--tl-h"></div>
+					<div class="vw-crop-mark vw-crop-mark--tl-v"></div>
+					<div class="vw-crop-mark vw-crop-mark--tr-h"></div>
+					<div class="vw-crop-mark vw-crop-mark--tr-v"></div>
+					<div class="vw-crop-mark vw-crop-mark--bl-h"></div>
+					<div class="vw-crop-mark vw-crop-mark--bl-v"></div>
+					<div class="vw-crop-mark vw-crop-mark--br-h"></div>
+					<div class="vw-crop-mark vw-crop-mark--br-v"></div>
+				</div>
+			</div>
+		</div>
+		<div id="dev-hud-container"></div>
+	</div>
 	<script type="module" src="./entry_client.ts"></script>
 </body>
 </html>

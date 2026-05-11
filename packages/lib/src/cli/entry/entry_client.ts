@@ -29,6 +29,7 @@ import {
 } from "../../index.js";
 import type { Config, Timeline } from "../../index.js";
 import { resolveTiming } from "../../timeline/resolveTiming.js";
+import { applyDevFrameSize, installHudKeyListener } from "./dev_frame.js";
 
 // Extend window for ready signals used by render command (__VW_PLAYER_READY__,
 // __VW_SEGMENT_ADVANCES__) and internally for segment-load tracking
@@ -70,6 +71,12 @@ async function boot() {
 
 	const transitionLoaders = buildTransitionLoaderMap(config);
 	const finalTimeline = applyMetaDefaults(timeline, config);
+
+	// Apply fixed resolution and scale-to-fit for the dev preview frame.
+	// This ensures the preview renders at native resolution matching what
+	// the render pipeline produces, regardless of viewport size.
+	applyDevFrameSize(finalTimeline.meta.resolution);
+	installHudKeyListener();
 
 	// Validate
 	const result = validateTimeline(finalTimeline, segmentLoaders, transitionLoaders);
@@ -154,6 +161,21 @@ async function boot() {
 		resolvedTiming: resolvedTimingMap,
 	};
 	const player = new Player(host, playerOpts);
+
+	// Relocate the HUD from inside the player (where it overlays the video)
+	// to the external container below the frame, so the video area is clean
+	// for screen recording. The Player creates the HUD inside its host wrapper;
+	// we move it to #dev-hud-container which sits below the scaled frame.
+	const hudEl = host.querySelector(".vw-hud");
+	const hudContainer = document.getElementById("dev-hud-container");
+	if (hudEl && hudContainer) {
+		hudContainer.appendChild(hudEl);
+	} else if (!hudEl && !hideHud) {
+		console.warn(
+			"HUD element (.vw-hud) not found after Player construction; HUD relocation skipped.",
+		);
+	}
+
 	await player.load(finalTimeline, segmentLoaders, transitionLoaders);
 	await player.start();
 

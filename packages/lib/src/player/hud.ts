@@ -40,6 +40,10 @@ const HUD_STYLES = `
 	color: #fff;
 	z-index: 9999;
 }
+/* Normal HUD bar: single-row horizontal layout, no wrapping.
+   Designed to fit within a fixed 80px strip without clipping.
+   This height must match HUD_HEIGHT in dev_frame.ts and the CSS
+   in index.html (#dev-hud-container height/min-height/max-height). */
 .vw-hud-inner {
 	position: absolute;
 	bottom: 0;
@@ -49,24 +53,30 @@ const HUD_STYLES = `
 	padding: 10px 14px;
 	pointer-events: auto;
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 	gap: 6px 16px;
-	align-items: baseline;
-}
-.vw-hud-item { white-space: nowrap; }
-.vw-hud-label { opacity: 0.6; margin-right: 4px; }
-.vw-hud-vo {
-	flex-basis: 100%;
-	opacity: 0.8;
-	font-style: italic;
-	white-space: normal;
-	max-height: 3.6em;
+	align-items: center;
+	height: 100%;
+	max-height: 80px;
 	overflow: hidden;
 }
+.vw-hud-item { white-space: nowrap; flex-shrink: 0; }
+.vw-hud-label { opacity: 0.6; margin-right: 4px; }
+.vw-hud-vo {
+	opacity: 0.8;
+	font-style: italic;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
+	flex: 0 1 auto;
+}
 .vw-hud-keys {
-	flex-basis: 100%;
 	opacity: 0.4;
 	font-size: 11px;
+	white-space: nowrap;
+	margin-left: auto;
+	flex-shrink: 0;
 }
 .vw-hud-ended {
 	position: absolute;
@@ -77,33 +87,50 @@ const HUD_STYLES = `
 	border-radius: 4px;
 	pointer-events: auto;
 }
+/* Error display: horizontal layout for fixed-height HUD strip.
+   Left accent + icon | two-line title+message (truncated) | reload button.
+   Click the error text to log the full stack trace to the browser console,
+   since the fixed 80px HUD height is too small for inline stack display. */
 .vw-hud-error-overlay {
 	position: absolute;
 	inset: 0;
-	background: rgba(180,30,30,0.92);
+	background: rgba(50,10,10,0.95);
+	border-left: 4px solid #e54;
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	align-items: center;
-	justify-content: center;
 	pointer-events: auto;
-	padding: 24px;
-	text-align: center;
+	padding: 0 16px;
+	gap: 12px;
+	overflow: hidden;
 }
-.vw-hud-error-overlay h2 { margin: 0 0 8px; font-size: 18px; }
-.vw-hud-error-overlay p { margin: 0 0 12px; opacity: 0.9; }
-.vw-hud-error-stack {
-	max-width: 80%;
-	max-height: 200px;
-	overflow: auto;
-	background: rgba(0,0,0,0.4);
-	padding: 10px;
-	border-radius: 4px;
-	font-size: 11px;
-	font-family: monospace;
-	text-align: left;
-	white-space: pre-wrap;
-	word-break: break-all;
-	margin-bottom: 12px;
+.vw-hud-error-icon {
+	font-size: 24px;
+	line-height: 1;
+	flex-shrink: 0;
+	opacity: 0.9;
+}
+.vw-hud-error-text {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow: hidden;
+	cursor: pointer;
+}
+.vw-hud-error-title {
+	font-size: 14px;
+	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	margin: 0;
+}
+.vw-hud-error-message {
+	font-size: 13px;
+	opacity: 0.8;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	margin: 2px 0 0;
 }
 .vw-hud-btn {
 	background: rgba(255,255,255,0.2);
@@ -113,7 +140,8 @@ const HUD_STYLES = `
 	border-radius: 4px;
 	cursor: pointer;
 	font-size: 13px;
-	margin: 4px;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 .vw-hud-btn:hover { background: rgba(255,255,255,0.3); }
 .vw-hud-play {
@@ -282,32 +310,44 @@ function renderError(error: { segmentId: string; message: string; stack?: string
 	const overlay = document.createElement("div");
 	overlay.className = "vw-hud-error-overlay";
 
-	const h2 = document.createElement("h2");
-	h2.textContent = `Segment error: ${error.segmentId}`;
-	overlay.appendChild(h2);
+	// Error icon
+	const icon = document.createElement("span");
+	icon.className = "vw-hud-error-icon";
+	icon.textContent = "⚠"; // warning sign
+	overlay.appendChild(icon);
 
-	const p = document.createElement("p");
-	p.textContent = error.message;
-	overlay.appendChild(p);
+	// Two-line text block: title + message (both truncated with ellipsis)
+	const textBlock = document.createElement("div");
+	textBlock.className = "vw-hud-error-text";
 
-	if (error.stack) {
-		const stackEl = document.createElement("div");
-		stackEl.className = "vw-hud-error-stack";
-		stackEl.textContent = error.stack;
-		stackEl.style.display = "none";
-		overlay.appendChild(stackEl);
+	const title = document.createElement("div");
+	title.className = "vw-hud-error-title";
+	title.textContent = `Segment error: ${error.segmentId}`;
+	title.title = `Segment error: ${error.segmentId}`;
+	textBlock.appendChild(title);
 
-		const toggleBtn = document.createElement("button");
-		toggleBtn.className = "vw-hud-btn";
-		toggleBtn.textContent = "Show stack trace";
-		toggleBtn.addEventListener("click", () => {
-			const visible = stackEl.style.display !== "none";
-			stackEl.style.display = visible ? "none" : "block";
-			toggleBtn.textContent = visible ? "Show stack trace" : "Hide stack trace";
-		});
-		overlay.appendChild(toggleBtn);
-	}
+	const msg = document.createElement("div");
+	msg.className = "vw-hud-error-message";
+	msg.textContent = error.message;
+	// Full message + stack available on hover via title attribute
+	msg.title = error.stack ? `${error.message}\n\n${error.stack}` : error.message;
+	textBlock.appendChild(msg);
 
+	// Click the error text to log the full stack trace to the console,
+	// since the fixed-height HUD strip is too small for inline display.
+	textBlock.addEventListener("click", () => {
+		if (error.stack) {
+			console.error(
+				`[Videowright] Segment error: ${error.segmentId}\n${error.message}\n\n${error.stack}`,
+			);
+		} else {
+			console.error(`[Videowright] Segment error: ${error.segmentId}\n${error.message}`);
+		}
+	});
+
+	overlay.appendChild(textBlock);
+
+	// Reload button
 	const reloadBtn = document.createElement("button");
 	reloadBtn.className = "vw-hud-btn";
 	reloadBtn.textContent = "Reload";
