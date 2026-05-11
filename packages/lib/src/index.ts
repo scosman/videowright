@@ -7,6 +7,7 @@ export type {
 	Segment,
 	TimelineEntry,
 	TimelineMeta,
+	ResolvedTimelineMeta,
 	Timeline,
 	Timing,
 	Voiceover,

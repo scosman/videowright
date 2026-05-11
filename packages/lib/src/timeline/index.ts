@@ -1,4 +1,4 @@
-import type { Config, Segment, Timeline, Transition } from "../types.js";
+import type { Config, ResolvedTimelineMeta, Segment, Timeline, Transition } from "../types.js";
 
 // Re-export browser-safe helpers only.
 // Node-only helpers (loadVoiceover, validateTiming, validateVoiceover) are
@@ -195,8 +195,12 @@ export function validateSegmentAdvances(
 /**
  * Apply config defaults to timeline meta. Returns a new Timeline without mutating.
  * Priority: timeline meta > config.defaults > hardcoded fallbacks.
+ * The returned meta is guaranteed to have resolution, fps, and aspectRatio set.
  */
-export function applyMetaDefaults(timeline: Timeline, config: Config): Timeline {
+export function applyMetaDefaults(
+	timeline: Timeline,
+	config: Config,
+): Timeline & { meta: ResolvedTimelineMeta } {
 	const d = config.defaults ?? {};
 	return {
 		...timeline,

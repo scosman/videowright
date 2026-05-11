@@ -22,12 +22,12 @@
 
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { validateSegmentAdvances } from "../timeline/index.js";
+import { applyMetaDefaults, validateSegmentAdvances } from "../timeline/index.js";
 import { loadVoiceover } from "../timeline/loadVoiceover.js";
 import type { ResolvedTiming, TimingSegment } from "../timeline/resolveTiming.js";
 import { resolveTiming } from "../timeline/resolveTiming.js";
 import { validateTiming, validateVoiceover } from "../timeline/validateTiming.js";
-import type { Timeline, Voiceover } from "../types.js";
+import type { Config, Timeline, Voiceover } from "../types.js";
 import { discoverProject } from "./discover_project.js";
 import { UserError } from "./errors.js";
 import { buildFfmpegArgs, findFfmpeg, spawnFfmpeg, writeWithBackpressure } from "./ffmpeg.js";
@@ -90,13 +90,30 @@ function buildFrameSchedule(
 	return schedule;
 }
 
+/**
+ * Resolve width, height, and fps using four-level precedence:
+ * 1. CLI args (opts.width/height/fps)
+ * 2. timeline.meta.resolution / timeline.meta.fps
+ * 3. config.defaults.resolution / config.defaults.fps
+ * 4. Hardcoded fallback (1920x1080 @ 60fps)
+ */
+export function resolveRenderParams(
+	opts: Pick<RenderOptions, "width" | "height" | "fps">,
+	timeline: Timeline,
+	config: Config,
+): { width: number; height: number; fps: number } {
+	const resolvedMeta = applyMetaDefaults(timeline, config).meta;
+	const [resolvedW, resolvedH] = resolvedMeta.resolution;
+	return {
+		width: opts.width ?? resolvedW,
+		height: opts.height ?? resolvedH,
+		fps: opts.fps ?? resolvedMeta.fps,
+	};
+}
+
 export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	const { cwd, positional, verbose } = opts;
-	const width = opts.width ?? 1920;
-	const height = opts.height ?? 1080;
-	const fps = opts.fps ?? 60;
 	const output = opts.output ?? "output.mp4";
-	const frameMs = 1000 / fps;
 
 	// 1. Validate dependencies
 	const ffmpegPath = findFfmpeg();
@@ -105,11 +122,24 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	const pw = await ensurePlaywright();
 
 	// 2. Find config + timeline
-	const { timelinePath } = discoverProject(cwd, positional, "render");
+	const { configPath, timelinePath } = discoverProject(cwd, positional, "render");
 
-	// Load timeline (only for segment id list -- advances come from the browser)
+	// Load config and timeline
+	const configMod = await loadModule(configPath);
+	const config = configMod.default as Config | undefined;
+	if (!config) {
+		throw new UserError(
+			"Config file has no default export",
+			"Use `export default defineConfig({ ... })` in videowright.config.ts.",
+		);
+	}
+
 	const timelineMod = await loadModule(timelinePath);
 	const timeline = timelineMod.default as Timeline;
+
+	// Resolve resolution and fps using four-level precedence
+	const { width, height, fps } = resolveRenderParams(opts, timeline, config);
+	const frameMs = 1000 / fps;
 
 	// 2b. Resolve voiceover if requested
 	const videoFolder = dirname(timelinePath);

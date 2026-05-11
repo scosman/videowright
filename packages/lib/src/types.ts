@@ -89,6 +89,10 @@ export interface TimelineMeta {
 	fps?: number;
 }
 
+/** TimelineMeta after applyMetaDefaults has filled in resolution, fps, and aspectRatio. */
+export type ResolvedTimelineMeta = TimelineMeta &
+	Required<Pick<TimelineMeta, "resolution" | "fps" | "aspectRatio">>;
+
 /** A complete timeline definition (default export of a timeline.ts file). */
 export interface Timeline {
 	meta: TimelineMeta;
