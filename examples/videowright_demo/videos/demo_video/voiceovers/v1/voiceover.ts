@@ -16,8 +16,7 @@ const voiceover: Voiceover = {
 			"install-cta": [9.761],
 		},
 	},
-	notes:
-		"ElevenLabs portal flow. v2 (multilingual). Tech-explainer tone. Audio ends at 64.94s.",
+	notes: "ElevenLabs portal flow. v2 (multilingual). Tech-explainer tone. Audio ends at 64.94s.",
 };
 
 export default voiceover;

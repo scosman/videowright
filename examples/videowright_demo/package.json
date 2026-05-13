@@ -1,23 +1,23 @@
 {
-  "name": "vw-test-2",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "npx videowright dev",
-    "render": "npx videowright render",
-    "record": "npx videowright record"
-  },
-  "dependencies": {
-    "@types/three": "^0.184.1",
-    "lottie-web": "^5.13.0",
-    "three": "^0.184.0",
-    "videowright": "file:../video_forge/packages/lib"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
-    "@playwright/test": "^1.59.1",
-    "typescript": "^6.0.3",
-    "vitest": "^3.2.4"
-  }
+	"name": "vw-test-2",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "npx videowright dev",
+		"render": "npx videowright render",
+		"record": "npx videowright record"
+	},
+	"dependencies": {
+		"@types/three": "^0.184.1",
+		"lottie-web": "^5.13.0",
+		"three": "^0.184.0",
+		"videowright": "file:../video_forge/packages/lib"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.15",
+		"@playwright/test": "^1.59.1",
+		"typescript": "^6.0.3",
+		"vitest": "^3.2.4"
+	}
 }

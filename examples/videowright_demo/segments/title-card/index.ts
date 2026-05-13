@@ -95,9 +95,7 @@ export default defineSegment({
 		const tag = host?.querySelector('[data-ref="tag"]') as HTMLElement;
 		const title = host?.querySelector('[data-ref="title"]') as HTMLElement;
 		const subtitle = host?.querySelector('[data-ref="subtitle"]') as HTMLElement;
-		const dimMain = host?.querySelector(
-			'[data-ref="dim-main"]',
-		) as SVGLineElement;
+		const dimMain = host?.querySelector('[data-ref="dim-main"]') as SVGLineElement;
 		const dimL = host?.querySelector('[data-ref="dim-l"]') as SVGLineElement;
 		const dimR = host?.querySelector('[data-ref="dim-r"]') as SVGLineElement;
 

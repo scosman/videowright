@@ -296,15 +296,9 @@ export default defineSegment({
 
 		const terminal = host?.querySelector('[data-ref="terminal"]') as HTMLElement;
 		const cmd = host?.querySelector('[data-ref="cmd"]') as HTMLElement;
-		const renderLog = host?.querySelector(
-			'[data-ref="render-log"]',
-		) as HTMLElement;
-		const renderProgress = host?.querySelector(
-			'[data-ref="render-progress"]',
-		) as HTMLElement;
-		const renderMeta = host?.querySelector(
-			'[data-ref="render-meta"]',
-		) as HTMLElement;
+		const renderLog = host?.querySelector('[data-ref="render-log"]') as HTMLElement;
+		const renderProgress = host?.querySelector('[data-ref="render-progress"]') as HTMLElement;
+		const renderMeta = host?.querySelector('[data-ref="render-meta"]') as HTMLElement;
 		const player = host?.querySelector('[data-ref="player"]') as HTMLElement;
 
 		// 1) Terminal fades in
@@ -343,7 +337,7 @@ export default defineSegment({
 			await ctx.hold(stepMs);
 		}
 		renderProgress.textContent = `[${"█".repeat(40)}] 100%`;
-		renderMeta.textContent = `✓ wrote explainer.mp4 · 4440 frames · 1.1s`;
+		renderMeta.textContent = "✓ wrote explainer.mp4 · 4440 frames · 1.1s";
 
 		await ctx.hold(350);
 

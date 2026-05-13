@@ -9,15 +9,15 @@ const MASCOT = `  ▐▛███▜▌
  ▝▜█████▛▘
    ▘▘ ▝▝`;
 
-const USER_PROMPT = `update the title card to our latest branding (name, tagline, design guide, colors), and add some motion`;
-const AGENT_LINE_1 = `Updating segments/title-card.tsx, styles/tokens.css…`;
-const AGENT_LINE_2 = `Done. Hot-reloaded.`;
+const USER_PROMPT =
+	"update the title card to our latest branding (name, tagline, design guide, colors), and add some motion";
+const AGENT_LINE_1 = "Updating segments/title-card.tsx, styles/tokens.css…";
+const AGENT_LINE_2 = "Done. Hot-reloaded.";
 
 export default defineSegment({
 	id: "interactive-dev",
 	advances: [10.0],
-	voiceover:
-		"Iterate in chat. The dev server hot-reloads. Type a change. See it.",
+	voiceover: "Iterate in chat. The dev server hot-reloads. Type a change. See it.",
 
 	mount(el) {
 		host = el;
@@ -364,47 +364,25 @@ export default defineSegment({
 		const ease = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 		const opts = { fill: "forwards" as const, easing: ease };
 
-		const userBlock = host?.querySelector(
-			'[data-ref="user-block"]',
-		) as HTMLElement;
-		const userPrompt = host?.querySelector(
-			'[data-ref="user-prompt"]',
-		) as HTMLElement;
-		const userCaret = host?.querySelector(
-			'[data-ref="user-caret"]',
-		) as HTMLElement;
-		const agentBlock1 = host?.querySelector(
-			'[data-ref="agent-block-1"]',
-		) as HTMLElement;
-		const agentText1 = host?.querySelector(
-			'[data-ref="agent-text-1"]',
-		) as HTMLElement;
-		const agentBlock2 = host?.querySelector(
-			'[data-ref="agent-block-2"]',
-		) as HTMLElement;
+		const userBlock = host?.querySelector('[data-ref="user-block"]') as HTMLElement;
+		const userPrompt = host?.querySelector('[data-ref="user-prompt"]') as HTMLElement;
+		const userCaret = host?.querySelector('[data-ref="user-caret"]') as HTMLElement;
+		const agentBlock1 = host?.querySelector('[data-ref="agent-block-1"]') as HTMLElement;
+		const agentText1 = host?.querySelector('[data-ref="agent-text-1"]') as HTMLElement;
+		const agentBlock2 = host?.querySelector('[data-ref="agent-block-2"]') as HTMLElement;
 		const working = host?.querySelector('[data-ref="working"]') as HTMLElement;
 		const spinner = host?.querySelector('[data-ref="spinner"]') as HTMLElement;
 		const hmrFlash = host?.querySelector('[data-ref="hmr-flash"]') as HTMLElement;
 
 		// Browser stage refs
-		const basicCard = host?.querySelector(
-			'[data-ref="basic-card"]',
-		) as HTMLElement;
+		const basicCard = host?.querySelector('[data-ref="basic-card"]') as HTMLElement;
 		const meCard = host?.querySelector('[data-ref="me-card"]') as HTMLElement;
 		const meTag = host?.querySelector('[data-ref="me-tag"]') as HTMLElement;
 		const meTitle = host?.querySelector('[data-ref="me-title"]') as HTMLElement;
-		const meDimMain = host?.querySelector(
-			'[data-ref="me-dim-main"]',
-		) as SVGLineElement;
-		const meDimL = host?.querySelector(
-			'[data-ref="me-dim-l"]',
-		) as SVGLineElement;
-		const meDimR = host?.querySelector(
-			'[data-ref="me-dim-r"]',
-		) as SVGLineElement;
-		const meSubtitle = host?.querySelector(
-			'[data-ref="me-subtitle"]',
-		) as HTMLElement;
+		const meDimMain = host?.querySelector('[data-ref="me-dim-main"]') as SVGLineElement;
+		const meDimL = host?.querySelector('[data-ref="me-dim-l"]') as SVGLineElement;
+		const meDimR = host?.querySelector('[data-ref="me-dim-r"]') as SVGLineElement;
+		const meSubtitle = host?.querySelector('[data-ref="me-subtitle"]') as HTMLElement;
 
 		// Cursor blinks in input, prompt typing starts immediately
 		userBlock.style.opacity = "1";
@@ -498,10 +476,11 @@ export default defineSegment({
 			],
 			{ ...opts, duration: 500, delay: 180 },
 		);
-		meDimMain.animate(
-			[{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }],
-			{ ...opts, duration: 600, delay: 620 },
-		);
+		meDimMain.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
+			...opts,
+			duration: 600,
+			delay: 620,
+		});
 		meDimL.animate([{ opacity: 0 }, { opacity: 1 }], {
 			...opts,
 			duration: 200,

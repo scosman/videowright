@@ -10,9 +10,9 @@ const MASCOT = `  ▐▛███▜▌
    ▘▘ ▝▝`;
 
 const USER_PROMPT_TEXT = `I want to build a video explaining videowright. Here's the script:`;
-const USER_PROMPT_PASTE = `[Pasted 43 lines]`;
+const USER_PROMPT_PASTE = "[Pasted 43 lines]";
 const AGENT_RESPONSE_1 = `Reading your script. I'll scaffold the timeline and draft segments — ping me if you want a different style than your past videos.`;
-const AGENT_RESPONSE_2 = `Video is ready. Preview: npm run dev`;
+const AGENT_RESPONSE_2 = "Video is ready. Preview: npm run dev";
 
 export default defineSegment({
 	id: "cold-open",
@@ -199,27 +199,17 @@ export default defineSegment({
     `;
 
 		// Pre-render the user prompt as static text
-		const userPromptEl = el.querySelector(
-			'[data-ref="user-prompt"]',
-		) as HTMLElement;
+		const userPromptEl = el.querySelector('[data-ref="user-prompt"]') as HTMLElement;
 		userPromptEl.textContent = USER_PROMPT_TEXT;
-		const userPasteEl = el.querySelector(
-			'[data-ref="user-paste"]',
-		) as HTMLElement;
+		const userPasteEl = el.querySelector('[data-ref="user-paste"]') as HTMLElement;
 		userPasteEl.textContent = USER_PROMPT_PASTE;
 	},
 
 	async play(ctx) {
 		const terminal = host?.querySelector('[data-ref="terminal"]') as HTMLElement;
-		const agentBlock1 = host?.querySelector(
-			'[data-ref="agent-block-1"]',
-		) as HTMLElement;
-		const agentText1 = host?.querySelector(
-			'[data-ref="agent-text-1"]',
-		) as HTMLElement;
-		const agentBlock2 = host?.querySelector(
-			'[data-ref="agent-block-2"]',
-		) as HTMLElement;
+		const agentBlock1 = host?.querySelector('[data-ref="agent-block-1"]') as HTMLElement;
+		const agentText1 = host?.querySelector('[data-ref="agent-text-1"]') as HTMLElement;
+		const agentBlock2 = host?.querySelector('[data-ref="agent-block-2"]') as HTMLElement;
 		const working = host?.querySelector('[data-ref="working"]') as HTMLElement;
 		const spinner = host?.querySelector('[data-ref="spinner"]') as HTMLElement;
 

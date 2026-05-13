@@ -1,6 +1,6 @@
-import { defineSegment } from "videowright";
 import lottie, { type AnimationItem } from "lottie-web";
 import * as THREE from "three";
+import { defineSegment } from "videowright";
 import rocketAnimation from "../../rocket-launch.json";
 
 let host: HTMLElement | null = null;
@@ -159,9 +159,7 @@ export default defineSegment({
     `;
 
 		// --- ECharts panel: bar + radar (CSS-only approximation) ---
-		const chartsBody = el.querySelector(
-			'[data-ref="p-charts-body"]',
-		) as HTMLElement;
+		const chartsBody = el.querySelector('[data-ref="p-charts-body"]') as HTMLElement;
 		chartsBody.innerHTML = `
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 36px; width: 100%; height: 100%; padding: 8px;">
         <div data-ref="bars-wrap" style="
@@ -198,7 +196,17 @@ export default defineSegment({
           ">SCORECARD · 5 AXES</div>
           <svg viewBox="0 0 400 400" style="width: 100%; height: 100%;">
             <g stroke="var(--color-muted)" stroke-width="1" fill="none" opacity="0.45">
-              ${[40, 80, 120, 160].map((r) => `<polygon points="${[0, 1, 2, 3, 4].map((i) => { const a = (-90 + i * 72) * Math.PI / 180; return `${200 + Math.cos(a) * r},${200 + Math.sin(a) * r}`; }).join(" ")}" />`).join("")}
+              ${[40, 80, 120, 160]
+								.map(
+									(r) =>
+										`<polygon points="${[0, 1, 2, 3, 4]
+											.map((i) => {
+												const a = ((-90 + i * 72) * Math.PI) / 180;
+												return `${200 + Math.cos(a) * r},${200 + Math.sin(a) * r}`;
+											})
+											.join(" ")}" />`,
+								)
+								.join("")}
               ${[0, 1, 2, 3, 4]
 								.map((i) => {
 									const a = ((-90 + i * 72) * Math.PI) / 180;
@@ -217,11 +225,9 @@ export default defineSegment({
 
 		// Build bars
 		const bars = el.querySelector('[data-ref="bars"]') as HTMLElement;
-		const barLabels = el.querySelector(
-			'[data-ref="bar-labels"]',
-		) as HTMLElement;
+		const barLabels = el.querySelector('[data-ref="bar-labels"]') as HTMLElement;
 		const labels = ["Q1", "Q2", "Q3", "Q4"];
-		labels.forEach((lab) => {
+		for (const lab of labels) {
 			const bar = document.createElement("div");
 			bar.setAttribute("data-bar", "");
 			bar.style.cssText = `
@@ -232,10 +238,10 @@ export default defineSegment({
       `;
 			bars.appendChild(bar);
 			const lblEl = document.createElement("div");
-			lblEl.style.cssText = `flex: 1; text-align: center;`;
+			lblEl.style.cssText = "flex: 1; text-align: center;";
 			lblEl.textContent = lab;
 			barLabels.appendChild(lblEl);
-		});
+		}
 
 		// --- 3D panel: wireframe sphere (CSS) + rocket SVG ---
 		const threeBody = el.querySelector('[data-ref="p-3d-body"]') as HTMLElement;
@@ -283,12 +289,7 @@ export default defineSegment({
 		// --- App UI panel: shadcn-style enterprise SaaS dashboard ---
 		const appBody = el.querySelector('[data-ref="p-app-body"]') as HTMLElement;
 
-		const navItem = (
-			key: string,
-			label: string,
-			icon: string,
-			active = false,
-		) => `
+		const navItem = (key: string, label: string, icon: string, active = false) => `
       <div data-nav="${key}" style="
         display: flex; align-items: center; gap: 12px;
         padding: 10px 14px;
@@ -662,11 +663,46 @@ export default defineSegment({
                 <div></div>
               </div>
               ${[
-								{ name: "Globex Corp", email: "ops@globex.com", plan: "Enterprise", mrr: "$4,800", status: "Active", color: "#9fc77a" },
-								{ name: "Initech", email: "billing@initech.io", plan: "Pro", mrr: "$1,400", status: "Active", color: "#9fc77a" },
-								{ name: "Wonka Industries", email: "finance@wonka.co", plan: "Pro", mrr: "$1,400", status: "Trial", color: "var(--cyan)" },
-								{ name: "Cyberdyne Systems", email: "skynet@cyberdyne.ai", plan: "Enterprise", mrr: "$6,200", status: "Active", color: "#9fc77a" },
-								{ name: "Stark Industries", email: "tony@stark.com", plan: "Enterprise", mrr: "$9,400", status: "Past due", color: "var(--warn)" },
+								{
+									name: "Globex Corp",
+									email: "ops@globex.com",
+									plan: "Enterprise",
+									mrr: "$4,800",
+									status: "Active",
+									color: "#9fc77a",
+								},
+								{
+									name: "Initech",
+									email: "billing@initech.io",
+									plan: "Pro",
+									mrr: "$1,400",
+									status: "Active",
+									color: "#9fc77a",
+								},
+								{
+									name: "Wonka Industries",
+									email: "finance@wonka.co",
+									plan: "Pro",
+									mrr: "$1,400",
+									status: "Trial",
+									color: "var(--cyan)",
+								},
+								{
+									name: "Cyberdyne Systems",
+									email: "skynet@cyberdyne.ai",
+									plan: "Enterprise",
+									mrr: "$6,200",
+									status: "Active",
+									color: "#9fc77a",
+								},
+								{
+									name: "Stark Industries",
+									email: "tony@stark.com",
+									plan: "Enterprise",
+									mrr: "$9,400",
+									status: "Past due",
+									color: "var(--warn)",
+								},
 							]
 								.map(
 									(r, i) => `
@@ -770,9 +806,7 @@ export default defineSegment({
 		const ease = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 		const opts = { fill: "forwards" as const, easing: ease };
 
-		const bottomTitle = host?.querySelector(
-			'[data-ref="bottom-title"]',
-		) as HTMLElement;
+		const bottomTitle = host?.querySelector('[data-ref="bottom-title"]') as HTMLElement;
 		const coordT = host?.querySelector('[data-ref="coord-t"]') as HTMLElement;
 
 		// Animate coordinate ticker
@@ -832,36 +866,38 @@ export default defineSegment({
 		const orb1 = host?.querySelector('[data-ref="svg-orb-1"]') as SVGGElement;
 		const orb2 = host?.querySelector('[data-ref="svg-orb-2"]') as SVGGElement;
 		const orb3 = host?.querySelector('[data-ref="svg-orb-3"]') as SVGGElement;
-		orb1.animate(
-			[{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
-			{ duration: 4000, iterations: Infinity, easing: "linear" },
-		);
-		orb2.animate(
-			[{ transform: "rotate(0deg)" }, { transform: "rotate(-360deg)" }],
-			{ duration: 3000, iterations: Infinity, easing: "linear" },
-		);
-		orb3.animate(
-			[{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
-			{ duration: 2000, iterations: Infinity, easing: "linear" },
-		);
+		orb1.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], {
+			duration: 4000,
+			iterations: Number.POSITIVE_INFINITY,
+			easing: "linear",
+		});
+		orb2.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(-360deg)" }], {
+			duration: 3000,
+			iterations: Number.POSITIVE_INFINITY,
+			easing: "linear",
+		});
+		orb3.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], {
+			duration: 2000,
+			iterations: Number.POSITIVE_INFINITY,
+			easing: "linear",
+		});
 
 		// === ECharts panel (1.6–3.6s) ===
 		await waitUntil(1600);
 		await hidePanel('[data-ref="p-svg"]');
 		await showPanel('[data-ref="p-charts"]');
-		const barEls = host?.querySelectorAll('[data-bar]');
+		const barEls = host?.querySelectorAll("[data-bar]");
 		const heights1 = [42, 68, 55, 80];
 		barEls?.forEach((b, i) => {
-			(b as HTMLElement).animate(
-				[{ height: "0%" }, { height: `${heights1[i]}%` }],
-				{ ...opts, duration: 400, delay: 40 + i * 40 },
-			);
+			(b as HTMLElement).animate([{ height: "0%" }, { height: `${heights1[i]}%` }], {
+				...opts,
+				duration: 400,
+				delay: 40 + i * 40,
+			});
 		});
 
 		// Animate radar shape via rAF + ctx.clock (WAAPI can't animate `points`)
-		const radarShape = host?.querySelector(
-			'[data-ref="radar-shape"]',
-		) as SVGPolygonElement;
+		const radarShape = host?.querySelector('[data-ref="radar-shape"]') as SVGPolygonElement;
 		const buildPoints = (vals: number[]) =>
 			vals
 				.map((v, i) => {
@@ -896,10 +932,11 @@ export default defineSegment({
 		await ctx.hold(1300);
 		const heights2 = [55, 50, 78, 92];
 		barEls?.forEach((b, i) => {
-			(b as HTMLElement).animate(
-				[{ height: `${heights1[i]}%` }, { height: `${heights2[i]}%` }],
-				{ ...opts, duration: 500, delay: i * 50 },
-			);
+			(b as HTMLElement).animate([{ height: `${heights1[i]}%` }, { height: `${heights2[i]}%` }], {
+				...opts,
+				duration: 500,
+				delay: i * 50,
+			});
 		});
 		radarFrom = radarTarget1;
 		radarTo = radarTarget2;
@@ -913,9 +950,7 @@ export default defineSegment({
 		// --- Real Three.js scene: rotating icosahedron with wireframe edges,
 		// shaded inner mesh, vertex points, orbital ring, and a dust field.
 		// Drive via ctx.clock() per render-safe pattern.
-		const threeHost = host?.querySelector(
-			'[data-ref="three-host"]',
-		) as HTMLElement;
+		const threeHost = host?.querySelector('[data-ref="three-host"]') as HTMLElement;
 
 		const rect = threeHost.getBoundingClientRect();
 		const w = Math.max(2, Math.round(rect.width));
@@ -973,10 +1008,7 @@ export default defineSegment({
 			}
 		}
 		const vertGeo = new THREE.BufferGeometry();
-		vertGeo.setAttribute(
-			"position",
-			new THREE.Float32BufferAttribute(vertexCoords, 3),
-		);
+		vertGeo.setAttribute("position", new THREE.Float32BufferAttribute(vertexCoords, 3));
 		const vertMat = new THREE.PointsMaterial({
 			color: 0xff8800,
 			size: 0.12,
@@ -993,10 +1025,7 @@ export default defineSegment({
 			orbitCoords.push(Math.cos(a) * 2.3, Math.sin(a * 1.7) * 0.25, Math.sin(a) * 2.3);
 		}
 		const orbitGeo = new THREE.BufferGeometry();
-		orbitGeo.setAttribute(
-			"position",
-			new THREE.Float32BufferAttribute(orbitCoords, 3),
-		);
+		orbitGeo.setAttribute("position", new THREE.Float32BufferAttribute(orbitCoords, 3));
 		const orbitMat = new THREE.PointsMaterial({
 			color: 0x4fd1e0,
 			size: 0.05,
@@ -1021,10 +1050,7 @@ export default defineSegment({
 			);
 		}
 		const dustGeo = new THREE.BufferGeometry();
-		dustGeo.setAttribute(
-			"position",
-			new THREE.Float32BufferAttribute(dustCoords, 3),
-		);
+		dustGeo.setAttribute("position", new THREE.Float32BufferAttribute(dustCoords, 3));
 		const dustMat = new THREE.PointsMaterial({
 			color: 0xe8eef5,
 			size: 0.02,
@@ -1057,17 +1083,14 @@ export default defineSegment({
 			three.orbitPoints.rotation.x = t * 0.2;
 			three.dustPoints.rotation.y = t * 0.05;
 			// Subtle edge opacity pulse
-			(three.edges.material as THREE.LineBasicMaterial).opacity =
-				0.7 + Math.sin(t * 2.2) * 0.15;
+			(three.edges.material as THREE.LineBasicMaterial).opacity = 0.7 + Math.sin(t * 2.2) * 0.15;
 			three.renderer.render(three.scene, three.camera);
 			requestAnimationFrame(threeTick);
 		};
 		requestAnimationFrame(threeTick);
 
 		// Real Lottie animation, driven manually via ctx.clock() per render-safe pattern.
-		const lottieHost = host?.querySelector(
-			'[data-ref="lottie-host"]',
-		) as HTMLElement;
+		const lottieHost = host?.querySelector('[data-ref="lottie-host"]') as HTMLElement;
 		lottieInstance = lottie.loadAnimation({
 			container: lottieHost,
 			renderer: "svg",
@@ -1077,8 +1100,7 @@ export default defineSegment({
 		});
 
 		// Lottie duration in ms: (op - ip) / fr * 1000 = 75/25 * 1000 = 3000ms.
-		const lottieDurMs =
-			((rocketAnimation.op - rocketAnimation.ip) / rocketAnimation.fr) * 1000;
+		const lottieDurMs = ((rocketAnimation.op - rocketAnimation.ip) / rocketAnimation.fr) * 1000;
 		const lottieStart = ctx.clock();
 
 		const lottieTick = () => {
@@ -1115,14 +1137,12 @@ export default defineSegment({
 			el: HTMLElement;
 			target: string;
 		}> = [];
-		host
-			?.querySelectorAll("[data-target]")
-			.forEach((el) => {
-				kpiTargets.push({
-					el: el as HTMLElement,
-					target: (el as HTMLElement).getAttribute("data-target") || "",
-				});
+		for (const el of host?.querySelectorAll("[data-target]") ?? []) {
+			kpiTargets.push({
+				el: el as HTMLElement,
+				target: (el as HTMLElement).getAttribute("data-target") || "",
 			});
+		}
 
 		const countUpStart = ctx.clock();
 		const countUpDur = 900;
@@ -1140,7 +1160,7 @@ export default defineSegment({
 				}
 				const [, prefix, num, suffix] = m;
 				const hasDecimal = num.includes(".");
-				const targetNum = parseFloat(num.replace(/,/g, ""));
+				const targetNum = Number.parseFloat(num.replace(/,/g, ""));
 				const cur = targetNum * e;
 				let formatted: string;
 				if (hasDecimal) {
@@ -1158,12 +1178,8 @@ export default defineSegment({
 		requestAnimationFrame(countUpTick);
 
 		// Area chart card + bar chart card fade in
-		const areaCard = host?.querySelector(
-			'[data-ref="area-card"]',
-		) as HTMLElement;
-		const barCard = host?.querySelector(
-			'[data-ref="bar-card"]',
-		) as HTMLElement;
+		const areaCard = host?.querySelector('[data-ref="area-card"]') as HTMLElement;
+		const barCard = host?.querySelector('[data-ref="bar-card"]') as HTMLElement;
 		areaCard.animate(
 			[
 				{ opacity: 0, transform: "translateY(8px)" },
@@ -1182,22 +1198,17 @@ export default defineSegment({
 		await ctx.hold(400);
 
 		// Area chart line draws in via stroke-dashoffset
-		const areaLine = host?.querySelector(
-			'[data-ref="area-line"]',
-		) as SVGPathElement;
-		const areaFill = host?.querySelector(
-			'[data-ref="area-fill"]',
-		) as SVGPathElement;
-		const areaDot = host?.querySelector(
-			'[data-ref="area-dot"]',
-		) as SVGCircleElement;
+		const areaLine = host?.querySelector('[data-ref="area-line"]') as SVGPathElement;
+		const areaFill = host?.querySelector('[data-ref="area-fill"]') as SVGPathElement;
+		const areaDot = host?.querySelector('[data-ref="area-dot"]') as SVGCircleElement;
 		const pathLen = areaLine.getTotalLength();
 		areaLine.style.strokeDasharray = `${pathLen}`;
 		areaLine.style.strokeDashoffset = `${pathLen}`;
-		areaLine.animate(
-			[{ strokeDashoffset: pathLen }, { strokeDashoffset: 0 }],
-			{ duration: 1100, easing: "ease-out", fill: "forwards" },
-		);
+		areaLine.animate([{ strokeDashoffset: pathLen }, { strokeDashoffset: 0 }], {
+			duration: 1100,
+			easing: "ease-out",
+			fill: "forwards",
+		});
 		areaFill.animate([{ opacity: 0 }, { opacity: 1 }], {
 			duration: 600,
 			delay: 600,
@@ -1210,45 +1221,31 @@ export default defineSegment({
 		});
 
 		// Bar chart rows fade in + bars fill
-		host
-			?.querySelectorAll("[data-bar-row]")
-			.forEach((row, i) => {
-				(row as HTMLElement).animate(
-					[
-						{ opacity: 0, transform: "translateX(-6px)" },
-						{ opacity: 1, transform: "translateX(0)" },
-					],
-					{ ...opts, duration: 260, delay: 100 + i * 80, fill: "forwards" },
-				);
+		host?.querySelectorAll("[data-bar-row]").forEach((row, i) => {
+			(row as HTMLElement).animate(
+				[
+					{ opacity: 0, transform: "translateX(-6px)" },
+					{ opacity: 1, transform: "translateX(0)" },
+				],
+				{ ...opts, duration: 260, delay: 100 + i * 80, fill: "forwards" },
+			);
+		});
+		host?.querySelectorAll("[data-bar-fill]").forEach((bar, i) => {
+			const val = Number.parseInt((bar as HTMLElement).getAttribute("data-bar-fill") || "0", 10);
+			(bar as HTMLElement).animate([{ width: "0%" }, { width: `${val}%` }], {
+				...opts,
+				duration: 540,
+				delay: 220 + i * 80,
+				fill: "forwards",
 			});
-		host
-			?.querySelectorAll("[data-bar-fill]")
-			.forEach((bar, i) => {
-				const val = parseInt(
-					(bar as HTMLElement).getAttribute("data-bar-fill") || "0",
-					10,
-				);
-				(bar as HTMLElement).animate(
-					[{ width: "0%" }, { width: `${val}%` }],
-					{
-						...opts,
-						duration: 540,
-						delay: 220 + i * 80,
-						fill: "forwards",
-					},
-				);
-			});
+		});
 
 		// --- Phase 2 transition (11.0 → 11.5s): tab switch to Customers ---
 		await waitUntil(11000);
 
 		// Sidebar nav highlight moves from Dashboard to Customers
-		const dashNav = host?.querySelector(
-			'[data-nav="dashboard"]',
-		) as HTMLElement;
-		const custNav = host?.querySelector(
-			'[data-nav="customers"]',
-		) as HTMLElement;
+		const dashNav = host?.querySelector('[data-nav="dashboard"]') as HTMLElement;
+		const custNav = host?.querySelector('[data-nav="customers"]') as HTMLElement;
 		dashNav.style.background = "transparent";
 		dashNav.style.color = "var(--color-muted)";
 		dashNav.style.boxShadow = "none";
@@ -1257,18 +1254,12 @@ export default defineSegment({
 		custNav.style.boxShadow = "inset 2px 0 0 var(--color-accent)";
 
 		// Breadcrumb updates
-		const breadcrumb = host?.querySelector(
-			'[data-ref="breadcrumb"]',
-		) as HTMLElement;
+		const breadcrumb = host?.querySelector('[data-ref="breadcrumb"]') as HTMLElement;
 		breadcrumb.textContent = "Customers";
 
 		// Crossfade views
-		const dashView = host?.querySelector(
-			'[data-view="dashboard"]',
-		) as HTMLElement;
-		const custView = host?.querySelector(
-			'[data-view="customers"]',
-		) as HTMLElement;
+		const dashView = host?.querySelector('[data-view="dashboard"]') as HTMLElement;
+		const custView = host?.querySelector('[data-view="customers"]') as HTMLElement;
 		dashView.animate([{ opacity: 1 }, { opacity: 0 }], {
 			...opts,
 			duration: 240,
@@ -1297,9 +1288,7 @@ export default defineSegment({
 		// --- Phase 2 action (12.4 → end): type a note, click send, toast ---
 		await waitUntil(12400);
 
-		const actionPanel = host?.querySelector(
-			'[data-ref="action-panel"]',
-		) as HTMLElement;
+		const actionPanel = host?.querySelector('[data-ref="action-panel"]') as HTMLElement;
 		actionPanel.animate(
 			[
 				{ opacity: 0, transform: "translateY(6px)" },
@@ -1311,12 +1300,8 @@ export default defineSegment({
 		await ctx.hold(350);
 
 		// Type the note
-		const noteText = host?.querySelector(
-			'[data-ref="note-text"]',
-		) as HTMLElement;
-		const noteCaret = host?.querySelector(
-			'[data-ref="note-caret"]',
-		) as HTMLElement;
+		const noteText = host?.querySelector('[data-ref="note-text"]') as HTMLElement;
+		const noteCaret = host?.querySelector('[data-ref="note-caret"]') as HTMLElement;
 		const message = "Payment retry — try card on file Tue 9am";
 		const typeStep = 38;
 		for (let i = 0; i <= message.length; i++) {
@@ -1329,9 +1314,7 @@ export default defineSegment({
 
 		// Hide caret, "submit"
 		noteCaret.style.display = "none";
-		const submitBtn = host?.querySelector(
-			'[data-ref="note-submit"]',
-		) as HTMLElement;
+		const submitBtn = host?.querySelector('[data-ref="note-submit"]') as HTMLElement;
 		submitBtn.animate(
 			[{ transform: "scale(1)" }, { transform: "scale(0.94)" }, { transform: "scale(1)" }],
 			{ duration: 220, easing: "ease-out" },

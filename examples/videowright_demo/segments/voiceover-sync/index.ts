@@ -171,21 +171,11 @@ export default defineSegment({
 		const ease = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 		const opts = { fill: "forwards" as const, easing: ease };
 
-		const lines = host?.querySelectorAll(
-			"[data-line]",
-		) as NodeListOf<HTMLElement>;
-		const tReadout = host?.querySelector(
-			'[data-ref="t-readout"]',
-		) as HTMLElement;
-		const animTitle = host?.querySelector(
-			'[data-ref="anim-title"]',
-		) as HTMLElement;
-		const animFill = host?.querySelector(
-			'[data-ref="anim-fill"]',
-		) as HTMLElement;
-		const animCaption = host?.querySelector(
-			'[data-ref="anim-caption"]',
-		) as HTMLElement;
+		const lines = host?.querySelectorAll("[data-line]") as NodeListOf<HTMLElement>;
+		const tReadout = host?.querySelector('[data-ref="t-readout"]') as HTMLElement;
+		const animTitle = host?.querySelector('[data-ref="anim-title"]') as HTMLElement;
+		const animFill = host?.querySelector('[data-ref="anim-fill"]') as HTMLElement;
+		const animCaption = host?.querySelector('[data-ref="anim-caption"]') as HTMLElement;
 		const resync = host?.querySelector('[data-ref="resync"]') as HTMLElement;
 		const dirty = host?.querySelector('[data-ref="dirty"]') as HTMLElement;
 
