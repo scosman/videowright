@@ -86,6 +86,21 @@ The test suite is robust: unit tests, integration tests, and end-to-end tests th
 
 If you encounter an error, describe it to your coding agent. A good agent can quickly diagnose and repair the issue. It's usually in the project files, but if you find one in the library please submit an issue or a patch.
 
+## Development
+
+Run all checks (lint, typecheck, tests) locally:
+
+```bash
+./checks.sh             # all checks
+./checks.sh --no-test   # skip tests for quick iteration
+```
+
+Install the pre-commit hook (once per clone). This will replace any existing pre-commit hook:
+
+```bash
+ln -sf ../../checks.sh .git/hooks/pre-commit
+```
+
 ## License
 
 [MIT](LICENSE)
