@@ -1,5 +1,5 @@
 /**
- * Integration test: boot the actual Vite dev server against examples/demo_example/
+ * Integration test: boot the actual Vite dev server against examples/videowright_demo/
  * and verify the page loads without errors.
  *
  * This catches the real issue where import.meta.glob with aliases fails silently,
@@ -11,7 +11,7 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { type DevResult, runDev } from "../../src/cli/dev.js";
 
-const DEMO_ROOT = resolve(__dirname, "../../../../examples/demo_example");
+const DEMO_ROOT = resolve(__dirname, "../../../../examples/videowright_demo");
 
 let server: DevResult | null = null;
 
@@ -40,7 +40,7 @@ describe("demo dev server", () => {
 		expect(html).toContain("Videowright Dev");
 	});
 
-	it("virtual:vw-segments module resolves with all 7 segments using @consumer alias", async () => {
+	it("virtual:vw-segments module resolves with all 8 segments using @consumer alias", async () => {
 		server = await runDev({
 			cwd: DEMO_ROOT,
 			port: 5200,
@@ -53,15 +53,16 @@ describe("demo dev server", () => {
 
 		const code = await res.text();
 
-		// The virtual module should contain dynamic imports for all 7 segments
+		// The virtual module should contain dynamic imports for all 8 segments
 		const expectedIds = [
-			"intro",
-			"feature-svg",
-			"feature-three",
-			"feature-lottie",
-			"feature-echarts",
-			"feature-cards",
-			"outro",
+			"cold-open",
+			"title-card",
+			"web-tech-gallery",
+			"interactive-dev",
+			"pixel-perfect-export",
+			"voiceover-sync",
+			"any-coding-agent",
+			"install-cta",
 		];
 
 		for (const id of expectedIds) {

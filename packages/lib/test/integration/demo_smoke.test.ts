@@ -1,5 +1,5 @@
 /**
- * Smoke test: verify the demo_example's timeline.ts loads correctly via tsx
+ * Smoke test: verify the videowright_demo's timeline.ts loads correctly via tsx
  * and that the demo has the expected structure.
  *
  * This does NOT attempt to render Three.js, Lottie, or ECharts in jsdom.
@@ -15,40 +15,34 @@ import { buildNodeSegmentLoaderMap } from "../../src/cli/script_cmd.js";
 import { loadModule } from "../../src/cli/ts_loader.js";
 import type { Timeline } from "../../src/types.js";
 
-const DEMO_ROOT = resolve(__dirname, "../../../../examples/demo_example");
+const DEMO_ROOT = resolve(__dirname, "../../../../examples/videowright_demo");
 
 const EXPECTED_SEGMENT_IDS = [
-	"intro",
-	"feature-svg",
-	"feature-three",
-	"feature-lottie",
-	"feature-echarts",
-	"feature-cards",
-	"outro",
+	"cold-open",
+	"title-card",
+	"web-tech-gallery",
+	"interactive-dev",
+	"pixel-perfect-export",
+	"voiceover-sync",
+	"any-coding-agent",
+	"install-cta",
 ];
 
 describe("cli_dev_against_demo_smoke", () => {
 	it("demo directory exists with expected structure", () => {
 		expect(existsSync(DEMO_ROOT)).toBe(true);
 		expect(existsSync(join(DEMO_ROOT, "videowright.config.ts"))).toBe(true);
-		expect(existsSync(join(DEMO_ROOT, "videos/demo/timeline.ts"))).toBe(true);
-		expect(existsSync(join(DEMO_ROOT, "videos/demo/voiceover/script.md"))).toBe(true);
-		expect(existsSync(join(DEMO_ROOT, "styles/tokens.css"))).toBe(true);
-		expect(existsSync(join(DEMO_ROOT, "styles/tokens.ts"))).toBe(true);
-		expect(existsSync(join(DEMO_ROOT, "styles/STYLE.md"))).toBe(true);
-		expect(existsSync(join(DEMO_ROOT, "transitions/logo-morph.ts"))).toBe(true);
+		expect(existsSync(join(DEMO_ROOT, "videos/demo_video/timeline.ts"))).toBe(true);
+		expect(existsSync(join(DEMO_ROOT, "videos/demo_video/voiceover/script.md"))).toBe(true);
+		expect(existsSync(join(DEMO_ROOT, "styles/motion-engineering/tokens.css"))).toBe(true);
+		expect(existsSync(join(DEMO_ROOT, "styles/motion-engineering/STYLE.md"))).toBe(true);
 	});
 
-	it("all 7 segment directories exist with index.ts", () => {
+	it("all 8 segment directories exist with index.ts", () => {
 		for (const id of EXPECTED_SEGMENT_IDS) {
 			const segmentPath = join(DEMO_ROOT, "segments", id, "index.ts");
 			expect(existsSync(segmentPath), `Missing segment: ${id}`).toBe(true);
 		}
-	});
-
-	it("component directories exist", () => {
-		expect(existsSync(join(DEMO_ROOT, "components/animated-title/index.ts"))).toBe(true);
-		expect(existsSync(join(DEMO_ROOT, "components/feature-card/index.ts"))).toBe(true);
 	});
 
 	it("findConfig discovers demo config", () => {
@@ -73,13 +67,10 @@ describe("cli_dev_against_demo_smoke", () => {
 
 		expect(timeline).toBeDefined();
 		expect(timeline.meta).toBeDefined();
-		expect(timeline.meta.title).toBe("Videowright — Demo");
-		expect(timeline.meta.aspectRatio).toBe("16:9");
-		expect(timeline.meta.resolution).toEqual([1920, 1080]);
-		expect(timeline.meta.fps).toBe(60);
+		expect(timeline.meta.title).toBe("Videowright Explainer");
 	});
 
-	it("timeline has 7 segments with expected ids", async () => {
+	it("timeline has 8 segments with expected ids", async () => {
 		const timelinePath = findTimeline(DEMO_ROOT);
 		expect(timelinePath).toBeTruthy();
 		if (!timelinePath) return;
@@ -87,13 +78,13 @@ describe("cli_dev_against_demo_smoke", () => {
 		const mod = await loadModule(timelinePath);
 		const timeline = mod.default as Timeline;
 
-		expect(timeline.segments).toHaveLength(7);
+		expect(timeline.segments).toHaveLength(8);
 
 		const ids = timeline.segments.map((s) => s.id);
 		expect(ids).toEqual(EXPECTED_SEGMENT_IDS);
 	});
 
-	it("timeline uses logo-morph custom transition on feature-cards", async () => {
+	it("timeline uses fade transition on web-tech-gallery", async () => {
 		const timelinePath = findTimeline(DEMO_ROOT);
 		expect(timelinePath).toBeTruthy();
 		if (!timelinePath) return;
@@ -101,21 +92,21 @@ describe("cli_dev_against_demo_smoke", () => {
 		const mod = await loadModule(timelinePath);
 		const timeline = mod.default as Timeline;
 
-		const cardsEntry = timeline.segments.find((s) => s.id === "feature-cards");
-		expect(cardsEntry).toBeDefined();
-		expect(cardsEntry?.transition).toBe("logo-morph");
+		const galleryEntry = timeline.segments.find((s) => s.id === "web-tech-gallery");
+		expect(galleryEntry).toBeDefined();
+		expect(galleryEntry?.transition).toBe("fade");
 	});
 
-	it("buildNodeSegmentLoaderMap discovers all 7 segments", () => {
+	it("buildNodeSegmentLoaderMap discovers all 8 segments", () => {
 		const loaderMap = buildNodeSegmentLoaderMap(DEMO_ROOT);
-		expect(loaderMap.size).toBe(7);
+		expect(loaderMap.size).toBe(8);
 
 		for (const id of EXPECTED_SEGMENT_IDS) {
 			expect(loaderMap.has(id), `Missing loader for: ${id}`).toBe(true);
 		}
 	});
 
-	it("config loads via tsx and registers logo-morph transition", async () => {
+	it("config loads via tsx with correct structure", async () => {
 		const configPath = findConfig(DEMO_ROOT);
 		expect(configPath).toBeTruthy();
 		if (!configPath) return;
@@ -123,13 +114,19 @@ describe("cli_dev_against_demo_smoke", () => {
 		const mod = await loadModule(configPath);
 		const config = mod.default as {
 			projectStructure: string;
-			transitions?: Record<string, unknown>;
+			defaultStyle?: string;
+			defaults?: {
+				resolution?: [number, number];
+				fps?: number;
+				aspectRatio?: string;
+			};
 		};
 
 		expect(config).toBeDefined();
 		expect(config.projectStructure).toBe("v1");
-		expect(config.transitions).toBeDefined();
-		expect(config.transitions?.["logo-morph"]).toBeDefined();
-		expect(typeof config.transitions?.["logo-morph"]).toBe("function");
+		expect(config.defaultStyle).toBe("motion-engineering");
+		expect(config.defaults?.resolution).toEqual([1920, 1080]);
+		expect(config.defaults?.fps).toBe(60);
+		expect(config.defaults?.aspectRatio).toBe("16:9");
 	});
 });
