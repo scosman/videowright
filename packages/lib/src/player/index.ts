@@ -353,8 +353,13 @@ export class Player {
 
 	/**
 	 * Compute the time until the next advance in the current segment, then schedule it.
+	 *
+	 * @param driftCorrectionMs - Signed milliseconds to add to the delay.
+	 *   Positive = schedule is ahead of audio, so delay is lengthened.
+	 *   Negative = schedule is behind audio, so delay is shortened.
+	 *   Passed from autoAdvanceTick when drift exceeds DRIFT_TOLERANCE_MS.
 	 */
-	private scheduleNextAutoAdvance(): void {
+	private scheduleNextAutoAdvance(driftCorrectionMs = 0): void {
 		if (this._playbackMode !== "playing") return;
 		if (this.state === "ended" || this.state === "errored") return;
 		if (!this.timeline || !this.options.resolvedTiming) return;
@@ -379,9 +384,9 @@ export class Player {
 		// Time of the current beat (start of this beat) and the next advance
 		const currentBeatTime = currentBeat > 0 ? advances[currentBeat - 1] : 0;
 		const nextAdvanceTime = advances[currentBeat];
-		const delaySeconds = nextAdvanceTime - currentBeatTime;
+		const delayMs = (nextAdvanceTime - currentBeatTime) * 1000 + driftCorrectionMs;
 
-		if (delaySeconds <= 0) {
+		if (delayMs <= 0) {
 			// Fire immediately
 			this.autoAdvanceTick();
 			return;
@@ -389,7 +394,7 @@ export class Player {
 
 		this.autoAdvanceTimer = setTimeout(() => {
 			this.autoAdvanceTick();
-		}, delaySeconds * 1000);
+		}, delayMs);
 	}
 
 	private async autoAdvanceTick(): Promise<void> {
@@ -397,23 +402,28 @@ export class Player {
 		if (this._playbackMode !== "playing") return;
 		if (this.state === "ended" || this.state === "errored") return;
 
-		const indexBefore = this.getCurrentSlot().timelineIndex;
+		// Determine whether this tick is the segment's final advance BEFORE
+		// calling handleNext, so we can force a transition even when
+		// triggerNext() drains a pending waitForNext resolver.
+		const slot = this.getCurrentSlot();
+		const segId = this.timeline?.segments[slot.timelineIndex]?.id;
+		const advances = segId ? this.options.resolvedTiming?.[segId] : undefined;
+		const beatBefore = slot.runner?.currentBeat ?? 0;
+		const isLastAdvance = advances != null && beatBefore + 1 >= advances.length;
 
-		// Fire next advance (may transition state to "ended")
-		await this.handleNext();
+		await this.handleNext(isLastAdvance);
 
-		const segmentChanged = this.getCurrentSlot().timelineIndex !== indexBefore;
-
-		// Check audio drift after the advance so the expected time reflects
-		// the post-advance position, not the pre-advance one.
-		// Skip on forward-pass segment transitions: the audio is already
-		// playing continuously and re-seeking causes an audible blip.
-		if (this.audioEl && this.options.resolvedTiming && !segmentChanged) {
+		// Compute signed drift between audio element and expected timeline
+		// position. Instead of seeking the audio (which causes an audible
+		// click/stutter), we adjust the next scheduled tick delay so the
+		// scheduler realigns with the audio clock.
+		let driftCorrectionMs = 0;
+		if (this.audioEl && this.options.resolvedTiming) {
 			const expectedTime = this.computeLogicalAudioTime();
 			const actualTime = this.audioEl.currentTime;
-			const drift = Math.abs(actualTime - expectedTime);
-			if (drift > Player.DRIFT_TOLERANCE_MS / 1000) {
-				this.audioEl.currentTime = expectedTime;
+			const drift = expectedTime - actualTime; // positive = schedule ahead of audio
+			if (Math.abs(drift) > Player.DRIFT_TOLERANCE_MS / 1000) {
+				driftCorrectionMs = drift * 1000;
 			}
 		}
 
@@ -421,7 +431,7 @@ export class Player {
 		// Cast needed: TS narrows this.state from the early guard, but
 		// handleNext() can mutate it to "ended" at runtime.
 		if (this._playbackMode === "playing" && (this.state as PlayerState) !== "ended") {
-			this.scheduleNextAutoAdvance();
+			this.scheduleNextAutoAdvance(driftCorrectionMs);
 		}
 	}
 
@@ -524,7 +534,15 @@ export class Player {
 		}
 	}
 
-	private async handleNext(): Promise<void> {
+	/**
+	 * Advance one beat. In manual-nav mode (isLastAdvance omitted / false),
+	 * draining a pending waitForNext resolver counts as consuming the press
+	 * and the player stays on the current segment. When called from
+	 * autoAdvanceTick with isLastAdvance=true, the method forces a segment
+	 * transition after draining the resolver -- otherwise the last scheduled
+	 * advance would be consumed without ever transitioning out.
+	 */
+	private async handleNext(isLastAdvance = false): Promise<void> {
 		if (this.state !== "playing" || this.transitioning) return;
 
 		const slot = this.getCurrentSlot();
@@ -532,7 +550,7 @@ export class Player {
 
 		// Let the segment handle the press first
 		const consumed = slot.runner.triggerNext();
-		if (consumed) {
+		if (consumed && !isLastAdvance) {
 			hashRouter.write({
 				segmentId: slot.runner.segment.id,
 				beat: slot.runner.currentBeat,
@@ -541,7 +559,8 @@ export class Player {
 			return;
 		}
 
-		// Segment didn't consume -> advance to next segment
+		// Segment didn't consume, or this was the last scheduled advance
+		// for the segment -- transition to next segment.
 		const nextIndex = slot.timelineIndex + 1;
 		if (!this.timeline || nextIndex >= this.timeline.segments.length) {
 			this.state = "ended";
