@@ -1,8 +1,8 @@
 # Videowright
 
-**Turn a coding agent into a video team.**
+**Create a video with a prompt.**
 
-Videowright creates demo videos, explainer videos, and product walkthroughs end-to-end. Describe what you want to a coding agent, and it builds, previews, and exports a finished video.
+Videowright creates demo videos, explainer videos, and product walkthroughs from your coding agent. Just describe what you want and it generates your video (including audio). Iterate in chat until it's perfect.
 
 <video src="https://github.com/user-attachments/assets/236ab8d1-d5ea-4fe9-b340-e07d9dbf90a4" width="600" controls></video>
 
@@ -24,7 +24,7 @@ The agent reads the install prompt and walks you through setup.
 
 ## How Does Videowright Work?
 
-You describe the video you want. The agent writes video segments -- self-contained TypeScript modules that each render one beat of the video. You preview in the dev player (`npx videowright dev`), give feedback in chat, and the agent iterates. Videowright will generate an AI voiceover, and sync the video to match. When you're happy, export to mp4 with `npx videowright render` or screen capture with `npx videowright record`.
+You describe the video you want. The agent writes video segments -- self-contained web-components that each render one beat of the video. You preview in the dev player (`npx videowright dev`), give feedback in chat, and the agent iterates. Videowright will generate an AI voiceover, and sync the video to match. When you're happy, export to mp4 with `npx videowright render` or screen capture with `npx videowright record`.
 
 ## Styles
 
@@ -32,9 +32,9 @@ Pick one of six built-in styles, or create your own from a brand guide, referenc
 
 <img width="953" height="549" alt="Built-in style packs" src="https://github.com/user-attachments/assets/3aaeecc2-7ca4-4c5a-8ed2-9adc4e226b2d" />
 
-### Style Examples
+### Style Demo
 
-Two examples: both generated from the same video description, but targeting two different styles. Both videos were generated in a single prompt:
+Two demo videos: the same prompt, different styles.
 
 <table><tr>
 <td width="45%">
@@ -44,7 +44,7 @@ https://github.com/user-attachments/assets/1960c3e8-a3f2-4028-91ab-afbc79a53fca
 </td>
 <td width="45%">
   
-https://github.com/user-attachments/assets/5df0bde1-b759-4ba8-aeef-4dddc8e60c24
+https://github.com/user-attachments/assets/d2454377-9f02-4b1c-af9a-e59c9a0c8912
 
 </td>
 </tr></table>
