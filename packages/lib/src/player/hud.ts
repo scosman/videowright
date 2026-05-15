@@ -239,7 +239,7 @@ export function createHud(options?: HudOptions): Hud {
 			const inner = document.createElement("div");
 			inner.className = "vw-hud-inner";
 
-			// Play/pause button (shown in dev and record modes, not render)
+			// Play/pause button (shown in dev mode, not render)
 			if (state.mode !== "render" && playBtn) {
 				playBtn.textContent = state.playbackMode === "playing" ? "⏸" : "▶";
 				playBtn.title = state.playbackMode === "playing" ? "Pause" : "Play";

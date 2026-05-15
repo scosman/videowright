@@ -111,8 +111,7 @@ If `package.json` does **not** exist in the current directory, write one with th
   "type": "module",
   "scripts": {
     "dev": "npx videowright dev",
-    "render": "npx videowright render",
-    "record": "npx videowright record"
+    "render": "npx videowright render"
   }
 }
 ```
@@ -129,7 +128,7 @@ If `package.json` **does** exist:
 4. If `"type"` exists with a value other than `"module"`: stop and tell the user exactly:
    > Your package.json has `"type": "<current-value>"`. Videowright requires `"type": "module"` for ESM imports. Should I change it?
    If the user agrees, update the field. If not, stop the install -- Videowright will not work without ESM.
-5. Check for `"scripts"` and add `"dev"`, `"render"`, and `"record"` entries if they do not already exist. Do not overwrite existing script entries.
+5. Check for `"scripts"` and add `"dev"` and `"render"` entries if they do not already exist. Do not overwrite existing script entries.
 
 ### 4b: Install Videowright
 

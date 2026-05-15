@@ -4,10 +4,11 @@
 
 You were routed here from the intent dispatch table because the user wants to export a video to MP4.
 
-Videowright has two commands for producing video output:
+Videowright has one command for producing video output:
 
 - **`render`** -- deterministic frame-by-frame MP4 export via Playwright + ffmpeg. This is the only command that produces an MP4 file.
-- **`record`** -- auto-advance browser playback for visual review or external screen capture. No MP4 is produced. The user runs their own screen-capture software over the browser window.
+
+For screen recording, use the dev server and your own screen-capture software (see below).
 
 ## `videowright render`
 
@@ -44,8 +45,6 @@ For screen recording, use `videowright dev` and open the video view in a browser
 3. Use **← →** keys to advance manually and **Space** to play/pause.
 4. Run your screen-capture software over the browser window.
 
-The `videowright record` command has been removed. The hide-HUD tab in the video view replaces the old reduced-HUD record mode.
-
 ## Render options
 
 | Flag | Default | Purpose |
@@ -60,7 +59,10 @@ The `videowright record` command has been removed. The hide-HUD tab in the video
 
 ### Positional argument
 
-Both `render` and `record` accept an optional positional argument for the timeline path. Without it, they use the same default discovery as `videowright dev` (most recently modified `timeline.ts` under `videos/`).
+`render` accepts an optional positional argument -- either a slug (directory name under `videos/`) or a path to a `timeline.ts`. When no argument is given:
+- **Single video**: renders it automatically.
+- **Multiple videos**: prompts for selection (interactive TTY) or lists slug commands (non-interactive/CI).
+- **No videos**: errors with guidance.
 
 ## Dependencies
 
@@ -80,8 +82,6 @@ Install ffmpeg:
 ```bash
 npx playwright install chromium
 ```
-
-`record` does **not** require Playwright -- it uses the standard dev server and the user's own browser.
 
 ## Audio
 
@@ -106,16 +106,6 @@ npx videowright render
 ```
 
 If no voiceover is active (no `--voiceover` flag and no `default_voiceover`), the output is silent.
-
-### Record mode voiceover
-
-`record` also accepts `--voiceover`:
-
-```bash
-npx videowright record --voiceover v1
-```
-
-Audio plays through the browser's `<audio>` element during record mode. The play button starts auto-advance with synced audio.
 
 ## Output
 

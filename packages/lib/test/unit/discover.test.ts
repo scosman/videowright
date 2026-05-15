@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { findConfig, findTimeline } from "../../src/cli/discover.js";
+import { findConfig, findTimeline, resolveSlugOrPath } from "../../src/cli/discover.js";
 import { UserError } from "../../src/cli/errors.js";
 
 let tmpDir: string;
@@ -103,6 +103,59 @@ describe("findTimeline", () => {
 		mkdirSync(join(tmpDir, "videos", "alpha"), { recursive: true });
 		mkdirSync(join(tmpDir, "videos", "beta"), { recursive: true });
 		const result = findTimeline(tmpDir);
+		expect(result).toBeNull();
+	});
+});
+
+describe("resolveSlugOrPath", () => {
+	it("resolveSlugOrPath_slug_match", () => {
+		const videoDir = join(tmpDir, "videos", "demo");
+		mkdirSync(videoDir, { recursive: true });
+		writeFileSync(join(videoDir, "timeline.ts"), "export default {};", "utf-8");
+
+		const result = resolveSlugOrPath("demo", tmpDir);
+		expect(result).not.toBeNull();
+		expect(result).toContain("videos");
+		expect(result).toContain("demo");
+		expect(result).toContain("timeline.ts");
+	});
+
+	it("resolveSlugOrPath_path_match", () => {
+		const videoDir = join(tmpDir, "videos", "demo");
+		mkdirSync(videoDir, { recursive: true });
+		const timelinePath = join(videoDir, "timeline.ts");
+		writeFileSync(timelinePath, "export default {};", "utf-8");
+
+		const result = resolveSlugOrPath("videos/demo/timeline.ts", tmpDir);
+		expect(result).not.toBeNull();
+		expect(result).toContain("timeline.ts");
+	});
+
+	it("resolveSlugOrPath_slug_wins_over_path", () => {
+		// Create a slug-based video AND a file at the same name
+		const videoDir = join(tmpDir, "videos", "demo");
+		mkdirSync(videoDir, { recursive: true });
+		writeFileSync(join(videoDir, "timeline.ts"), "export default {};", "utf-8");
+
+		// Also create a file literally named "demo" at the root
+		writeFileSync(join(tmpDir, "demo"), "some file", "utf-8");
+
+		const result = resolveSlugOrPath("demo", tmpDir);
+		expect(result).not.toBeNull();
+		// Should resolve to the slug (videos/demo/timeline.ts), not the literal file
+		expect(result).toContain("videos");
+		expect(result).toContain("timeline.ts");
+	});
+
+	it("resolveSlugOrPath_neither", () => {
+		const result = resolveSlugOrPath("nonexistent", tmpDir);
+		expect(result).toBeNull();
+	});
+
+	it("resolveSlugOrPath_slug_no_timeline", () => {
+		// Directory exists but no timeline.ts
+		mkdirSync(join(tmpDir, "videos", "empty_video"), { recursive: true });
+		const result = resolveSlugOrPath("empty_video", tmpDir);
 		expect(result).toBeNull();
 	});
 });

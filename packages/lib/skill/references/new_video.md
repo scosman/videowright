@@ -22,7 +22,7 @@ Before handing off to the build phase, you need all of the following. Ask only f
 
 When the user picks **voiceover**, note that Videowright supports integrated voiceover audio:
 
-- Audio plays in `dev` and `record` modes via an HTML `<audio>` element synced to the player.
+- Audio plays in the dev server via an HTML `<audio>` element synced to the player.
 - `render` muxes audio into the output MP4 via ffmpeg.
 - The voiceover flow (AI-generated or manual) is handled after the video is scaffolded. See [voiceover.md](voiceover.md).
 

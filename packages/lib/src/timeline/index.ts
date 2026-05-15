@@ -167,7 +167,7 @@ export function validateSegmentAdvances(
 
 		if (!advances || !Array.isArray(advances) || advances.length === 0) {
 			errors.push(
-				`Segment "${entry.id}": missing or empty 'advances' array. Every segment must declare advances for render/record timing.`,
+				`Segment "${entry.id}": missing or empty 'advances' array. Every segment must declare advances for render timing.`,
 			);
 			continue;
 		}

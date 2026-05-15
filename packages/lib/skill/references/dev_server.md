@@ -83,7 +83,7 @@ When the video has a `default_voiceover` set in `timeline.ts`, the dev server lo
 
 If no `default_voiceover` is set, the play button still works — it auto-advances silently using `default_timing` or segment `advances`.
 
-`dev` does not accept a `--voiceover` flag. It always uses `default_voiceover` from `timeline.ts`. To test a specific voiceover, set it as the default or use `record --voiceover <slug>`.
+`dev` does not accept a `--voiceover` flag. It always uses `default_voiceover` from `timeline.ts`. To test a specific voiceover, set it as the default.
 
 ## HUD (Heads-Up Display)
 

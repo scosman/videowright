@@ -27,11 +27,13 @@ import { loadVoiceover } from "../timeline/loadVoiceover.js";
 import type { ResolvedTiming, TimingSegment } from "../timeline/resolveTiming.js";
 import { resolveTiming } from "../timeline/resolveTiming.js";
 import { validateTiming, validateVoiceover } from "../timeline/validateTiming.js";
-import type { Config, Timeline, Voiceover } from "../types.js";
-import { discoverProject } from "./discover_project.js";
+import type { Config, Timeline, VideoSummary, Voiceover } from "../types.js";
+import { findConfig, resolveSlugOrPath } from "./discover.js";
+import { discoverAllVideos } from "./discover_project.js";
 import { UserError } from "./errors.js";
 import { buildFfmpegArgs, findFfmpeg, spawnFfmpeg, writeWithBackpressure } from "./ffmpeg.js";
 import { ensurePlaywright } from "./playwright_check.js";
+import { promptVideoSelection } from "./prompt.js";
 import { TIME_SHIM_SOURCE } from "./time_shim.js";
 import { loadModule } from "./ts_loader.js";
 
@@ -111,6 +113,35 @@ export function resolveRenderParams(
 	};
 }
 
+/**
+ * Resolve which timeline to render when no positional arg is given.
+ * Exported for testability -- the branching logic depends on video count and TTY state.
+ *
+ * @returns The absolute timelinePath to render.
+ */
+export async function resolveRenderTarget(
+	project: { videos: VideoSummary[] },
+	isTTY: boolean,
+): Promise<string> {
+	if (project.videos.length === 0) {
+		throw new UserError(
+			"No videos found.",
+			"Ask your coding agent to create one (e.g., /videowright new video).",
+		);
+	}
+
+	if (project.videos.length === 1) {
+		return project.videos[0].timelinePath;
+	}
+
+	if (!isTTY) {
+		const slugList = project.videos.map((v) => `  npx videowright render ${v.slug}`).join("\n");
+		throw new UserError(`Multiple videos found. Specify one explicitly:\n${slugList}`);
+	}
+
+	return promptVideoSelection(project.videos);
+}
+
 export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	const { cwd, positional, verbose } = opts;
 	const output = opts.output ?? "output.mp4";
@@ -122,7 +153,28 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	const pw = await ensurePlaywright();
 
 	// 2. Find config + timeline
-	const { configPath, timelinePath } = discoverProject(cwd, positional, "render");
+	const configPath = findConfig(cwd);
+	if (!configPath) {
+		throw new UserError(
+			`No videowright.config.ts found at ${cwd}`,
+			"The Videowright skill can scaffold one. Run setup first.",
+		);
+	}
+
+	let timelinePath: string;
+
+	if (positional) {
+		const resolved = resolveSlugOrPath(positional, cwd);
+		if (!resolved) {
+			throw new UserError(
+				`No video matching "${positional}" — not a slug under videos/, not a valid path.`,
+			);
+		}
+		timelinePath = resolved;
+	} else {
+		const project = await discoverAllVideos(cwd);
+		timelinePath = await resolveRenderTarget(project, !!process.stdin.isTTY);
+	}
 
 	// Load config and timeline
 	const configMod = await loadModule(configPath);

@@ -259,7 +259,6 @@ describe("skill file structure", () => {
 		expect(pkg.type).toBe("module");
 		expect(pkg.scripts?.dev).toBeDefined();
 		expect(pkg.scripts?.render).toBeDefined();
-		expect(pkg.scripts?.record).toBeDefined();
 	});
 
 	it("install template tsconfig.json exists with required fields", () => {

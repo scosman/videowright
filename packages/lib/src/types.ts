@@ -29,7 +29,7 @@ export interface SegmentSpec {
 	/** Unique id matching the segment's folder name under segments/. */
 	id: string;
 	/**
-	 * Segment-relative seconds at which to fire each 'next' advance during render/record.
+	 * Segment-relative seconds at which to fire each 'next' advance during render.
 	 * Must be monotonically increasing. All values must be positive numbers.
 	 *
 	 * Length = number of triggerNext() calls required to traverse this segment, INCLUDING

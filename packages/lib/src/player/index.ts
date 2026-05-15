@@ -946,7 +946,7 @@ export class Player {
 
 	/**
 	 * Set document.body.dataset.vwState to the current player state.
-	 * Used by record/render drivers to detect when the player is idle (not transitioning)
+	 * Used by the render driver to detect when the player is idle (not transitioning)
 	 * and ready for the next action.
 	 *
 	 * States: "idle" | "loading" | "playing" | "transitioning" | "ended" | "errored"

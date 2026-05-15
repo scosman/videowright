@@ -1,6 +1,6 @@
 /**
  * Shared project discovery: finds config and timeline, throws UserError on missing.
- * Used by dev, script, record, and render commands.
+ * Used by dev, script, and render commands.
  */
 
 import { statSync } from "node:fs";
@@ -21,7 +21,7 @@ export interface DiscoveredProject {
  *
  * @param cwd - Consumer repo root
  * @param positional - Optional explicit timeline path
- * @param commandName - Command name for error messages (e.g. "dev", "record")
+ * @param commandName - Command name for error messages (e.g. "dev", "render")
  */
 export function discoverProject(
 	cwd: string,

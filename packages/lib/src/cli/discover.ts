@@ -47,6 +47,28 @@ export function findAllTimelines(root: string): string[] {
 }
 
 /**
+ * Resolve a positional arg to a timeline path.
+ * - First tries it as a slug (videos/<arg>/timeline.ts exists).
+ * - Then tries it as a literal path (resolved relative to root).
+ * - Returns the absolute path if resolved, null if neither works.
+ */
+export function resolveSlugOrPath(arg: string, root: string): string | null {
+	// Try as slug first
+	const slugPath = join(root, "videos", arg, "timeline.ts");
+	if (existsSync(slugPath)) {
+		return resolve(slugPath);
+	}
+
+	// Try as literal path
+	const literalPath = resolve(root, arg);
+	if (existsSync(literalPath)) {
+		return resolve(literalPath);
+	}
+
+	return null;
+}
+
+/**
  * Find a timeline file.
  * - If hint is provided, resolve relative to cwd. Returns absolute path if found.
  *   Throws UserError if the explicit path does not exist.

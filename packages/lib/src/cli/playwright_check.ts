@@ -1,6 +1,6 @@
 /**
  * Playwright availability check.
- * Playwright is an optional runtime dependency -- only needed for record/render commands.
+ * Playwright is an optional runtime dependency -- only needed for the render command.
  * Dynamic import so consumers who only use dev/script don't pay the cost.
  */
 
@@ -24,7 +24,7 @@ export interface PlaywrightBrowserContext {
 
 /**
  * Minimal stub of Playwright's Page interface.
- * Intentionally narrow -- only the methods record.ts and render.ts actually use.
+ * Intentionally narrow -- only the methods render.ts actually uses.
  * Playwright's real `evaluate` accepts arg-passing overloads; we don't need them.
  */
 export interface PlaywrightPage {

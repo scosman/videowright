@@ -37,7 +37,7 @@ const HELP_TEXT = `Usage: videowright <command> [options]
 Commands:
   dev             Start the dev server (homepage at http://localhost:5173/)
   script [path]   Generate voiceover script
-  render [path]   Deterministic frame-by-frame export via JS time injection + ffmpeg
+  render [video]  Deterministic frame-by-frame export via JS time injection + ffmpeg
 
 Options:
   --port <n>            Dev server port (default: 5173)

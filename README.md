@@ -24,7 +24,7 @@ The agent reads the install prompt and walks you through setup.
 
 ## How Does Videowright Work?
 
-You describe the video you want. The agent writes video segments -- self-contained web-components that each render one beat of the video. You preview in the dev player (`npx videowright dev`), give feedback in chat, and the agent iterates. Videowright will generate an AI voiceover, and sync the video to match. When you're happy, export to mp4 with `npx videowright render` or screen capture with `npx videowright record`.
+You describe the video you want. The agent writes video segments -- self-contained web-components that each render one beat of the video. You preview in the dev server (`npx videowright dev`), give feedback in chat, and the agent iterates. Videowright will generate an AI voiceover, and sync the video to match. When you're happy, export with `npx videowright render`.
 
 ## Styles
 
@@ -66,13 +66,12 @@ When you change the audio -- re-record a line, change pacing, swap voices -- the
 
 Just chat with videowright about edits you want to make, and it does the rest. It can be stylistic, content, order or pacing.
 
-## CLI and Capture
+## CLI
 
-Three CLI modes, depending on where you are in the workflow:
+Two CLI modes, depending on where you are in the workflow:
 
-- **`npx videowright dev`** -- Dev server with hot reload. For building and iterating, not recording.
-- **`npx videowright record`** -- Auto-advancing playback for external screen capture. Use when narrating live or controlling pacing manually.
-- **`npx videowright render`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect export. Will mux audio file into the output.
+- **`npx videowright dev`** -- Dev server with a homepage listing all videos in the project. Click a video to open the player with hot reload. Hide the HUD for a clean screen-recording surface.
+- **`npx videowright render [slug]`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect output. Pass a video slug (directory name under `videos/`) or omit it to be prompted. In a single-video project, the video is rendered automatically.
 
 ## Multi-Video Projects
 

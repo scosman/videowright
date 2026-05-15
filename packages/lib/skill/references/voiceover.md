@@ -6,7 +6,7 @@ You were routed here from the intent dispatch table or from another workflow tha
 
 ## Overview
 
-Videowright supports voiceover audio integrated into video playback. A voiceover consists of an audio file (mp3 or wav), a `Timing` that syncs segment advances to the audio, and metadata stored in a typed `voiceover.ts` file. Audio plays in `dev` and `record` modes via an HTML `<audio>` element and is muxed into MP4 output by `render` via ffmpeg.
+Videowright supports voiceover audio integrated into video playback. A voiceover consists of an audio file (mp3 or wav), a `Timing` that syncs segment advances to the audio, and metadata stored in a typed `voiceover.ts` file. Audio plays in the dev server via an HTML `<audio>` element and is muxed into MP4 output by `render` via ffmpeg.
 
 Two production flows are supported:
 
@@ -164,12 +164,11 @@ When using `default_voiceover`, the `audio_file` and `provider_timing_file` path
 
 ## CLI usage
 
-`render` and `record` accept `--voiceover`:
+`render` accepts `--voiceover`:
 
 ```bash
 # Use a specific voiceover
 npx videowright render --voiceover v1
-npx videowright record --voiceover narrator-warm
 
 # Suppress voiceover (ignore default_voiceover, use default_timing or segment advances)
 npx videowright render --voiceover none
@@ -185,7 +184,6 @@ npx videowright render
 | Mode | Audio mechanism | Behavior |
 |---|---|---|
 | `dev` | HTML `<audio>` element | Play button in HUD starts auto-advance with synced audio. Manual nav pauses audio. |
-| `record` | HTML `<audio>` element | Same as dev. User runs external screen capture over the browser. |
 | `render` | ffmpeg audio mux | Audio file is muxed into the output MP4 as a second input to ffmpeg. No `<audio>` element. |
 
 ## Timing precedence
