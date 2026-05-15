@@ -18,10 +18,8 @@ export interface PlayerOptions {
 	renderMode?: boolean;
 	/** Frames per second for render mode clock. Default 60. */
 	fps?: number;
-	/** Vite-served audio file URL for voiceover playback (dev/record only). */
+	/** Vite-served audio file URL for voiceover playback (dev only). */
 	audioFile?: string;
-	/** Record mode: reduced HUD showing only play button and end-of-timeline. */
-	recordMode?: boolean;
 	/**
 	 * Fully resolved per-segment timing for auto-advance.
 	 * Keys are segment ids; values are advance times in seconds (segment-relative).
@@ -45,7 +43,6 @@ export class Player {
 		renderMode: boolean;
 		fps: number;
 		audioFile?: string;
-		recordMode: boolean;
 		resolvedTiming?: Record<string, number[]>;
 	};
 	private state: PlayerState = "idle";
@@ -80,7 +77,6 @@ export class Player {
 			renderMode: options?.renderMode ?? false,
 			fps: options?.fps ?? 60,
 			audioFile: options?.audioFile,
-			recordMode: options?.recordMode ?? false,
 			resolvedTiming: options?.resolvedTiming,
 		};
 
@@ -516,6 +512,9 @@ export class Player {
 				case "toggleHud":
 					this.hud.toggle();
 					break;
+				case "togglePlay":
+					this.togglePlayback();
+					break;
 			}
 		} else if (cmd.kind === "jumpTo") {
 			if (this._playbackMode === "playing") {
@@ -934,7 +933,6 @@ export class Player {
 			mode: this.options.renderMode ? "render" : "interactive",
 			ended: this.state === "ended",
 			playbackMode: this._playbackMode,
-			recordMode: this.options.recordMode,
 		};
 
 		this.hud.update(hudState);

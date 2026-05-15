@@ -8,6 +8,17 @@
 
 import { describe, expect, it, vi } from "vitest";
 
+// Mock virtual modules used by video_view.ts
+vi.mock("virtual:vw-globals", () => ({
+	timelinePath: "/fake/timeline.ts",
+	consumerRoot: "/fake/root",
+	audioFile: undefined,
+	resolvedTiming: undefined,
+	voiceoverNone: true,
+	renderFps: undefined,
+}));
+vi.mock("virtual:vw-segments", () => ({ default: {} }));
+
 // Mock router.navigate
 vi.mock("../../src/cli/entry/router.js", () => ({
 	navigate: vi.fn(),
@@ -17,6 +28,15 @@ vi.mock("../../src/cli/entry/router.js", () => ({
 vi.mock("../../src/cli/entry/dev_frame.js", () => ({
 	applyDevFrameSize: vi.fn(),
 	installHudKeyListener: vi.fn(() => vi.fn()),
+	toggleDevHud: vi.fn(() => true),
+}));
+
+// Mock download modal and hide-HUD tab to isolate top bar tests
+vi.mock("../../src/cli/entry/components/download_modal.js", () => ({
+	renderDownloadModal: vi.fn(() => vi.fn()),
+}));
+vi.mock("../../src/cli/entry/components/hide_hud_tab.js", () => ({
+	renderHideHudTab: vi.fn(() => document.createElement("button")),
 }));
 
 // Mock index.js re-exports to provide stubs for the build helpers
@@ -89,5 +109,21 @@ describe("video view top bar", () => {
 
 		const title = el.querySelector(".vw-top-bar__title");
 		expect(title?.textContent).toBe("Another Video");
+	});
+
+	it("video_view_top_bar_shows_download_icon", () => {
+		const el = renderVideoView(projectInfo, "demo_video");
+		const dlBtn = el.querySelector(".vw-top-bar__icon-btn");
+		expect(dlBtn).not.toBeNull();
+		expect(dlBtn?.getAttribute("aria-label")).toBe("Download video");
+	});
+
+	it("video_view_has_hide_hud_tab", () => {
+		const el = renderVideoView(projectInfo, "demo_video");
+		const hudContainer = el.querySelector("#dev-hud-container");
+		expect(hudContainer).not.toBeNull();
+		// hide_hud_tab.ts is mocked to return a <button>; check it's inside the container
+		const button = hudContainer?.querySelector("button");
+		expect(button).not.toBeNull();
 	});
 });

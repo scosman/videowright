@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-	iconArrowLeft,
 	iconCheck,
 	iconChevronDown,
-	iconChevronRight,
 	iconChevronUp,
 	iconCopy,
 	iconDownload,
@@ -16,10 +14,8 @@ describe("icons", () => {
 		["iconCopy", iconCopy],
 		["iconCheck", iconCheck],
 		["iconX", iconX],
-		["iconChevronRight", iconChevronRight],
 		["iconChevronDown", iconChevronDown],
 		["iconChevronUp", iconChevronUp],
-		["iconArrowLeft", iconArrowLeft],
 	] as const;
 
 	for (const [name, fn] of icons) {

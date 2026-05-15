@@ -22,18 +22,10 @@ export function iconX(): string {
 	return `<svg ${ICON_ATTRS}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 }
 
-export function iconChevronRight(): string {
-	return `<svg ${ICON_ATTRS}><polyline points="9 18 15 12 9 6"/></svg>`;
-}
-
 export function iconChevronDown(): string {
 	return `<svg ${ICON_ATTRS}><polyline points="6 9 12 15 18 9"/></svg>`;
 }
 
 export function iconChevronUp(): string {
 	return `<svg ${ICON_ATTRS}><polyline points="18 15 12 9 6 15"/></svg>`;
-}
-
-export function iconArrowLeft(): string {
-	return `<svg ${ICON_ATTRS}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`;
 }

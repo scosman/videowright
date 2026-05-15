@@ -106,7 +106,7 @@ Press **H** to toggle the HUD on and off. The HUD is visible by default.
 
 The `?hideHud=1` query parameter starts with the HUD hidden. This is used internally by `videowright render` so the HUD does not appear in exported frames.
 
-The `?recordMode=1` query parameter is used by `videowright record` to start the player in record mode with reduced HUD chrome (only play button and end-of-timeline badge visible).
+A small hide-HUD tab is anchored to the top edge of the HUD strip. Clicking it (or pressing H) toggles the HUD on and off. This is useful for users who want to screen-record the browser window without HUD clutter.
 
 ### Error display
 

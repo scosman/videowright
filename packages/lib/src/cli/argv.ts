@@ -5,7 +5,7 @@
 
 import { parseArgs } from "node:util";
 
-export type Command = "dev" | "script" | "record" | "render" | "help" | "version";
+export type Command = "dev" | "script" | "render" | "help" | "version";
 
 export interface ParsedArgs {
 	command: Command;
@@ -22,14 +22,14 @@ export interface ParsedArgs {
 	};
 }
 
-const KNOWN_COMMANDS = new Set<string>(["dev", "script", "record", "render"]);
+const KNOWN_COMMANDS = new Set<string>(["dev", "script", "render"]);
 
 /** Flags that only apply to the `render` command. Rejected on all other commands. */
 const RENDER_ONLY_FLAGS = ["width", "height", "fps", "output"] as const;
 const RENDER_ONLY_COMMANDS = new Set<Command>(["render"]);
 
-/** Flags that apply to render and record. */
-const VOICEOVER_COMMANDS = new Set<Command>(["render", "record"]);
+/** Flags that apply to render. */
+const VOICEOVER_COMMANDS = new Set<Command>(["render"]);
 
 export class ArgvError extends Error {
 	override name = "ArgvError";
@@ -134,7 +134,7 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 	// Reject --voiceover on commands that don't support it
 	const voiceover = values.voiceover as string | undefined;
 	if (voiceover !== undefined && !VOICEOVER_COMMANDS.has(command)) {
-		throw new ArgvError(`--voiceover is only valid for the "render" and "record" commands`);
+		throw new ArgvError(`--voiceover is only valid for the "render" command`);
 	}
 
 	return {

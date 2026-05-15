@@ -11,6 +11,11 @@ vi.mock("../../src/cli/entry/router.js", () => ({
 	navigate: vi.fn(),
 }));
 
+// Mock download modal
+vi.mock("../../src/cli/entry/components/download_modal.js", () => ({
+	renderDownloadModal: vi.fn(() => vi.fn()),
+}));
+
 function makeVideo(overrides: Partial<VideoSummary> = {}): VideoSummary {
 	return {
 		slug: "demo_video",
@@ -103,5 +108,20 @@ describe("renderHomepage", () => {
 		const el = renderHomepage(makeProjectInfo(videos));
 		const heading = el.querySelector(".vw-homepage__heading");
 		expect(heading?.textContent).toBe("Videos");
+	});
+
+	it("homepage_download_icon_opens_modal", async () => {
+		const { renderDownloadModal } = await import(
+			"../../src/cli/entry/components/download_modal.js"
+		);
+		const videos = [makeVideo({ slug: "my_vid", title: "My Video" })];
+		const el = renderHomepage(makeProjectInfo(videos));
+
+		const dlBtn = el.querySelector(".vw-card__download") as HTMLButtonElement;
+		dlBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+		expect(renderDownloadModal).toHaveBeenCalledWith(
+			expect.objectContaining({ slug: "my_vid", title: "My Video" }),
+		);
 	});
 });

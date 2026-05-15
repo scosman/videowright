@@ -4,6 +4,7 @@
  */
 
 import type { ProjectInfo } from "../../../types.js";
+import { renderDownloadModal } from "../components/download_modal.js";
 import { renderEmptyState } from "../components/empty_state.js";
 import { renderTopBar } from "../components/top_bar.js";
 import { renderVideoCard } from "../components/video_card.js";
@@ -50,7 +51,11 @@ export function renderHomepage(projectInfo: ProjectInfo): HTMLElement {
 			style: video.style,
 			onOpen: () => navigate(`/${video.slug}/`),
 			onDownload: () => {
-				// Download modal wiring comes in Phase 3
+				renderDownloadModal({
+					slug: video.slug,
+					title: video.title,
+					onClose: () => {},
+				});
 			},
 		});
 		grid.appendChild(card);

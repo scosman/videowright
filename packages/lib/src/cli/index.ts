@@ -1,6 +1,6 @@
 /**
  * videowright CLI main logic.
- * Parses argv, dispatches to dev, script, record, and render subcommands.
+ * Parses argv, dispatches to dev, script, and render subcommands.
  * The binary entry point is bin.ts (not this file).
  */
 
@@ -37,7 +37,6 @@ const HELP_TEXT = `Usage: videowright <command> [options]
 Commands:
   dev             Start the dev server (homepage at http://localhost:5173/)
   script [path]   Generate voiceover script
-  record [path]   Auto-advance playback for visual review or external screen capture
   render [path]   Deterministic frame-by-frame export via JS time injection + ffmpeg
 
 Options:
@@ -47,7 +46,7 @@ Options:
   --height <n>          Video height in pixels (render only, default: 1080)
   --fps <n>             Frames per second (render only, default: 60)
   --output <path>       Output file path (render only, default: output.mp4)
-  --voiceover <slug>    Use voiceover from voiceovers/<slug>/ (render, record)
+  --voiceover <slug>    Use voiceover from voiceovers/<slug>/ (render)
   --voiceover none      Disable voiceover (ignore default_voiceover)
   --verbose             Show extra detail
   --help                Show this help
@@ -126,30 +125,6 @@ export async function main(argv?: string[]): Promise<number> {
 			} else {
 				process.stdout.write(result.markdown);
 			}
-			return 0;
-		}
-
-		if (command === "record") {
-			const { runRecord } = await import("./record.js");
-			const result = await runRecord({
-				cwd,
-				positional,
-				verbose: flags.verbose,
-				voiceover: flags.voiceover,
-			});
-			console.log(
-				`\n  videowright record running at ${result.url}\n  No mp4 output -- use "videowright render" for export.\n`,
-			);
-			// Keep alive until Ctrl-C (same pattern as dev)
-			await new Promise<void>((resolve) => {
-				const onSignal = () => {
-					process.removeListener("SIGINT", onSignal);
-					process.removeListener("SIGTERM", onSignal);
-					result.close().then(() => resolve());
-				};
-				process.on("SIGINT", onSignal);
-				process.on("SIGTERM", onSignal);
-			});
 			return 0;
 		}
 

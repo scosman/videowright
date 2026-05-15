@@ -70,7 +70,14 @@ export function toggleDevHud(): boolean {
 		layout.style.gridTemplateRows = hudVisible ? "auto 1fr 80px" : "auto 1fr 0px";
 	}
 	if (hudContainer) {
-		hudContainer.style.display = hudVisible ? "" : "none";
+		// Hide only the inner HUD content (.vw-hud), NOT the container itself.
+		// The container must stay visible (with overflow:visible) so the
+		// hide-HUD tab — positioned at top:-8px — remains accessible when
+		// the HUD strip is collapsed.
+		const hudContent = hudContainer.querySelector(".vw-hud") as HTMLElement | null;
+		if (hudContent) {
+			hudContent.style.display = hudVisible ? "" : "none";
+		}
 	}
 
 	// Recompute scale with the new available height

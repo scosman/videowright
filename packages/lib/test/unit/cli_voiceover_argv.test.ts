@@ -14,22 +14,10 @@ describe("argv parser: --voiceover flag", () => {
 		expect(result.flags.voiceover).toBe("none");
 	});
 
-	it("record_accepts_voiceover_slug", () => {
-		const result = parseArgv(["record", "--voiceover", "v1"]);
-		expect(result.command).toBe("record");
-		expect(result.flags.voiceover).toBe("v1");
-	});
-
-	it("record_accepts_voiceover_none", () => {
-		const result = parseArgv(["record", "--voiceover", "none"]);
-		expect(result.command).toBe("record");
-		expect(result.flags.voiceover).toBe("none");
-	});
-
 	it("dev_rejects_voiceover_flag", () => {
 		expect(() => parseArgv(["dev", "--voiceover", "v1"])).toThrow(ArgvError);
 		expect(() => parseArgv(["dev", "--voiceover", "v1"])).toThrow(
-			'--voiceover is only valid for the "render" and "record" commands',
+			'--voiceover is only valid for the "render" command',
 		);
 	});
 

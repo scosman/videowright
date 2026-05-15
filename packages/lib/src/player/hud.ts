@@ -13,7 +13,6 @@ export interface HudState {
 	ended: boolean;
 	error?: { segmentId: string; message: string; stack?: string };
 	playbackMode?: "idle" | "playing";
-	recordMode?: boolean;
 }
 
 export interface HudOptions {
@@ -247,12 +246,6 @@ export function createHud(options?: HudOptions): Hud {
 				inner.appendChild(playBtn);
 			}
 
-			// In record mode, show only play button and end-of-timeline badge
-			if (state.recordMode) {
-				el.appendChild(inner);
-				return;
-			}
-
 			addItem(inner, "segment", state.segmentId);
 			addItem(inner, "beat", String(state.beat));
 			addItem(inner, "seg time", formatTime(state.segmentTime));
@@ -268,7 +261,7 @@ export function createHud(options?: HudOptions): Hud {
 
 			const keys = document.createElement("div");
 			keys.className = "vw-hud-keys";
-			keys.textContent = "→/Space: next | ←: prev | R: restart | H: HUD | 1-9: jump";
+			keys.textContent = "→: next | ←: prev | Space: play/pause | R: restart | H: HUD | 1-9: jump";
 			inner.appendChild(keys);
 
 			el.appendChild(inner);

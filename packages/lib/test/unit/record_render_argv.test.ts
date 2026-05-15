@@ -1,77 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ArgvError, parseArgv } from "../../src/cli/argv.js";
 
-describe("argv parser: record command", () => {
-	it("argv_record_no_args", () => {
-		const result = parseArgv(["record"]);
-		expect(result.command).toBe("record");
-		expect(result.positional).toBeUndefined();
-	});
-
-	it("argv_record_with_path", () => {
-		const result = parseArgv(["record", "videos/demo/timeline.ts"]);
-		expect(result.command).toBe("record");
-		expect(result.positional).toBe("videos/demo/timeline.ts");
-	});
-
-	it("argv_record_with_verbose", () => {
-		const result = parseArgv(["record", "--verbose"]);
-		expect(result.command).toBe("record");
-		expect(result.flags.verbose).toBe(true);
-	});
-
-	it("argv_record_with_path_and_verbose", () => {
-		const result = parseArgv(["record", "videos/demo/timeline.ts", "--verbose"]);
-		expect(result.command).toBe("record");
-		expect(result.positional).toBe("videos/demo/timeline.ts");
-		expect(result.flags.verbose).toBe(true);
-	});
-
-	it("argv_record_rejects_output_flag", () => {
-		expect(() => parseArgv(["record", "--output", "foo.mp4"])).toThrow(ArgvError);
-		expect(() => parseArgv(["record", "--output", "foo.mp4"])).toThrow(
-			'--output is only valid for the "render" command',
-		);
-	});
-
-	it("argv_record_rejects_width_flag", () => {
-		expect(() => parseArgv(["record", "--width", "1920"])).toThrow(ArgvError);
-		expect(() => parseArgv(["record", "--width", "1920"])).toThrow(
-			'--width is only valid for the "render" command',
-		);
-	});
-
-	it("argv_record_rejects_height_flag", () => {
-		expect(() => parseArgv(["record", "--height", "1080"])).toThrow(ArgvError);
-		expect(() => parseArgv(["record", "--height", "1080"])).toThrow(
-			'--height is only valid for the "render" command',
-		);
-	});
-
-	it("argv_record_rejects_fps_flag", () => {
-		expect(() => parseArgv(["record", "--fps", "30"])).toThrow(ArgvError);
-		expect(() => parseArgv(["record", "--fps", "30"])).toThrow(
-			'--fps is only valid for the "render" command',
-		);
-	});
-
-	it("argv_record_with_voiceover_slug", () => {
-		const result = parseArgv(["record", "--voiceover", "narrator-warm"]);
-		expect(result.command).toBe("record");
-		expect(result.flags.voiceover).toBe("narrator-warm");
-	});
-
-	it("argv_record_with_voiceover_none", () => {
-		const result = parseArgv(["record", "--voiceover", "none"]);
-		expect(result.command).toBe("record");
-		expect(result.flags.voiceover).toBe("none");
-	});
-
-	it("argv_record_with_voiceover_and_path", () => {
-		const result = parseArgv(["record", "videos/demo/timeline.ts", "--voiceover", "v1"]);
-		expect(result.command).toBe("record");
-		expect(result.positional).toBe("videos/demo/timeline.ts");
-		expect(result.flags.voiceover).toBe("v1");
+describe("argv parser: record command removed", () => {
+	it("argv_record_is_now_unknown", () => {
+		expect(() => parseArgv(["record"])).toThrow(ArgvError);
+		expect(() => parseArgv(["record"])).toThrow("Unknown command: record");
 	});
 });
 

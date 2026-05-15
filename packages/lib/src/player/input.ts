@@ -8,6 +8,7 @@ export type PlayerCommand =
 	| "prev"
 	| "restart"
 	| "toggleHud"
+	| "togglePlay"
 	| { kind: "jumpTo"; index: number };
 
 const SWIPE_THRESHOLD = 50;
@@ -26,9 +27,12 @@ export function attachInput(host: HTMLElement, emit: (cmd: PlayerCommand) => voi
 
 		switch (e.key) {
 			case "ArrowRight":
-			case " ":
 				e.preventDefault();
 				emit("next");
+				break;
+			case " ":
+				e.preventDefault();
+				emit("togglePlay");
 				break;
 			case "ArrowLeft":
 				e.preventDefault();

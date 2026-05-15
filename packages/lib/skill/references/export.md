@@ -35,29 +35,16 @@ npx videowright render videos/my_video/timeline.ts
 - **Determinism**: Fully deterministic -- frames are byte-identical across runs.
 - **Best for**: Final exports, CI pipelines, videos where reproducibility matters.
 
-## `videowright record`
+## Screen Recording
 
-Auto-advance playback in the browser for visual review or external screen capture.
+For screen recording, use `videowright dev` and open the video view in a browser. The download modal (accessible via the download icon in the top bar or on homepage cards) provides instructions for screen recording:
 
-```bash
-npx videowright record
-npx videowright record videos/my_video/timeline.ts
-```
+1. Open the video in the dev server.
+2. Press **H** or click the hide-HUD tab to hide the HUD.
+3. Use **← →** keys to advance manually and **Space** to play/pause.
+4. Run your screen-capture software over the browser window.
 
-### How it works
-
-1. Boots the dev server on an auto-assigned port.
-2. Prints a URL with `?recordMode=1` (reduced HUD for clean capture).
-3. The user opens the URL in their browser.
-4. A play button in the HUD starts auto-advance with synced audio (if a voiceover is active). The user can also navigate manually with keyboard/mouse (same controls as `dev`).
-5. The user runs their own screen-capture software over the browser window.
-
-### Characteristics
-
-- **Mode**: interactive (same as `dev`).
-- **No MP4 output.** For MP4 export, use `render`.
-- **Audio**: plays through browser `<audio>` element when a voiceover is active.
-- **Best for**: Quick visual review, screen recording with external tools.
+The `videowright record` command has been removed. The hide-HUD tab in the video view replaces the old reduced-HUD record mode.
 
 ## Render options
 

@@ -226,6 +226,8 @@ describe("toggleDevHud", () => {
 	let host: HTMLDivElement;
 	let scaleContainer: HTMLDivElement;
 
+	let hudContent: HTMLDivElement;
+
 	beforeEach(() => {
 		_resetHudVisible();
 
@@ -235,6 +237,13 @@ describe("toggleDevHud", () => {
 
 		hudContainer = document.createElement("div");
 		hudContainer.id = "dev-hud-container";
+		hudContainer.style.overflow = "visible";
+
+		// Inner HUD content element (the one that gets hidden)
+		hudContent = document.createElement("div");
+		hudContent.className = "vw-hud";
+		hudContainer.appendChild(hudContent);
+
 		document.body.appendChild(hudContainer);
 
 		scaleContainer = document.createElement("div");
@@ -284,15 +293,23 @@ describe("toggleDevHud", () => {
 		expect(layout.style.gridTemplateRows).toBe("auto 1fr 80px");
 	});
 
-	it("hides HUD container via display:none when toggling off", () => {
+	it("hides HUD content via display:none when toggling off", () => {
 		toggleDevHud();
-		expect(hudContainer.style.display).toBe("none");
+		expect(hudContent.style.display).toBe("none");
 	});
 
-	it("restores HUD container display when toggling on", () => {
+	it("restores HUD content display when toggling on", () => {
 		toggleDevHud();
 		toggleDevHud();
-		expect(hudContainer.style.display).toBe("");
+		expect(hudContent.style.display).toBe("");
+	});
+
+	it("keeps hudContainer visible when HUD is hidden so hide-tab remains accessible", () => {
+		toggleDevHud();
+		// The container itself must NOT be display:none — only the inner
+		// .vw-hud element is hidden. The hide-HUD tab is a child of the
+		// container positioned at top:-8px with overflow:visible.
+		expect(hudContainer.style.display).not.toBe("none");
 	});
 
 	it("recomputes scale when HUD is hidden (more available height)", () => {

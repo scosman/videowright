@@ -12,8 +12,10 @@ import {
 } from "../../../index.js";
 import type { Config, ProjectInfo, Timeline } from "../../../index.js";
 import { resolveTiming } from "../../../timeline/resolveTiming.js";
+import { renderDownloadModal } from "../components/download_modal.js";
+import { renderHideHudTab } from "../components/hide_hud_tab.js";
 import { renderTopBar } from "../components/top_bar.js";
-import { applyDevFrameSize, installHudKeyListener } from "../dev_frame.js";
+import { applyDevFrameSize, installHudKeyListener, toggleDevHud } from "../dev_frame.js";
 
 // Virtual modules
 import {
@@ -53,12 +55,18 @@ export function renderVideoView(projectInfo: ProjectInfo, slug: string): HTMLEle
 		),
 	);
 
-	// Top bar with breadcrumb
+	// Top bar with breadcrumb and download button
 	const topBar = renderTopBar({
 		projectName: projectInfo.projectName,
 		breadcrumbTitle: video.title,
-		// Download button wiring comes in Phase 3
-		showDownload: false,
+		showDownload: true,
+		onDownload: () => {
+			renderDownloadModal({
+				slug: video.slug,
+				title: video.title,
+				onClose: () => {},
+			});
+		},
 	});
 	container.appendChild(topBar);
 
@@ -91,14 +99,22 @@ export function renderVideoView(projectInfo: ProjectInfo, slug: string): HTMLEle
 	hudContainer.setAttribute(
 		"style",
 		[
+			"position: relative",
 			"background: var(--bg-surface, #131316)",
 			"border-top: 1px solid var(--border-subtle, #26262d)",
 			"height: 80px",
 			"min-height: 80px",
 			"max-height: 80px",
-			"overflow: hidden",
+			"overflow: visible",
 		].join(";"),
 	);
+
+	// Hide-HUD tab anchored to top edge of HUD container
+	const hideHudTab = renderHideHudTab({
+		onToggle: () => toggleDevHud(),
+	});
+	hudContainer.appendChild(hideHudTab);
+
 	container.appendChild(hudContainer);
 
 	// Boot the player asynchronously
@@ -183,12 +199,9 @@ async function bootPlayer(
 	window.__VW_SEGMENT_ADVANCES__ = advancesMap;
 	window.__VW_SEGMENTS_LOADED__ = true;
 
-	// Support ?hideHud=1 for render screenshots and ?recordMode=1 for record command.
-	// recordMode is a compatibility shim — the record command still appends this
-	// query param until Phase 3 removes the command entirely.
+	// Support ?hideHud=1 for render screenshots.
 	const params = new URLSearchParams(window.location.search);
 	const hideHud = params.has("hideHud");
-	const recordMode = params.has("recordMode");
 
 	// Resolve voiceover timing
 	let audioFileResolved: string | undefined;
@@ -225,7 +238,6 @@ async function bootPlayer(
 
 	const playerOpts = {
 		hud: !hideHud,
-		recordMode,
 		audioFile: audioFileResolved,
 		resolvedTiming: resolvedTimingMap,
 	};

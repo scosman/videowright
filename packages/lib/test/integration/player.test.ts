@@ -807,24 +807,77 @@ describe("Player playback mode", () => {
 		player.destroy();
 	});
 
-	it("record_mode_hud_shows_only_play_button", async () => {
-		const seg = makeSegment({ id: "seg-0", async play() {} });
-		const player = new Player(host, { recordMode: true });
+	it("space_key_toggles_playback", async () => {
+		const seg = makeSegment({
+			id: "seg-0",
+			async play(ctx) {
+				await ctx.waitForNext();
+			},
+		});
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [2] },
+		});
 		await player.load(makeTimeline(["seg-0"]), makeLoader([seg]), makeTransitionLoaders());
 		await player.start();
 		await flush();
 
-		// Should have play button
-		const playBtn = host.querySelector(".vw-hud-play");
-		expect(playBtn).toBeTruthy();
+		expect(player.playbackMode).toBe("idle");
 
-		// Should not have segment info items
-		const items = host.querySelectorAll(".vw-hud-item");
-		expect(items.length).toBe(0);
+		// Space should toggle to playing
+		pressKey(" ");
+		await flush();
+		expect(player.playbackMode).toBe("playing");
 
-		// Should not have keyboard shortcut ref
-		const keys = host.querySelectorAll(".vw-hud-keys");
-		expect(keys.length).toBe(0);
+		// Space again should toggle back to idle
+		pressKey(" ");
+		await flush();
+		expect(player.playbackMode).toBe("idle");
+
+		player.destroy();
+	});
+
+	it("space_key_does_not_advance_beat", async () => {
+		// With two segments and no resolvedTiming, Space should toggle playback
+		// but not manually advance to the next beat (unlike ArrowRight).
+		const seg0 = makeSegment({
+			id: "seg-0",
+			async play(ctx) {
+				await ctx.waitForNext();
+				await ctx.waitForNext();
+			},
+		});
+		const seg1 = makeSegment({ id: "seg-1", async play() {} });
+		const player = new Player(host, {
+			resolvedTiming: { "seg-0": [1, 2], "seg-1": [1] },
+		});
+		await player.load(
+			makeTimeline(["seg-0", "seg-1"]),
+			makeLoader([seg0, seg1]),
+			makeTransitionLoaders(),
+		);
+		await player.start();
+		await flush();
+
+		expect(player.currentSegmentId).toBe("seg-0");
+		expect(player.currentTimelineIndex).toBe(0);
+
+		// ArrowRight should advance a beat
+		pressKey("ArrowRight");
+		await flush();
+		// seg-0 has waitForNext calls, so ArrowRight consumes one
+
+		// Space should toggle playback, not advance
+		pressKey(" ");
+		await flush();
+		expect(player.playbackMode).toBe("playing");
+
+		// Pause again to stop auto-advance
+		pressKey(" ");
+		await flush();
+		expect(player.playbackMode).toBe("idle");
+
+		// Still on seg-0 (Space didn't cause a segment transition)
+		expect(player.currentSegmentId).toBe("seg-0");
 
 		player.destroy();
 	});
