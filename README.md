@@ -24,7 +24,7 @@ The agent reads the install prompt and walks you through setup.
 
 ## How Does Videowright Work?
 
-You describe the video you want. The agent writes vdeo segments -- self-contained TypeScript modules that each render one beat of the video. You preview in the dev player (`npx videowright dev`), give feedback in chat, and the agent iterates. Videowright will generate an AI voiceover, and sync the video to match. When you're happy, export with `npx videowright render` or capture with `npx videowright record`.
+You describe the video you want. The agent writes video segments -- self-contained TypeScript modules that each render one beat of the video. You preview in the dev player (`npx videowright dev`), give feedback in chat, and the agent iterates. Videowright will generate an AI voiceover, and sync the video to match. When you're happy, export to mp4 with `npx videowright render` or screen capture with `npx videowright record`.
 
 ## Styles
 
