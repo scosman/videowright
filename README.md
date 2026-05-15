@@ -32,17 +32,19 @@ Pick one of six built-in styles, or create your own from a brand guide, referenc
 
 <img width="953" height="549" alt="Built-in style packs" src="https://github.com/user-attachments/assets/3aaeecc2-7ca4-4c5a-8ed2-9adc4e226b2d" />
 
-Same video script, two different styles -- both generated in a single prompt:
+### Style Examples
+
+Two examples: both generated from the same video description, but targeting two different styles. Both videos were generated in a single prompt:
 
 <table><tr>
 <td width="45%">
 
-https://github.com/user-attachments/assets/5df0bde1-b759-4ba8-aeef-4dddc8e60c24
+https://github.com/user-attachments/assets/1960c3e8-a3f2-4028-91ab-afbc79a53fca
 
 </td>
 <td width="45%">
-
-https://github.com/user-attachments/assets/1960c3e8-a3f2-4028-91ab-afbc79a53fca
+  
+https://github.com/user-attachments/assets/5df0bde1-b759-4ba8-aeef-4dddc8e60c24
 
 </td>
 </tr></table>
@@ -53,14 +55,16 @@ Videowright supports a full voiceover pipeline: write a narration script, genera
 
 The workflow:
 
-1. **Write the script.** Draft voiceover copy organized by segment in your video's plan. The `npx videowright script` command assembles all segments' voiceover text into a single markdown document for review or handoff.
-2. **Generate audio.** Record your own or use AI text-to-speech (ElevenLabs is supported out of the box).
+1. **Write the script.** Draft voiceover copy organized by segment in your video's PLAN.md (or ask videowright to). The `npx videowright script` command assembles all segments' voiceover text into a single markdown document for review or handoff.
+2. **Generate audio.** Record your own audio, or use AI text-to-speech. ElevenLabs is supported out of the box.
 3. **Get timestamps.** Run the audio through speech-to-text to get per-word timing data. This tells Videowright exactly when each line is spoken.
 4. **Sync.** The agent computes a timing object that maps each segment's advances to the audio timestamps. Video beats land on the narration automatically.
 
-When you update the audio -- re-record a line, change pacing, swap voices -- the agent re-syncs video timing to match. Segments don't need code changes; only the timing data updates.
+When you change the audio -- re-record a line, change pacing, swap voices -- the agent re-syncs video timing to match. Segments don't need code changes; only the timing data updates.
 
-**Reordering sections** is just a conversation. Ask the agent to move a segment and it uses ffmpeg to splice the audio files, updates the timing data, and reorders the timeline. Script, audio, and video stay in sync.
+## Editing
+
+Just chat with videowright about edits you want to make, and it does the rest. It can be stylistic, content, order or pacing.
 
 ## CLI and Capture
 
@@ -76,14 +80,13 @@ A videowright project can contain many videos. Build up your style over time, ma
 
 ## How Videowright Was Built
 
-Videowright is [vibe crafted](https://github.com/scosman/vibe-crafting) -- a form of vibe coding with structured specs, thorough tests, and a human in the loop for technical decisions. It's not perfect, but since it's designed to produce one-off videos (not run in production), that's fine.
+Videowright is [vibe crafted](https://github.com/scosman/vibe-crafting) -- a form of agentic coding with structured specs, thorough tests, and a human driving core technical decisions. It's not perfect, but since it's designed to produce one-off videos (not run in production), that's fine.
 
 The test suite is robust: unit tests, integration tests, and end-to-end tests that include pixel-perfect rendering checks. These verify that animations driven by `requestAnimationFrame`, `setTimeout`, CSS keyframes, and the Web Animations API all produce identical frames across runs -- the same determinism guarantee that makes `videowright render` work.
 
-If you encounter an error, describe it to your coding agent. A good agent can quickly diagnose and repair the issue. It's usually in the project files, but if you find one in the library file an issue or submit a patch.
+If you encounter an error, describe it to your coding agent. A good agent can quickly diagnose and repair the issue. It's usually in the project files, but if you find one in the library please submit an issue or a patch.
 
 ## License
 
 [MIT](LICENSE)
 
-All runtime dependencies are MIT, ISC, or BSD-3-Clause. No copyleft, no BUSL.
