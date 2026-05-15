@@ -161,6 +161,32 @@ export type Transition = (
 	ctx: TransitionContext,
 ) => Promise<void>;
 
+// ---- Project discovery ----
+
+/** Summary of a single video for the homepage and routing. */
+export interface VideoSummary {
+	/** Directory name under videos/ -- also the URL slug. */
+	slug: string;
+	/** Absolute path to videos/<slug>/timeline.ts. */
+	timelinePath: string;
+	/** meta.title from the timeline. Falls back to slug if load failed. */
+	title: string;
+	/** Resolved style: meta.style ?? config.defaultStyle ?? "unknown". */
+	style: string;
+	/** mtime of timeline.ts (epoch ms). Used for sort order. */
+	mtimeMs: number;
+	/** Error message if loading the timeline threw. */
+	loadError?: string;
+}
+
+/** Project-level info exposed to the browser via a virtual module. */
+export interface ProjectInfo {
+	/** Basename of cwd. Shown in the top bar. */
+	projectName: string;
+	/** Videos sorted by mtime descending. */
+	videos: VideoSummary[];
+}
+
 // ---- Config ----
 
 /** Repo-wide configuration from videowright.config.ts. */

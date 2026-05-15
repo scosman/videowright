@@ -6,3 +6,9 @@ declare module "virtual:vw-globals" {
 	export const voiceoverNone: boolean | undefined;
 	export const renderFps: number | undefined;
 }
+
+declare module "virtual:videowright/project" {
+	import type { ProjectInfo } from "../../types.js";
+	const projectInfo: ProjectInfo;
+	export default projectInfo;
+}

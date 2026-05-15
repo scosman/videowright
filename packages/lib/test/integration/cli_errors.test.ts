@@ -41,22 +41,17 @@ describe("CLI error handling", () => {
 		}
 	});
 
-	it("cli_dev_missing_timeline_exits_1", async () => {
-		// Has config but no videos
+	it("cli_dev_zero_videos_boots_successfully", async () => {
+		// Has config but no videos -- dev server should still boot (shows homepage with empty state)
 		writeFileSync(
 			join(tmpDir, "videowright.config.ts"),
 			`export default { projectStructure: "v1" };`,
 			"utf-8",
 		);
 
-		try {
-			await runDev({ cwd: tmpDir });
-			expect.unreachable("should have thrown");
-		} catch (e) {
-			expect(e).toBeInstanceOf(UserError);
-			const error = e as UserError;
-			expect(error.message).toContain("No videos found");
-		}
+		const result = await runDev({ cwd: tmpDir });
+		expect(result.url).toContain("http://");
+		await result.close();
 	});
 
 	it("cli_script_missing_config_exits_1", async () => {

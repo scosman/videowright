@@ -16,6 +16,37 @@ export function findConfig(cwd: string): string | null {
 }
 
 /**
+ * Discover all videos under <root>/videos/. Returns absolute timeline.ts paths.
+ * No sorting at this layer -- caller sorts.
+ */
+export function findAllTimelines(root: string): string[] {
+	const videosDir = join(root, "videos");
+	if (!existsSync(videosDir)) return [];
+
+	let entries: string[];
+	try {
+		entries = readdirSync(videosDir);
+	} catch {
+		return [];
+	}
+
+	const paths: string[] = [];
+	for (const entry of entries) {
+		const entryPath = join(videosDir, entry);
+		try {
+			if (!statSync(entryPath).isDirectory()) continue;
+		} catch {
+			continue;
+		}
+		const timelinePath = join(entryPath, "timeline.ts");
+		if (existsSync(timelinePath)) {
+			paths.push(resolve(timelinePath));
+		}
+	}
+	return paths;
+}
+
+/**
  * Find a timeline file.
  * - If hint is provided, resolve relative to cwd. Returns absolute path if found.
  *   Throws UserError if the explicit path does not exist.

@@ -2,17 +2,30 @@
  * `videowright record` -- auto-advance playback for visual review or
  * external screen capture.
  *
- * Boots the dev server and opens a browser URL with `?recordMode=1`.
+ * Boots its own Vite dev server targeting a single video with `?recordMode=1`.
  * The user can run external screen-capture software over the browser window.
  * No mp4 is produced -- use `videowright render` for export.
+ *
+ * NOTE: This command is scheduled for removal in Phase 3.
  */
 
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { loadVoiceover } from "../timeline/loadVoiceover.js";
 import { resolveTiming } from "../timeline/resolveTiming.js";
 import type { Segment, Timeline } from "../types.js";
-import { discoverProject } from "./discover_project.js";
+import { discoverAllVideos, discoverProject } from "./discover_project.js";
+import { UserError } from "./errors.js";
 import { loadModule } from "./ts_loader.js";
+import type { VwGlobals } from "./vite_helpers.js";
+import {
+	findPackageRoot,
+	fullReloadPlugin,
+	globalsVirtualModulePlugin,
+	projectVirtualModulePlugin,
+	segmentDiscoveryPlugin,
+	spaFallbackPlugin,
+} from "./vite_helpers.js";
 
 export interface RecordOptions {
 	cwd: string;
@@ -29,30 +42,24 @@ export interface RecordResult {
 export async function runRecord(opts: RecordOptions): Promise<RecordResult> {
 	const { cwd, positional, verbose } = opts;
 
-	// Validate project exists before booting the server. This gives a fast,
-	// clear error ("No videowright.config.ts found") instead of a delayed Vite
-	// boot error. runDev will re-discover internally -- the duplication is
-	// intentional for better error UX.
-	const { timelinePath } = discoverProject(cwd, positional, "record");
+	const { configPath, timelinePath } = discoverProject(cwd, positional, "record");
+
+	// Load config (validates it can be loaded)
+	await loadModule(configPath);
 
 	// Build extra globals for voiceover injection
-	const extraGlobals: Record<string, unknown> = {};
+	const voiceoverGlobals: Partial<VwGlobals> = {};
 	const voiceoverSuppressed = opts.voiceover === "none";
 
 	if (!voiceoverSuppressed && opts.voiceover) {
-		// CLI voiceover: load and validate
 		const videoFolder = dirname(timelinePath);
 		const voResult = await loadVoiceover({
 			videoFolder,
 			slug: opts.voiceover,
 		});
 
-		// Inject the audio file path for Vite serving via /@fs/ prefix
-		extraGlobals.audioFile = `/@fs/${voResult.audioFilePath}`;
+		voiceoverGlobals.audioFile = `/@fs/${voResult.audioFilePath}`;
 
-		// Load timeline and segment advances for complete timing resolution.
-		// Segment advances are needed so partial voiceover Timings (which only
-		// override some segments) fall back correctly for unoverridden segments.
 		const timelineMod = await loadModule(timelinePath);
 		const timeline = timelineMod.default as Timeline;
 		const segments = await loadSegmentAdvances(videoFolder, timeline);
@@ -65,46 +72,97 @@ export async function runRecord(opts: RecordOptions): Promise<RecordResult> {
 			cliVoiceoverModule: voResult.voiceover,
 		});
 
-		extraGlobals.resolvedTiming = resolved.perSegment;
+		voiceoverGlobals.resolvedTiming = resolved.perSegment;
 
 		if (verbose) {
 			console.log(`voiceover: ${opts.voiceover} (${voResult.audioFilePath})`);
 		}
 	} else if (voiceoverSuppressed) {
-		// --voiceover none: inject suppression signal so entry_client.ts
-		// does not fall through to default_voiceover from the timeline.
-		extraGlobals.voiceoverNone = true;
-
+		voiceoverGlobals.voiceoverNone = true;
 		if (verbose) {
 			console.log("voiceover: none (suppressed)");
 		}
+	} else {
+		// Check for default_voiceover on the timeline
+		try {
+			const timelineMod = await loadModule(timelinePath);
+			const timeline = timelineMod.default as Timeline;
+			if (timeline.default_voiceover) {
+				const videoFolder = dirname(timelinePath);
+				const audioAbsPath = resolve(videoFolder, timeline.default_voiceover.audio_file);
+				if (existsSync(audioAbsPath)) {
+					voiceoverGlobals.audioFile = `/@fs/${audioAbsPath}`;
+				}
+			}
+		} catch {
+			// Timeline may fail to load; entry_client will surface the error
+		}
 	}
 
-	// Boot dev server on auto-assigned port
-	const { runDev } = await import("./dev.js");
-	const devResult = await runDev({ cwd, positional, port: 0, verbose, extraGlobals });
+	// Boot a standalone Vite server for the single-video record view
+	const { createServer } = await import("vite");
+	const pkgRoot = findPackageRoot();
+	const entryDir = resolve(pkgRoot, "src/cli/entry");
 
-	const base = devResult.url.replace(/\/$/, "");
-	const separator = base.includes("?") ? "&" : "?";
-	const recordUrl = `${base}${separator}recordMode=1`;
+	if (!existsSync(resolve(entryDir, "index.html"))) {
+		throw new UserError(
+			"Internal entry HTML not found",
+			"Reinstall videowright; this is a packaging bug.",
+		);
+	}
+
+	const globals: VwGlobals = {
+		timelinePath,
+		consumerRoot: cwd,
+		...voiceoverGlobals,
+	};
+
+	// Discover all videos for the SPA router's project info virtual module.
+	// Look up the slug from the discovered videos rather than manually parsing the path.
+	const projectInfo = await discoverAllVideos(cwd);
+	const slug = projectInfo.videos.find((v) => v.timelinePath === timelinePath)?.slug ?? "unknown";
+
+	const server = await createServer({
+		configFile: false,
+		root: entryDir,
+		plugins: [
+			fullReloadPlugin(),
+			segmentDiscoveryPlugin(cwd),
+			globalsVirtualModulePlugin(globals),
+			spaFallbackPlugin(),
+			projectVirtualModulePlugin(projectInfo),
+		],
+		server: {
+			port: 0,
+			strictPort: false,
+			fs: {
+				allow: [cwd, pkgRoot],
+			},
+		},
+		resolve: {
+			alias: {
+				"@consumer": cwd,
+			},
+		},
+	});
+
+	await server.listen();
+
+	const address = server.resolvedUrls?.local?.[0] ?? "http://localhost:0/";
+	const base = address.replace(/\/$/, "");
+	const recordUrl = `${base}/${slug}/?recordMode=1`;
 
 	if (verbose) {
-		console.log(`dev server: ${devResult.url}`);
+		console.log(`dev server: ${address}`);
 		console.log(`record URL: ${recordUrl}`);
 	}
 
 	return {
 		url: recordUrl,
-		close: devResult.close,
+		close: () => server.close(),
 	};
 }
 
-/**
- * Load segment advances from segment modules on disk.
- * Resolves segments relative to the video folder (the directory containing
- * timeline.ts), matching the convention used by the rest of the CLI.
- * Returns minimal {id, advances} objects for use with resolveTiming.
- */
 async function loadSegmentAdvances(
 	videoFolder: string,
 	timeline: Timeline,
@@ -117,9 +175,6 @@ async function loadSegmentAdvances(
 			const seg = mod.default as Segment;
 			segments.push({ id: entry.id, advances: seg?.advances ?? [] });
 		} catch {
-			// If a segment can't be loaded CLI-side (e.g. it imports browser-only
-			// assets), fall back to an empty advances array. The browser-side
-			// entry_client.ts will have the real advances from Vite-loaded modules.
 			segments.push({ id: entry.id, advances: [] });
 		}
 	}

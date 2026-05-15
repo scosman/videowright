@@ -4,9 +4,10 @@
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Plugin, ViteDevServer } from "vite";
+import type { Connect, Plugin, ViteDevServer } from "vite";
+import type { ProjectInfo } from "../types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -178,6 +179,122 @@ export function segmentDiscoveryPlugin(consumerRoot: string): Plugin {
 					invalidate();
 				}
 			});
+		},
+	};
+}
+
+// ---- Project virtual module plugin ----
+
+const VIRTUAL_PROJECT_ID = "virtual:videowright/project";
+const RESOLVED_VIRTUAL_PROJECT_ID = `\0${VIRTUAL_PROJECT_ID}`;
+
+/**
+ * Vite plugin that provides a virtual module `virtual:videowright/project`.
+ * The module exports the `ProjectInfo` object as a default export so the
+ * browser can import it synchronously with no fetch waterfall.
+ *
+ * When `onReload` is provided, timeline.ts changes trigger a re-discovery
+ * and full page reload so the homepage reflects updated metadata.
+ */
+export function projectVirtualModulePlugin(
+	initialProjectInfo: ProjectInfo,
+	opts?: {
+		consumerRoot: string;
+		onReload: () => Promise<ProjectInfo>;
+	},
+): Plugin {
+	let projectInfo = initialProjectInfo;
+
+	return {
+		name: "videowright-project-info",
+		resolveId(id) {
+			if (id === VIRTUAL_PROJECT_ID) return RESOLVED_VIRTUAL_PROJECT_ID;
+		},
+		load(id) {
+			if (id !== RESOLVED_VIRTUAL_PROJECT_ID) return;
+			return `export default ${JSON.stringify(projectInfo)};`;
+		},
+		configureServer(server: ViteDevServer) {
+			if (!opts) return;
+
+			const videosDir = join(opts.consumerRoot, "videos");
+			const reload = async () => {
+				projectInfo = await opts.onReload();
+				const mod = server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_PROJECT_ID);
+				if (mod) {
+					server.moduleGraph.invalidateModule(mod);
+				}
+				server.ws.send({ type: "full-reload" });
+			};
+
+			const onTimelineChange = (path: string) => {
+				if (path.endsWith("timeline.ts") && path.includes(`${videosDir}/`)) {
+					reload();
+				}
+			};
+
+			server.watcher.add(videosDir);
+			server.watcher.on("change", onTimelineChange);
+			server.watcher.on("add", onTimelineChange);
+			server.watcher.on("unlink", onTimelineChange);
+		},
+	};
+}
+
+// ---- SPA history fallback plugin ----
+
+/** Paths that should never be rewritten by the SPA fallback. */
+const VITE_INTERNAL_PREFIXES = ["/@vite/", "/@fs/", "/@id/", "/node_modules/", "/__vite"];
+
+/**
+ * Vite plugin that implements SPA history fallback for the dev server.
+ * Rewrites GET requests for non-asset paths to `/` so that Vite serves
+ * index.html, enabling client-side routing via the History API.
+ */
+export function spaFallbackPlugin(): Plugin {
+	return {
+		name: "videowright-spa-fallback",
+		configureServer(server: ViteDevServer) {
+			// Return a function so the middleware runs AFTER Vite's built-in
+			// static serving and transform middleware. This ensures that actual
+			// files (JS, CSS, images) are served normally, and only unmatched
+			// paths fall through to the rewrite.
+			return () => {
+				const middleware: Connect.NextHandleFunction = (req, _res, next) => {
+					if (!req.url || req.method !== "GET") {
+						next();
+						return;
+					}
+
+					const url = req.url.split("?")[0];
+
+					// Skip render.html (Playwright render entry)
+					if (url === "/render.html") {
+						next();
+						return;
+					}
+
+					// Skip paths with file extensions (static assets)
+					if (extname(url)) {
+						next();
+						return;
+					}
+
+					// Skip Vite internal paths
+					for (const prefix of VITE_INTERNAL_PREFIXES) {
+						if (url.startsWith(prefix)) {
+							next();
+							return;
+						}
+					}
+
+					// Rewrite to root so Vite serves index.html
+					req.url = "/";
+					next();
+				};
+
+				server.middlewares.use(middleware);
+			};
 		},
 	};
 }

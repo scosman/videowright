@@ -1,0 +1,41 @@
+/**
+ * Design tokens for the Videowright dev UI.
+ * Dark mode only. See ui_design.md for rationale.
+ */
+
+:root {
+	/* Backgrounds */
+	--bg-base: #0a0a0b;
+	--bg-surface: #131316;
+	--bg-surface-hover: #1a1a1f;
+	--bg-surface-elevated: #1d1d22;
+
+	/* Borders */
+	--border-subtle: #26262d;
+	--border-strong: #3a3a44;
+
+	/* Text */
+	--text-primary: #f5f5f7;
+	--text-secondary: #a0a0a8;
+	--text-tertiary: #6e6e78;
+
+	/* Accent */
+	--accent: #a78bfa;
+	--accent-dim: #7c3aed33;
+
+	/* Semantic */
+	--success: #34d399;
+	--error: #f87171;
+
+	/* Radius */
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 14px;
+
+	/* Shadow */
+	--shadow-modal: 0 24px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-subtle);
+
+	/* Motion */
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--duration: 150ms;
+}

@@ -31,12 +31,13 @@ describe("demo dev server", () => {
 
 		expect(server.url).toContain("5199");
 
-		// Fetch the HTML page
+		// Fetch the HTML page (homepage)
 		const res = await fetch(server.url);
 		expect(res.status).toBe(200);
 
 		const html = await res.text();
-		expect(html).toContain("player-host");
+		// index.html is now a simple SPA shell with an app container
+		expect(html).toContain('id="app"');
 		expect(html).toContain("Videowright Dev");
 	});
 
@@ -80,7 +81,56 @@ describe("demo dev server", () => {
 		);
 	});
 
-	it("entry_client.ts is served and imports virtual:vw-segments", async () => {
+	it("SPA fallback serves index.html for slug paths", async () => {
+		server = await runDev({
+			cwd: DEMO_ROOT,
+			port: 5202,
+		});
+
+		// A slug path should serve the same SPA HTML as the root
+		const res = await fetch(`${server.url}demo_video/`);
+		expect(res.status).toBe(200);
+
+		const html = await res.text();
+		expect(html).toContain('id="app"');
+		expect(html).toContain("Videowright Dev");
+	});
+
+	it("virtual:videowright/project module contains discovered videos", async () => {
+		server = await runDev({
+			cwd: DEMO_ROOT,
+			port: 5203,
+		});
+
+		// Fetch the virtual module. Vite prefixes virtual modules with \0
+		// and serves them under /@id/__x00__
+		const res = await fetch(`${server.url}@id/__x00__virtual:videowright/project`);
+		expect(res.status).toBe(200);
+
+		const code = await res.text();
+		// Should contain the demo_video slug
+		expect(code).toContain("demo_video");
+		// Should contain the project name
+		expect(code).toContain("videowright_demo");
+	});
+
+	it("SPA fallback does not rewrite render.html", async () => {
+		server = await runDev({
+			cwd: DEMO_ROOT,
+			port: 5204,
+		});
+
+		// render.html should be served as-is, not rewritten to index.html
+		const res = await fetch(`${server.url}render.html`);
+		expect(res.status).toBe(200);
+
+		const html = await res.text();
+		// render.html has its own content distinct from the SPA shell
+		expect(html).toContain("render_entry.ts");
+		expect(html).not.toContain('id="app"');
+	});
+
+	it("entry_client.ts is served and imports virtual:videowright/project", async () => {
 		server = await runDev({
 			cwd: DEMO_ROOT,
 			port: 5201,
@@ -92,10 +142,9 @@ describe("demo dev server", () => {
 
 		const code = await res.text();
 
-		// Vite should have transformed the virtual import into a resolved module
-		// The transformed code should NOT contain the original broken glob pattern
-		expect(code).not.toContain('import.meta.glob("@consumer');
-		// It should reference the virtual module (Vite resolves it)
-		expect(code).toContain("vw-segments");
+		// entry_client.ts is now a router that imports the project info virtual module
+		expect(code).toContain("videowright/project");
+		// It should import the router and views
+		expect(code).toContain("parseRoute");
 	});
 });

@@ -14,6 +14,8 @@ export type {
 	Transition,
 	TransitionContext,
 	Config,
+	VideoSummary,
+	ProjectInfo,
 } from "./types.js";
 export { SEGMENT_BRAND } from "./types.js";
 

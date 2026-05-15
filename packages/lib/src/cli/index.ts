@@ -35,7 +35,7 @@ function readVersion(): string {
 const HELP_TEXT = `Usage: videowright <command> [options]
 
 Commands:
-  dev [path]      Start the dev server
+  dev             Start the dev server (homepage at http://localhost:5173/)
   script [path]   Generate voiceover script
   record [path]   Auto-advance playback for visual review or external screen capture
   render [path]   Deterministic frame-by-frame export via JS time injection + ffmpeg
@@ -96,7 +96,6 @@ export async function main(argv?: string[]): Promise<number> {
 			const { runDev } = await import("./dev.js");
 			const result = await runDev({
 				cwd,
-				positional,
 				port: flags.port,
 				verbose: flags.verbose,
 			});

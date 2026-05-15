@@ -55,7 +55,8 @@ let resizeHandler: (() => void) | null = null;
 /**
  * Toggle the HUD strip visibility. When hidden, the video area grows to fill
  * the freed space and the scale factor is recomputed. The grid template
- * switches between `1fr 80px` (visible) and `1fr 0px` (hidden).
+ * switches between `auto 1fr 80px` (visible) and `auto 1fr 0px` (hidden),
+ * preserving the nav row introduced by the multi-video layout.
  *
  * Returns the new visibility state.
  */
@@ -66,7 +67,7 @@ export function toggleDevHud(): boolean {
 	const hudContainer = document.getElementById("dev-hud-container");
 
 	if (layout) {
-		layout.style.gridTemplateRows = hudVisible ? "1fr 80px" : "1fr 0px";
+		layout.style.gridTemplateRows = hudVisible ? "auto 1fr 80px" : "auto 1fr 0px";
 	}
 	if (hudContainer) {
 		hudContainer.style.display = hudVisible ? "" : "none";
@@ -95,15 +96,26 @@ export function _resetHudVisible(): void {
 }
 
 /**
+ * Measure the current height of the nav bar inside #dev-layout, if present.
+ * Returns 0 when there is no nav element (e.g., non-video views).
+ */
+function getNavHeight(): number {
+	const nav = document.querySelector("#dev-layout > nav");
+	if (!nav) return 0;
+	return (nav as HTMLElement).offsetHeight || 0;
+}
+
+/**
  * Apply native resolution to #player-host and scale-to-fit the video area.
  * Attaches a resize listener to keep the scale updated.
  *
  * The available space for the frame is:
  *   width:  viewport width  - 2 * VIDEO_AREA_PADDING
- *   height: viewport height - getCurrentHudHeight() - 2 * VIDEO_AREA_PADDING
+ *   height: viewport height - getNavHeight() - getCurrentHudHeight() - 2 * VIDEO_AREA_PADDING
  *
  * getCurrentHudHeight() returns HUD_HEIGHT when the HUD is visible, 0 when
  * hidden, so the scale recomputes correctly when the HUD is toggled.
+ * getNavHeight() measures the nav bar introduced by the multi-video layout.
  *
  * Expects the DOM to contain:
  * - `#player-host` — the rendering surface
@@ -120,7 +132,8 @@ export function applyDevFrameSize(resolution: [number, number]): void {
 
 	const updateScale = () => {
 		const availableW = window.innerWidth - VIDEO_AREA_PADDING * 2;
-		const availableH = window.innerHeight - getCurrentHudHeight() - VIDEO_AREA_PADDING * 2;
+		const availableH =
+			window.innerHeight - getNavHeight() - getCurrentHudHeight() - VIDEO_AREA_PADDING * 2;
 
 		const scale = computeScale(width, height, availableW, availableH);
 		host.style.transform = `scale(${scale})`;
