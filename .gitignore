@@ -1,5 +1,7 @@
 .specs_skill_state/
 reviews/
+# Claude Code runtime state (root only — examples/videowright_demo/.claude/ is tracked)
+/.claude/
 
 # Dependencies
 node_modules/
@@ -9,6 +11,8 @@ dist/
 *.tsbuildinfo
 # Test coverage
 coverage/
+# checks.sh failure log
+test-failure.log
 
 # Playwright
 test-results/

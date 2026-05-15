@@ -13,10 +13,11 @@
  */
 
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { runRender } from "../../src/cli/render.js";
 
 function systemHasFfmpeg(): boolean {
 	try {
@@ -31,7 +32,11 @@ async function canLaunchBrowser(): Promise<boolean> {
 	try {
 		const pw = await import("playwright-core");
 		const chromiumPath = pw.chromium.executablePath();
-		return Boolean(chromiumPath && existsSync(chromiumPath));
+		if (!chromiumPath || !existsSync(chromiumPath)) return false;
+		// Actually attempt to launch to detect sandbox/permission failures
+		const browser = await pw.chromium.launch({ headless: true });
+		await browser.close();
+		return true;
 	} catch {
 		return false;
 	}
@@ -39,8 +44,11 @@ async function canLaunchBrowser(): Promise<boolean> {
 
 const HAS_DEPS = systemHasFfmpeg() && (await canLaunchBrowser());
 
+// Resolve symlinks in tmpdir (macOS /var -> /private/var) so Vite's
+// server.fs.allow check matches the real filesystem paths it resolves internally.
+const resolvedTmp = realpathSync(tmpdir());
 const tmpDir = join(
-	tmpdir(),
+	resolvedTmp,
 	`vw-render-determinism-${Date.now()}-${Math.random().toString(36).slice(2)}`,
 );
 
@@ -59,17 +67,21 @@ function setupFixtureProject(): void {
 	// Segment that counts from 0 to 9, holding 100ms between each step.
 	// At 10fps, each frame is 100ms, so we should get 10 frames with
 	// values 0-9 displayed (one per frame).
+	// Export a plain segment object instead of importing defineSegment from
+	// "videowright". The fixture runs inside a Vite server rooted at the tmpdir,
+	// which has no node_modules — bare-module imports like "videowright" can't
+	// be resolved from there. The render pipeline only reads advances/mount/play
+	// from the default export, so a plain object works.
 	writeFileSync(
 		join(segDir, "index.ts"),
-		`import { defineSegment } from "videowright";
-export default defineSegment({
+		`export default {
 	id: "counter",
 	advances: [1.0],
-	mount(el) {
+	mount(el: HTMLElement) {
 		el.style.cssText = "display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#222;";
 		el.innerHTML = "<h1 id='count' style='color:white;font-size:120px;'>0</h1>";
 	},
-	async play(ctx) {
+	async play(ctx: any) {
 		const el = document.getElementById("count");
 		if (!el) return;
 		for (let i = 0; i < 10; i++) {
@@ -77,7 +89,7 @@ export default defineSegment({
 			if (i < 9) await ctx.hold(100);
 		}
 	},
-});`,
+};`,
 	);
 
 	writeFileSync(
@@ -89,25 +101,6 @@ const timeline: Timeline = {
 };
 export default timeline;`,
 	);
-}
-
-/**
- * Helper that catches browser-launch failures and skips gracefully.
- */
-async function runRenderOrSkip(
-	opts: Parameters<typeof import("../../src/cli/render.js").runRender>[0],
-) {
-	const { runRender } = await import("../../src/cli/render.js");
-	try {
-		return await runRender(opts);
-	} catch (e) {
-		const msg = e instanceof Error ? e.message : String(e);
-		if (msg.includes("browserType.launch") || msg.includes("Permission denied")) {
-			console.warn("Skipping: browser cannot launch in this environment");
-			return null;
-		}
-		throw e;
-	}
 }
 
 describe.skipIf(!HAS_DEPS)("render determinism via JS injection", () => {
@@ -123,7 +116,7 @@ describe.skipIf(!HAS_DEPS)("render determinism via JS injection", () => {
 
 	it("render_counter_segment_produces_expected_frames", async () => {
 		const outputPath = join(tmpDir, "output.mp4");
-		const result = await runRenderOrSkip({
+		const result = await runRender({
 			cwd: tmpDir,
 			positional: "videos/test-video/timeline.ts",
 			width: 320,
@@ -132,8 +125,6 @@ describe.skipIf(!HAS_DEPS)("render determinism via JS injection", () => {
 			output: outputPath,
 			voiceover: "none",
 		});
-
-		if (!result) return; // browser launch blocked
 
 		expect(result.outputPath).toBe(outputPath);
 		expect(existsSync(outputPath)).toBe(true);
@@ -148,7 +139,7 @@ describe.skipIf(!HAS_DEPS)("render determinism via JS injection", () => {
 
 	it("render_counter_produces_correct_duration", async () => {
 		const outputPath = join(tmpDir, "output-duration.mp4");
-		const result = await runRenderOrSkip({
+		const result = await runRender({
 			cwd: tmpDir,
 			positional: "videos/test-video/timeline.ts",
 			width: 320,
@@ -157,8 +148,6 @@ describe.skipIf(!HAS_DEPS)("render determinism via JS injection", () => {
 			output: outputPath,
 			voiceover: "none",
 		});
-
-		if (!result) return; // browser launch blocked
 
 		// Verify via ffprobe that the container duration matches expected
 		try {

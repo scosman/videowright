@@ -5,8 +5,7 @@
  * voiceover with a tiny valid mp3), runs `render --voiceover <slug>`, and
  * verifies the output mp4 contains an audio stream via ffprobe.
  *
- * Skips if ffmpeg or Playwright are not available, or if the browser
- * cannot launch (e.g., sandboxed environments).
+ * Skips if ffmpeg or Playwright are not available.
  */
 
 import { execFileSync, execSync } from "node:child_process";
@@ -14,6 +13,7 @@ import {
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	realpathSync,
 	rmSync,
 	statSync,
 	unlinkSync,
@@ -22,6 +22,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { runRender } from "../../src/cli/render.js";
 
 function generateSilentMp3(durationSeconds = 0.5): Buffer {
 	try {
@@ -86,7 +87,11 @@ async function canLaunchBrowser(): Promise<boolean> {
 	try {
 		const pw = await import("playwright-core");
 		const chromiumPath = pw.chromium.executablePath();
-		return Boolean(chromiumPath && existsSync(chromiumPath));
+		if (!chromiumPath || !existsSync(chromiumPath)) return false;
+		// Actually attempt to launch to detect sandbox/permission failures
+		const browser = await pw.chromium.launch({ headless: true });
+		await browser.close();
+		return true;
 	} catch {
 		return false;
 	}
@@ -94,8 +99,11 @@ async function canLaunchBrowser(): Promise<boolean> {
 
 const HAS_DEPS = systemHasFfmpeg() && (await canLaunchBrowser());
 
+// Resolve symlinks in tmpdir (macOS /var -> /private/var) so Vite's
+// server.fs.allow check matches the real filesystem paths it resolves internally.
+const resolvedTmp = realpathSync(tmpdir());
 const tmpDir = join(
-	tmpdir(),
+	resolvedTmp,
 	`vw-render-audio-${Date.now()}-${Math.random().toString(36).slice(2)}`,
 );
 
@@ -116,21 +124,24 @@ function setupFixtureProject(): void {
 		`export default { projectStructure: "v1" as const };`,
 	);
 
-	// Segment with 2 seconds of video (advances: [2.0])
+	// Export a plain segment object instead of importing defineSegment from
+	// "videowright". The fixture runs inside a Vite server rooted at the tmpdir,
+	// which has no node_modules — bare-module imports like "videowright" can't
+	// be resolved from there. The render pipeline only reads advances/mount/play
+	// from the default export, so a plain object works.
 	writeFileSync(
 		join(segDir, "index.ts"),
-		`import { defineSegment } from "videowright";
-export default defineSegment({
+		`export default {
 	id: "hello",
 	advances: [2.0],
-	mount(el) {
+	mount(el: HTMLElement) {
 		el.style.cssText = "display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#222;";
 		el.innerHTML = "<h1 style='color:white;font-size:48px;'>Hello</h1>";
 	},
-	async play(ctx) {
+	async play(ctx: any) {
 		await ctx.hold(2000);
 	},
-});`,
+};`,
 	);
 
 	writeFileSync(
@@ -195,27 +206,6 @@ export default vo;`,
 	}
 }
 
-/**
- * Helper that catches browser-launch failures (e.g., sandboxed environments
- * where Chromium's MachPort call is blocked) and skips the test gracefully
- * instead of failing.
- */
-async function runRenderOrSkip(
-	opts: Parameters<typeof import("../../src/cli/render.js").runRender>[0],
-) {
-	const { runRender } = await import("../../src/cli/render.js");
-	try {
-		return await runRender(opts);
-	} catch (e) {
-		const msg = e instanceof Error ? e.message : String(e);
-		if (msg.includes("browserType.launch") || msg.includes("Permission denied")) {
-			console.warn("Skipping: browser cannot launch in this environment");
-			return null;
-		}
-		throw e;
-	}
-}
-
 describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 	beforeAll(() => {
 		setupFixtureProject();
@@ -234,7 +224,7 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 		}
 
 		const outputPath = join(tmpDir, "output.mp4");
-		const result = await runRenderOrSkip({
+		const result = await runRender({
 			cwd: tmpDir,
 			positional: "videos/test-video/timeline.ts",
 			width: 320,
@@ -243,8 +233,6 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			output: outputPath,
 			voiceover: "narrator",
 		});
-
-		if (!result) return; // browser launch blocked
 
 		expect(result.outputPath).toBe(outputPath);
 		expect(existsSync(outputPath)).toBe(true);
@@ -260,7 +248,7 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 
 	it("render_without_voiceover_produces_silent_mp4", async () => {
 		const outputPath = join(tmpDir, "output-silent.mp4");
-		const result = await runRenderOrSkip({
+		const result = await runRender({
 			cwd: tmpDir,
 			positional: "videos/test-video/timeline.ts",
 			width: 320,
@@ -269,8 +257,6 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			output: outputPath,
 			voiceover: "none",
 		});
-
-		if (!result) return; // browser launch blocked
 
 		expect(result.outputPath).toBe(outputPath);
 		expect(existsSync(outputPath)).toBe(true);
@@ -298,7 +284,7 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 		}
 
 		const outputPath = join(tmpDir, "output-short-audio.mp4");
-		const result = await runRenderOrSkip({
+		const result = await runRender({
 			cwd: tmpDir,
 			positional: "videos/test-video/timeline.ts",
 			width: 320,
@@ -307,8 +293,6 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			output: outputPath,
 			voiceover: "short-narrator",
 		});
-
-		if (!result) return; // browser launch blocked
 
 		expect(result.outputPath).toBe(outputPath);
 		expect(existsSync(outputPath)).toBe(true);
@@ -347,7 +331,7 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 		}
 
 		const outputPath = join(tmpDir, "output-long-audio.mp4");
-		const result = await runRenderOrSkip({
+		const result = await runRender({
 			cwd: tmpDir,
 			positional: "videos/test-video/timeline.ts",
 			width: 320,
@@ -356,8 +340,6 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			output: outputPath,
 			voiceover: "long-narrator",
 		});
-
-		if (!result) return; // browser launch blocked
 
 		expect(result.outputPath).toBe(outputPath);
 		expect(existsSync(outputPath)).toBe(true);

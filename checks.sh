@@ -11,6 +11,7 @@
 #   ln -sf ../../checks.sh .git/hooks/pre-commit
 
 set -euo pipefail
+set +m  # disable job-control messages ("[1]+ Done" etc.)
 
 skip_test=false
 for arg in "$@"; do
@@ -75,7 +76,26 @@ echo ""
 
 for check in "${failed[@]}"; do
   echo "=== $check output ==="
-  cat "$tmpdir/$check.out"
+  if [ "$check" = "test" ]; then
+    # For test failures, extract the vitest "Failed Tests" summary and the
+    # final status block. This filters out pages of vite/esbuild teardown
+    # stack traces that bury the actual failure messages.
+    # Look for the "Failed Tests" header (vitest uses ⎯ U+23AF as separator)
+    # and print from there to end of file.
+    summary=$(sed -n '/Failed Tests/,$p' "$tmpdir/$check.out")
+    if [ -n "$summary" ]; then
+      # Save full log so users can deep-dive if needed
+      cp "$tmpdir/$check.out" test-failure.log 2>/dev/null || true
+      echo "$summary"
+      echo ""
+      echo "(full test output saved to test-failure.log)"
+    else
+      # No "Failed Tests" section found — show everything
+      cat "$tmpdir/$check.out"
+    fi
+  else
+    cat "$tmpdir/$check.out"
+  fi
   echo ""
 done
 
