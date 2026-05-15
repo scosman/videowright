@@ -12,8 +12,8 @@ import {
 } from "../../../index.js";
 import type { Config, ProjectInfo, Timeline } from "../../../index.js";
 import { resolveTiming } from "../../../timeline/resolveTiming.js";
+import { renderTopBar } from "../components/top_bar.js";
 import { applyDevFrameSize, installHudKeyListener } from "../dev_frame.js";
-import { navigate } from "../router.js";
 
 // Virtual modules
 import {
@@ -22,7 +22,6 @@ import {
 	resolvedTiming as injectedTiming,
 	voiceoverNone,
 } from "virtual:vw-globals";
-// @ts-expect-error -- virtual module, no type declarations
 import segmentGlobRaw from "virtual:vw-segments";
 
 // Extend window for ready signals
@@ -40,6 +39,11 @@ declare global {
  * scoped to a specific video within the multi-video server.
  */
 export function renderVideoView(projectInfo: ProjectInfo, slug: string): HTMLElement {
+	const video = projectInfo.videos.find((v) => v.slug === slug);
+	if (!video) {
+		throw new Error(`No video found for slug "${slug}"`);
+	}
+
 	const container = document.createElement("div");
 	container.id = "dev-layout";
 	container.setAttribute(
@@ -49,31 +53,14 @@ export function renderVideoView(projectInfo: ProjectInfo, slug: string): HTMLEle
 		),
 	);
 
-	// Minimal nav bar with back link (Phase 2 replaces with polished top bar)
-	const nav = document.createElement("nav");
-	nav.setAttribute(
-		"style",
-		[
-			"padding: 8px 16px",
-			"font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif",
-			"font-size: 13px",
-			"background: var(--bg-surface, #131316)",
-			"border-bottom: 1px solid var(--border-subtle, #26262d)",
-		].join(";"),
-	);
-	const backLink = document.createElement("a");
-	backLink.href = "/";
-	backLink.textContent = "← All videos";
-	backLink.setAttribute(
-		"style",
-		["color: var(--text-secondary, #a0a0a8)", "text-decoration: none", "cursor: pointer"].join(";"),
-	);
-	backLink.addEventListener("click", (e) => {
-		e.preventDefault();
-		navigate("/");
+	// Top bar with breadcrumb
+	const topBar = renderTopBar({
+		projectName: projectInfo.projectName,
+		breadcrumbTitle: video.title,
+		// Download button wiring comes in Phase 3
+		showDownload: false,
 	});
-	nav.appendChild(backLink);
-	container.appendChild(nav);
+	container.appendChild(topBar);
 
 	const videoArea = document.createElement("div");
 	videoArea.id = "dev-video-area";
@@ -104,7 +91,8 @@ export function renderVideoView(projectInfo: ProjectInfo, slug: string): HTMLEle
 	hudContainer.setAttribute(
 		"style",
 		[
-			"background: rgba(0, 0, 0, 0.85)",
+			"background: var(--bg-surface, #131316)",
+			"border-top: 1px solid var(--border-subtle, #26262d)",
 			"height: 80px",
 			"min-height: 80px",
 			"max-height: 80px",
@@ -112,12 +100,6 @@ export function renderVideoView(projectInfo: ProjectInfo, slug: string): HTMLEle
 		].join(";"),
 	);
 	container.appendChild(hudContainer);
-
-	// Find the video summary
-	const video = projectInfo.videos.find((v) => v.slug === slug);
-	if (!video) {
-		throw new Error(`No video found for slug "${slug}"`);
-	}
 
 	// Boot the player asynchronously
 	bootPlayer(video.timelinePath, playerHost, hudContainer).catch((e) => {

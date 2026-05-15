@@ -9,7 +9,6 @@
 import { consumerRoot, renderFps, timelinePath } from "virtual:vw-globals";
 
 // Virtual module provided by segmentDiscoveryPlugin
-// @ts-expect-error -- virtual module, no type declarations
 import segmentGlobRaw from "virtual:vw-segments";
 
 import {

@@ -4,74 +4,47 @@
  */
 
 import type { ProjectInfo } from "../../../types.js";
+import { renderTopBar } from "../components/top_bar.js";
 import { navigate } from "../router.js";
 
-export function renderNotFound(attemptedPath: string, _projectInfo: ProjectInfo): HTMLElement {
+export function renderNotFound(attemptedPath: string, projectInfo: ProjectInfo): HTMLElement {
 	const container = document.createElement("main");
 	container.className = "vw-not-found";
-	container.setAttribute(
-		"style",
-		[
-			"display: flex",
-			"flex-direction: column",
-			"align-items: center",
-			"justify-content: center",
-			"min-height: 100vh",
-			"font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif",
-			"color: var(--text-primary, #f5f5f7)",
-			"background: var(--bg-base, #0a0a0b)",
-			"text-align: center",
-			"padding: 32px",
-		].join(";"),
-	);
+
+	// Top bar
+	const topBar = renderTopBar({ projectName: projectInfo.projectName });
+	container.appendChild(topBar);
+
+	// Content
+	const content = document.createElement("div");
+	content.className = "vw-not-found__content";
 
 	const code = document.createElement("div");
-	code.setAttribute(
-		"style",
-		[
-			"font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
-			"font-size: 64px",
-			"color: var(--text-tertiary, #6e6e78)",
-			"line-height: 1",
-			"margin-bottom: 16px",
-		].join(";"),
-	);
+	code.className = "vw-not-found__code";
 	code.textContent = "404";
-	container.appendChild(code);
+	content.appendChild(code);
 
 	const heading = document.createElement("h1");
-	heading.setAttribute(
-		"style",
-		["font-size: 24px", "font-weight: 600", "margin: 0 0 8px 0", "line-height: 1.3"].join(";"),
-	);
+	heading.className = "vw-not-found__heading";
 	heading.textContent = "Video not found";
-	container.appendChild(heading);
+	content.appendChild(heading);
 
 	const desc = document.createElement("p");
-	desc.setAttribute(
-		"style",
-		["font-size: 14px", "color: var(--text-secondary, #a0a0a8)", "margin: 0 0 24px 0"].join(";"),
-	);
+	desc.className = "vw-not-found__desc";
 	desc.textContent = `No video at ${attemptedPath}`;
-	container.appendChild(desc);
+	content.appendChild(desc);
 
 	const link = document.createElement("a");
-	link.setAttribute(
-		"style",
-		[
-			"font-size: 14px",
-			"color: var(--accent, #a78bfa)",
-			"text-decoration: none",
-			"cursor: pointer",
-		].join(";"),
-	);
-	link.textContent = "← Back to videos";
+	link.className = "vw-not-found__link";
 	link.href = "/";
+	link.textContent = "← Back to videos";
 	link.addEventListener("click", (e) => {
 		e.preventDefault();
 		navigate("/");
 	});
-	container.appendChild(link);
+	content.appendChild(link);
+
+	container.appendChild(content);
 
 	return container;
 }

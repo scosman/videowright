@@ -1,14 +1,8 @@
-declare module "virtual:vw-globals" {
-	export const timelinePath: string;
-	export const consumerRoot: string;
-	export const audioFile: string | undefined;
-	export const resolvedTiming: Record<string, number[]> | undefined;
-	export const voiceoverNone: boolean | undefined;
-	export const renderFps: number | undefined;
-}
+/**
+ * Re-export of virtual module declarations.
+ * The canonical declarations live in src/virtual-modules.d.ts (outside the
+ * src/cli/entry/ exclude path so tsc can see them). This file is kept for
+ * Vite's dev-time TypeScript resolution within the entry/ directory.
+ */
 
-declare module "virtual:videowright/project" {
-	import type { ProjectInfo } from "../../types.js";
-	const projectInfo: ProjectInfo;
-	export default projectInfo;
-}
+/// <reference path="../../virtual-modules.d.ts" />

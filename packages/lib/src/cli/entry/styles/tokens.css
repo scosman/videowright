@@ -35,6 +35,9 @@
 	/* Shadow */
 	--shadow-modal: 0 24px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-subtle);
 
+	/* Typography */
+	--font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
 	/* Motion */
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 	--duration: 150ms;

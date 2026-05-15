@@ -1,0 +1,373 @@
+/**
+ * Component styles for the Videowright dev UI.
+ * Uses design tokens from tokens.css.
+ */
+
+/* ---- Top Bar ---- */
+
+.vw-top-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 56px;
+	padding: 0 24px;
+	background: var(--bg-surface);
+	border-bottom: 1px solid var(--border-subtle);
+	flex-shrink: 0;
+}
+
+.vw-top-bar__left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.vw-top-bar__wordmark {
+	font-family: var(--font-mono);
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--text-primary);
+	text-decoration: none;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: color var(--duration) var(--ease-out);
+}
+
+.vw-top-bar__wordmark:hover {
+	color: var(--accent);
+}
+
+.vw-top-bar__sep {
+	color: var(--text-tertiary);
+	font-size: 14px;
+	flex-shrink: 0;
+	user-select: none;
+}
+
+.vw-top-bar__title {
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--text-primary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
+}
+
+.vw-top-bar__right {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-shrink: 0;
+}
+
+.vw-top-bar__project {
+	font-size: 13px;
+	color: var(--text-secondary);
+}
+
+.vw-top-bar__icon-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: none;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--text-secondary);
+	cursor: pointer;
+	transition: background var(--duration) var(--ease-out), color var(--duration) var(--ease-out);
+}
+
+.vw-top-bar__icon-btn:hover {
+	background: var(--bg-surface-hover);
+	color: var(--accent);
+}
+
+/* ---- Video Card ---- */
+
+.vw-card {
+	padding: 16px;
+	border-radius: var(--radius-md);
+	background: var(--bg-surface);
+	border: 1px solid var(--border-subtle);
+	cursor: pointer;
+	transition: transform var(--duration) var(--ease-out), border-color var(--duration)
+		var(--ease-out);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.vw-card:hover {
+	transform: translateY(-1px);
+	border-color: var(--border-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vw-card:hover {
+		transform: none;
+		border-color: var(--border-strong);
+	}
+}
+
+.vw-card__header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.vw-card__title {
+	font-size: 16px;
+	font-weight: 500;
+	color: var(--text-primary);
+	line-height: 1.3;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.vw-card__download {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: none;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--text-secondary);
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background var(--duration) var(--ease-out), color var(--duration) var(--ease-out);
+}
+
+.vw-card__download:hover {
+	background: var(--bg-surface-hover);
+	color: var(--accent);
+}
+
+.vw-card__slug {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--text-secondary);
+	line-height: 1.4;
+}
+
+.vw-card__badge {
+	display: inline-block;
+	align-self: flex-start;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-secondary);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius-sm);
+	padding: 2px 8px;
+	line-height: 1.4;
+	margin-top: 4px;
+}
+
+/* ---- Empty State ---- */
+
+.vw-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	max-width: 440px;
+	margin: 0 auto;
+	padding: 64px 32px;
+	min-height: calc(100vh - 56px - 80px);
+}
+
+.vw-empty__hero {
+	font-size: 32px;
+	font-weight: 600;
+	color: var(--text-primary);
+	line-height: 1.3;
+	margin-bottom: 12px;
+}
+
+.vw-empty__desc {
+	font-size: 14px;
+	color: var(--text-secondary);
+	line-height: 1.5;
+	margin-bottom: 20px;
+}
+
+.vw-empty__code {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: var(--bg-surface-elevated);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius-md);
+	padding: 12px 16px;
+	margin-bottom: 24px;
+	width: 100%;
+	max-width: 320px;
+}
+
+.vw-empty__code code {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--text-primary);
+	flex: 1;
+	text-align: left;
+}
+
+.vw-empty__docs {
+	font-size: 13px;
+	color: var(--text-secondary);
+}
+
+.vw-empty__docs-link {
+	color: var(--accent);
+	text-decoration: none;
+	transition: color var(--duration) var(--ease-out);
+}
+
+.vw-empty__docs-link:hover {
+	color: var(--text-primary);
+}
+
+/* ---- Copy Button ---- */
+
+.vw-copy-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border: none;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--text-secondary);
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background var(--duration) var(--ease-out), color var(--duration) var(--ease-out);
+}
+
+.vw-copy-btn:hover {
+	background: var(--bg-surface-hover);
+	color: var(--text-primary);
+}
+
+.vw-copy-btn--copied {
+	color: var(--success);
+}
+
+.vw-copy-btn--copied:hover {
+	color: var(--success);
+}
+
+/* ---- Homepage Layout ---- */
+
+.vw-homepage {
+	min-height: 100vh;
+	background: var(--bg-base);
+}
+
+.vw-homepage__content {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 32px;
+}
+
+.vw-homepage__heading {
+	font-size: 24px;
+	font-weight: 600;
+	color: var(--text-primary);
+	line-height: 1.3;
+	margin: 0 0 4px 0;
+}
+
+.vw-homepage__subtitle {
+	font-size: 12px;
+	color: var(--text-secondary);
+	margin: 0 0 24px 0;
+}
+
+.vw-homepage__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 16px;
+}
+
+/* ---- 404 Layout ---- */
+
+.vw-not-found {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+	background: var(--bg-base);
+}
+
+.vw-not-found__content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+	text-align: center;
+	padding: 32px;
+}
+
+.vw-not-found__code {
+	font-family: var(--font-mono);
+	font-size: 64px;
+	color: var(--text-tertiary);
+	line-height: 1;
+	margin-bottom: 16px;
+}
+
+.vw-not-found__heading {
+	font-size: 24px;
+	font-weight: 600;
+	color: var(--text-primary);
+	line-height: 1.3;
+	margin: 0 0 8px 0;
+}
+
+.vw-not-found__desc {
+	font-size: 14px;
+	color: var(--text-secondary);
+	margin: 0 0 24px 0;
+}
+
+.vw-not-found__link {
+	font-size: 14px;
+	color: var(--accent);
+	text-decoration: none;
+	cursor: pointer;
+	transition: color var(--duration) var(--ease-out);
+}
+
+.vw-not-found__link:hover {
+	color: var(--text-primary);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 640px) {
+	.vw-top-bar {
+		padding: 0 16px;
+	}
+
+	.vw-top-bar__project {
+		display: none;
+	}
+
+	.vw-homepage__content {
+		padding: 24px 16px;
+	}
+
+	.vw-homepage__grid {
+		grid-template-columns: 1fr;
+	}
+}

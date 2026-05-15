@@ -1,112 +1,63 @@
 /**
- * Homepage view (placeholder for Phase 1).
- * Shows a list of video slugs as links. Full design comes in Phase 2.
+ * Homepage view.
+ * Shows a grid of video cards, or the empty-state panel when no videos exist.
  */
 
 import type { ProjectInfo } from "../../../types.js";
+import { renderEmptyState } from "../components/empty_state.js";
+import { renderTopBar } from "../components/top_bar.js";
+import { renderVideoCard } from "../components/video_card.js";
 import { navigate } from "../router.js";
 
 export function renderHomepage(projectInfo: ProjectInfo): HTMLElement {
 	const container = document.createElement("main");
 	container.className = "vw-homepage";
-	container.setAttribute(
-		"style",
-		[
-			"min-height: 100vh",
-			"font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif",
-			"color: var(--text-primary, #f5f5f7)",
-			"background: var(--bg-base, #0a0a0b)",
-			"padding: 32px",
-		].join(";"),
-	);
 
-	const heading = document.createElement("h1");
-	heading.setAttribute(
-		"style",
-		["font-size: 24px", "font-weight: 600", "margin: 0 0 8px 0", "line-height: 1.3"].join(";"),
-	);
-	heading.textContent = "Videos";
-	container.appendChild(heading);
+	// Top bar
+	const topBar = renderTopBar({ projectName: projectInfo.projectName });
+	container.appendChild(topBar);
 
-	const subtitle = document.createElement("p");
-	subtitle.setAttribute(
-		"style",
-		["font-size: 12px", "color: var(--text-secondary, #a0a0a8)", "margin: 0 0 24px 0"].join(";"),
-	);
-	const videoWord = projectInfo.videos.length === 1 ? "video" : "videos";
-	subtitle.textContent = `${projectInfo.videos.length} ${videoWord} in this project`;
-	container.appendChild(subtitle);
-
+	// Empty state
 	if (projectInfo.videos.length === 0) {
-		const empty = document.createElement("p");
-		empty.setAttribute(
-			"style",
-			["font-size: 14px", "color: var(--text-secondary, #a0a0a8)"].join(";"),
-		);
-		empty.textContent =
-			"No videos yet. Ask your coding agent to create one (e.g., /videowright new video).";
-		container.appendChild(empty);
+		container.appendChild(renderEmptyState());
 		return container;
 	}
 
-	const list = document.createElement("ul");
-	list.setAttribute(
-		"style",
-		[
-			"list-style: none",
-			"padding: 0",
-			"margin: 0",
-			"display: flex",
-			"flex-direction: column",
-			"gap: 8px",
-		].join(";"),
-	);
+	// Content area
+	const content = document.createElement("div");
+	content.className = "vw-homepage__content";
+
+	// Section heading
+	const heading = document.createElement("h1");
+	heading.className = "vw-homepage__heading";
+	heading.textContent = "Videos";
+	content.appendChild(heading);
+
+	const subtitle = document.createElement("p");
+	subtitle.className = "vw-homepage__subtitle";
+	const count = projectInfo.videos.length;
+	subtitle.textContent = `${count} ${count === 1 ? "video" : "videos"} in this project`;
+	content.appendChild(subtitle);
+
+	// Card grid
+	const grid = document.createElement("div");
+	grid.className = "vw-homepage__grid";
 
 	for (const video of projectInfo.videos) {
-		const item = document.createElement("li");
-		const link = document.createElement("a");
-		link.href = `/${video.slug}/`;
-		link.setAttribute(
-			"style",
-			[
-				"color: var(--accent, #a78bfa)",
-				"text-decoration: none",
-				"font-size: 16px",
-				"display: block",
-				"padding: 12px 16px",
-				"background: var(--bg-surface, #131316)",
-				"border: 1px solid var(--border-subtle, #26262d)",
-				"border-radius: 10px",
-				"cursor: pointer",
-			].join(";"),
-		);
-		link.addEventListener("click", (e) => {
-			e.preventDefault();
-			navigate(`/${video.slug}/`);
+		const card = renderVideoCard({
+			slug: video.slug,
+			title: video.title,
+			style: video.style,
+			onOpen: () => navigate(`/${video.slug}/`),
+			onDownload: () => {
+				// Download modal wiring comes in Phase 3
+			},
 		});
-
-		const title = document.createElement("div");
-		title.setAttribute("style", "color: var(--text-primary, #f5f5f7); font-weight: 500;");
-		title.textContent = video.title;
-		link.appendChild(title);
-
-		const slug = document.createElement("div");
-		slug.setAttribute(
-			"style",
-			[
-				"font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
-				"font-size: 13px",
-				"color: var(--text-secondary, #a0a0a8)",
-				"margin-top: 4px",
-			].join(";"),
-		);
-		slug.textContent = video.slug;
-		link.appendChild(slug);
-
-		item.appendChild(link);
-		list.appendChild(item);
+		grid.appendChild(card);
 	}
 
-	container.appendChild(list);
+	content.appendChild(grid);
+	container.appendChild(content);
+
 	return container;
 }
