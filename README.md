@@ -6,7 +6,7 @@ Videowright creates demo videos, explainer videos, and product walkthroughs from
 
 ## Demo - Sound on!
 
-<video src="https://github.com/user-attachments/assets/49152183-eb6e-4e3b-bde3-820f12a99d35" width="600" controls></video>
+<video src="https://github.com/user-attachments/assets/ba106686-3ff5-4d57-8fbb-141ad40c8c86" width="600" controls></video>
 
 ## Overview
 
