@@ -194,6 +194,10 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 		);
 	}
 
+	// Discover all videos up front. This is reused for both render-target
+	// selection (when no positional arg) and the Vite virtual module plugin.
+	const projectInfo = await discoverAllVideos(cwd);
+
 	let timelinePath: string;
 
 	if (positional) {
@@ -205,8 +209,7 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 		}
 		timelinePath = resolved;
 	} else {
-		const project = await discoverAllVideos(cwd);
-		timelinePath = await resolveRenderTarget(project, !!process.stdin.isTTY);
+		timelinePath = await resolveRenderTarget(projectInfo, !!process.stdin.isTTY);
 	}
 
 	// Load config and timeline
@@ -308,13 +311,15 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 
 	// 3. Boot Vite dev server with render entry
 	const { createServer } = await import("vite");
-	const { findPackageRoot, fullReloadPlugin, segmentDiscoveryPlugin } = await import(
-		"./vite_helpers.js"
-	);
+	const {
+		findPackageRoot,
+		fullReloadPlugin,
+		globalsVirtualModulePlugin,
+		projectVirtualModulePlugin,
+		segmentDiscoveryPlugin,
+	} = await import("./vite_helpers.js");
 	const pkgRoot = findPackageRoot();
 	const entryDir = resolve(pkgRoot, "src/cli/entry");
-
-	const { globalsVirtualModulePlugin } = await import("./vite_helpers.js");
 
 	const server = await createServer({
 		configFile: false,
@@ -327,6 +332,7 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 				consumerRoot: cwd,
 				renderFps: fps,
 			}),
+			projectVirtualModulePlugin(projectInfo),
 		],
 		server: {
 			port: 0,
