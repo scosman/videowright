@@ -14,7 +14,7 @@ This is a single file because the underlying mechanics — segments, timeline co
 These reference files cover the building blocks. Load them as needed — do not re-read this section's summaries when the full reference is available.
 
 - **[authoring_segment.md](authoring_segment.md)** — segment lifecycle (`mount`/`play`/`unmount`), `defineSegment`, timing with `ctx.waitForNext()` and `ctx.hold(ms)`, render-safe animation patterns (WAAPI, `ctx.clock()`, patterns and recommendations), idempotency, any-web-tech guidance.
-- **[voiceover.md](voiceover.md)** — voiceover flows (AI-generated and manual), the `voiceover` field on segments, VO-first authoring pattern, `videowright script` CLI, file conventions, CLI usage (`--voiceover`).
+- **[audio.md](audio.md)** — audio workflow (voiceover, SFX, music), the `voiceover` field on segments, VO-first authoring pattern, `videowright script` CLI, file conventions, CLI usage (`--audio-track`).
 - **[styles.md](styles.md)** — style folder structure, how segments consume tokens via CSS variables, switching styles, the timeline.ts import convention.
 - **[project_structure.md](project_structure.md)** — consumer repo layout, file-ownership rules (top-level dirs are shared, per-video files live in `videos/<name>/`).
 - **[types.md](types.md)** — quick reference for `Segment`, `PlayerContext`, `Timeline`, `TimelineMeta`, `Config`.
@@ -97,17 +97,17 @@ Key rules:
 
 ### Step 4 — Write voiceover script file
 
-This step applies only when audio intent is **voiceover**. For music or silent videos, skip it entirely.
+This step applies only when the video has a voiceover. For videos without voiceover, skip it entirely.
 
 The voiceover system has two parts that stay in sync:
 - **`voiceover` field** on each segment (in `segments/<id>/index.ts`) — the VO text for that segment. Set this in step 2 above.
-- **`voiceover/script.md` file** (in `videos/<name>/voiceover/script.md`) — the full script for the video, organized by segment id. Written here.
+- **`voiceover_script/script.md` file** (in `videos/<name>/voiceover_script/script.md`) — the full script for the video, organized by segment id. Written here.
 
 Steps:
 
-1. Create `videos/<name>/voiceover/script.md` with the full script, organized by segment id (one `## segment-id` heading per segment).
+1. Create `videos/<name>/voiceover_script/script.md` with the full script, organized by segment id (one `## segment-id` heading per segment).
 2. Verify each segment's `voiceover` field matches its section in the script. These must stay in sync — `videowright script` can regenerate one from the other.
-3. See [voiceover.md](voiceover.md) for the VO-first authoring pattern and `videowright script` usage.
+3. See [audio.md](audio.md) for the audio workflow and [audio/voiceover.md](audio/voiceover.md) for the VO-first authoring pattern and `videowright script` usage.
 
 ### Step 5 — Shared resources
 
@@ -147,13 +147,13 @@ After the video is verified, present the user with an explicit choice. Show this
 
 > Two options:
 > 1. **Edit the video content** — tell me what to change (segments, copy, animations, style).
-> 2. **Generate the voiceover audio** — I'll walk you through the voiceover flow.
+> 2. **Set up audio** — I'll walk you through voiceover, SFX, and music.
 
 If the user picks option 1, stay in this file and follow edit-mode instructions below for whatever they want to change.
 
-If the user picks option 2, immediately load [voiceover.md](voiceover.md) and follow its flow entry point. Do not add any intermediate questions — voiceover.md handles intake.
+If the user picks option 2, immediately load [audio.md](audio.md) and follow its flow entry point. Do not add any intermediate questions — audio.md handles intake.
 
-If audio intent is **not** voiceover (music or silent), omit option 2 and instead just ask: "The video is ready. Want to make any changes?"
+If audio intent is **silent**, omit option 2 and instead just ask: "The video is ready. Want to make any changes?"
 
 ## Edit mode
 
@@ -189,7 +189,7 @@ Common edit operations:
 
 **Rewrite voiceover:**
 1. Edit the `voiceover` field on affected segments.
-2. Run `npx videowright script` to regenerate `voiceover/script.md` from the updated segment fields. See [voiceover.md](voiceover.md).
+2. Run `npx videowright script` to regenerate `voiceover_script/script.md` from the updated segment fields. See [audio/voiceover.md](audio/voiceover.md).
 
 **Edit a segment's content:**
 1. Modify `segments/<id>/index.ts` directly.
@@ -202,7 +202,7 @@ Common edit operations:
 
 Segment ids are the primary key. Renaming a segment id cascades through:
 - Every `timeline.ts` that references it.
-- The `voiceover/script.md` heading.
+- The `voiceover_script/script.md` heading.
 - The PLAN.md segment outline.
 
 If you must rename, update all references. Prefer keeping existing ids unless the user explicitly asks for a rename.

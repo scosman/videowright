@@ -6,7 +6,7 @@ A voiceover is being set as the default for a video, and you need to perform a o
 
 ## What this is
 
-When a voiceover is set as the default (`default_voiceover` in `timeline.ts`), the agent performs a one-time manual pass over segment code to align fully automated animations with the voiceover's timing. This is a planning-time agent action, not a runtime mechanism.
+When an audio track is set as the default (`default_audio_track` in `timeline.ts`), the agent performs a one-time manual pass over segment code to align fully automated animations with the audio track's timing. This is a planning-time agent action, not a runtime mechanism.
 
 ## What to sync
 
@@ -105,21 +105,21 @@ This helps future editors understand the magic number.
 
 ### Step 5: Render-safety review
 
-After adjusting each segment, run the render-safety CR checklist from [create_or_edit_video.md](../create_or_edit_video.md) (Step 2b) against the modified code. The sync pass may introduce or reveal non-idiomatic patterns -- for example, animations that depend on external network fetches or non-deterministic input. Fix any issues before moving to the next segment.
+After adjusting each segment, run the render-safety CR checklist from [create_or_edit_video.md](../../create_or_edit_video.md) (Step 2b) against the modified code. The sync pass may introduce or reveal non-idiomatic patterns -- for example, animations that depend on external network fetches or non-deterministic input. Fix any issues before moving to the next segment.
 
 ## Tradeoffs
 
-- **Sync is to the default voiceover only.** If the user later switches to a different voiceover via `--voiceover <other-slug>`, advance timing updates automatically (driven by the new voiceover's `Timing`), but in-segment animation durations remain tuned to the original default.
-- **No runtime re-sync.** The sync is a one-time manual edit. There is no mechanism to dynamically adjust animation durations at playback time based on the active voiceover.
-- **Re-sync is available.** If the user changes the default voiceover, they can ask the agent to re-run the animation sync pass. The agent reads the new `Timing` and adjusts durations again.
+- **Sync is to the default audio track only.** If the user later switches to a different audio track via `--audio-track <other-id>`, advance timing updates automatically (driven by the new track's `Timing`), but in-segment animation durations remain tuned to the original default.
+- **No runtime re-sync.** The sync is a one-time manual edit. There is no mechanism to dynamically adjust animation durations at playback time based on the active audio track.
+- **Re-sync is available.** If the user changes the default audio track, they can ask the agent to re-run the animation sync pass. The agent reads the new `Timing` and adjusts durations again.
 
 ## When to skip animation sync
 
 - The video has no fully automated animations (all timing is `waitForNext`-driven).
 - The user explicitly says they do not want animation adjustments.
-- The voiceover is not being set as the default (it is an alternate take that will be used via `--voiceover <slug>` only).
+- The audio track is not being set as the default (it is an alternate take that will be used via `--audio-track <id>` only).
 
-In these cases, set `default_voiceover` in `timeline.ts` without modifying segment code.
+In these cases, set `default_audio_track` in `timeline.ts` without modifying segment code.
 
 ## Presenting changes to the user
 

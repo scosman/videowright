@@ -19,7 +19,7 @@ This question is asked at the start of Flow A (before style intake). Present the
 >
 > If you don't have an account: open https://elevenlabs.io and sign up first.
 
-After the user picks, if they chose **API key**, immediately present the curated voice catalog (see [voiceover.md curated voice catalog](../voiceover.md#curated-voice-catalog)). Then continue with style intake and script writing. When it is time for audio generation, dispatch into the appropriate sub-flow below.
+After the user picks, if they chose **API key**, immediately present the curated voice catalog (see [voiceover.md curated voice catalog](../../voiceover.md#curated-voice-catalog)). Then continue with style intake and script writing. When it is time for audio generation, dispatch into the appropriate sub-flow below.
 
 ---
 
@@ -89,7 +89,7 @@ The agent constructs and runs a curl command like this:
 
 ```bash
 # Read the provider script (everything below the --- line)
-SCRIPT_TEXT=$(sed '1,/^---$/d' "videos/<video>/voiceovers/<slug>/provider_script.md")
+SCRIPT_TEXT=$(sed '1,/^---$/d' "videos/<video>/audio/originals/voiceovers/<slug>/provider_script.md")
 
 # Voice ID from eleven_labs_voice_id (default: Asher tMvyQtpCVQ0DkixuYm6J)
 VOICE_ID="<selected voice ID>"
@@ -121,7 +121,7 @@ The response JSON contains base64-encoded audio and word-level alignment data. T
 1. **Extract the audio.** The response includes an `audio_base64` field. Decode and save it:
 
 ```bash
-jq -r '.audio_base64' "$TMPDIR/elevenlabs_response.json" | base64 --decode > "videos/<video>/voiceovers/<slug>/narration.mp3"
+jq -r '.audio_base64' "$TMPDIR/elevenlabs_response.json" | base64 --decode > "videos/<video>/audio/originals/voiceovers/<slug>/audio.mp3"
 ```
 
 2. **Extract the timing data.** The response includes an `alignment` field with per-character or per-word timing. Transform it into the standard timing JSON format and save:
@@ -129,7 +129,7 @@ jq -r '.audio_base64' "$TMPDIR/elevenlabs_response.json" | base64 --decode > "vi
 ```bash
 jq '{
   words: [.alignment.words[] | {word: .word, start: .start, end: .end}]
-}' "$TMPDIR/elevenlabs_response.json" > "videos/<video>/voiceovers/<slug>/provider_timing.json"
+}' "$TMPDIR/elevenlabs_response.json" > "videos/<video>/audio/originals/voiceovers/<slug>/timing.json"
 ```
 
 If the response uses character-level alignment instead of word-level, aggregate characters into words by grouping on whitespace boundaries and using the start of the first character and end of the last character for each word.
@@ -141,10 +141,10 @@ If the response uses character-level alignment instead of word-level, aggregate 
 After a successful API call, the voiceover folder should contain:
 
 ```
-voiceovers/<slug>/
+audio/originals/voiceovers/<slug>/
   provider_script.md       # already created in prior step
-  narration.mp3            # decoded from API response
-  provider_timing.json     # extracted from API response
+  audio.mp3                # decoded from API response
+  timing.json              # extracted from API response
 ```
 
 Proceed to the sync algorithm: [../sync_algorithm.md](../sync_algorithm.md).
@@ -167,11 +167,11 @@ Guide the user:
 > 2. Navigate to **Text to Speech** in the sidebar.
 > 3. **Important: Select the v2 model in the model dropdown.** Look for **"Eleven Multilingual v2"** (or **"Multilingual v2"**). Do NOT use the default v3 model -- v3 does not honor exact pause timing via `<break>` tags.
 > 4. Select a voice that matches your tone preferences. You can preview voices before generating.
-> 5. Paste the content from `voiceovers/<slug>/provider_script.md` (everything below the horizontal rule) into the text area.
+> 5. Paste the content from `audio/originals/voiceovers/<slug>/provider_script.md` (everything below the horizontal rule) into the text area.
 > 6. Click **Generate**.
 > 7. Listen to the preview. If pauses or delivery need adjustment, update the provider script and regenerate.
-> 8. **Download the audio file.** Click the download button on the generated audio. Save as `narration.mp3`.
-> 9. Place the file in `voiceovers/<slug>/narration.mp3`.
+> 8. **Download the audio file.** Click the download button on the generated audio. Save as `audio.mp3`.
+> 9. Place the file in `audio/originals/voiceovers/<slug>/audio.mp3`.
 
 ### Step 2 -- Extract timings (STT)
 
@@ -180,20 +180,20 @@ The TTS portal does not export per-word timing data. To get timings, run the gen
 > **Extracting word-level timing via Speech-to-Text:**
 >
 > 1. In the ElevenLabs portal, switch to **Speech to Text** in the sidebar.
-> 2. Upload the audio file you just saved (`voiceovers/<slug>/narration.mp3`).
+> 2. Upload the audio file you just saved (`audio/originals/voiceovers/<slug>/audio.mp3`).
 > 3. Wait for transcription to complete.
 > 4. **Export the result as JSON.** Look for an "Export" or "Download" option and select **JSON** format. **Do not use plain text export** -- plain text does not include per-word timing data.
-> 5. Save the JSON file as `voiceovers/<slug>/provider_timing.json`.
+> 5. Save the JSON file as `audio/originals/voiceovers/<slug>/timing.json`.
 
 ### Portal flow output
 
 After both steps, the voiceover folder should contain:
 
 ```
-voiceovers/<slug>/
+audio/originals/voiceovers/<slug>/
   provider_script.md       # already created in prior step
-  narration.mp3            # downloaded from TTS in step 1
-  provider_timing.json     # exported from STT in step 2
+  audio.mp3                # downloaded from TTS in step 1
+  timing.json              # exported from STT in step 2
 ```
 
 Proceed to the sync algorithm: [../sync_algorithm.md](../sync_algorithm.md).
@@ -213,7 +213,7 @@ Used when the user provides their own audio and needs per-word timing data. This
 > 3. Upload the audio file (mp3 or wav).
 > 4. Wait for transcription to complete.
 > 5. **Export as JSON.** Select the JSON export option -- plain text export does not include word timing data.
-> 6. Save the JSON file in `voiceovers/<slug>/` as `provider_timing.json`.
+> 6. Save the JSON file in `audio/originals/voiceovers/<slug>/` as `timing.json`.
 
 ### Timing JSON format (STT)
 
@@ -244,7 +244,7 @@ Additional fields like `confidence` can be ignored for sync purposes. The sync a
 
 ## Timing JSON format (canonical)
 
-Both flows produce the same timing JSON format at `voiceovers/<slug>/provider_timing.json`:
+Both flows produce the same timing JSON format at `audio/originals/voiceovers/<slug>/timing.json`:
 
 ```json
 {

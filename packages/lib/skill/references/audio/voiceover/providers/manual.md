@@ -16,13 +16,13 @@ Ask the user for the audio file. Two options:
 2. **Drop-in.** Create the voiceover folder and ask the user to place the file there.
 
 ```
-voiceovers/<slug>/
-  narration.mp3    # or .wav, any name
+audio/originals/voiceovers/<slug>/
+  audio.mp3    # or .wav
 ```
 
 Slug naming:
 - Ask the user for a slug, or suggest one based on context: `v1`, `narrator`, `take-1`.
-- Create the directory: `videos/<video>/voiceovers/<slug>/`.
+- Create the directory: `videos/<video>/audio/originals/voiceovers/<slug>/`.
 
 ### Audio format requirements
 
@@ -43,7 +43,7 @@ The user needs per-word timing data for the sync algorithm. Guide them through E
 > 3. Upload your audio file (`<filename>`).
 > 4. Wait for transcription to complete.
 > 5. **Export as JSON.** Select the JSON export option -- **do not use plain text export**, which does not include per-word timing data.
-> 6. Save the JSON file as `provider_timing.json` in `voiceovers/<slug>/`.
+> 6. Save the JSON file as `timing.json` in `audio/originals/voiceovers/<slug>/`.
 
 See [elevenlabs.md](elevenlabs.md) for the detailed STT portal walkthrough and expected JSON format.
 
@@ -51,7 +51,7 @@ See [elevenlabs.md](elevenlabs.md) for the detailed STT portal walkthrough and e
 
 After the user downloads the timing JSON:
 
-1. Read `provider_timing.json` and extract the full transcript text.
+1. Read `timing.json` and extract the full transcript text.
 2. Present it to the user for review: "Here's what ElevenLabs heard. Does this match your recording?"
 3. If the transcript is significantly wrong (wrong words, missing sections), the timing data may be unreliable. Ask the user to:
    - Re-record with clearer audio, or
@@ -75,17 +75,17 @@ If the video already has a script in PLAN.md:
 
 ## Step 5: Proceed to sync
 
-With the audio file and `provider_timing.json` in place, proceed to the sync algorithm: [../sync_algorithm.md](../sync_algorithm.md).
+With the audio file and `timing.json` in place, proceed to the sync algorithm: [../sync_algorithm.md](../sync_algorithm.md).
 
 The sync algorithm uses the provider timing JSON to compute a `Timing` object. The rest of the flow (default voiceover question, animation sync, writing `voiceover.ts`) is identical to the AI-generated flow.
 
 ## Expected folder state after manual flow
 
 ```
-voiceovers/<slug>/
+audio/originals/voiceovers/<slug>/
   voiceover.ts             # created at the end of the flow
-  narration.mp3            # user-provided audio
-  provider_timing.json     # from ElevenLabs STT
+  audio.mp3                # user-provided audio
+  timing.json              # from ElevenLabs STT
 ```
 
 Note: there is no `provider_script.md` in the manual flow since the user recorded the audio themselves.
@@ -97,4 +97,4 @@ Note: there is no `provider_script.md` in the manual flow since the user recorde
 | Audio has background music or noise | STT accuracy may suffer. Warn the user that timing data could be less precise. Suggest clean audio for best results. |
 | Audio has multiple speakers | Videowright supports only single-narrator voiceovers. Ask the user to provide a single-speaker recording. |
 | Audio is very short (< 5 seconds) | Proceed normally, but the resulting timing may be too sparse for meaningful sync. |
-| User does not want to use ElevenLabs STT | There is no alternative STT integration in V1. The user would need to manually create `provider_timing.json` with per-word timestamps, which is impractical. Recommend ElevenLabs STT (free tier available). |
+| User does not want to use ElevenLabs STT | There is no alternative STT integration in V1. The user would need to manually create `timing.json` with per-word timestamps, which is impractical. Recommend ElevenLabs STT (free tier available). |

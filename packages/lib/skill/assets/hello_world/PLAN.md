@@ -19,7 +19,7 @@
 3. hello-outro -- Closing card with call to action
 
 ## Script (if applicable)
-see voiceover/script.md
+see voiceover_script/script.md
 
 ---
 

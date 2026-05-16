@@ -281,7 +281,7 @@ await ctx.hold(2400);
 
 This is a best practice, not a hard rule. Fixed timers are appropriate when the duration is truly independent of the beat — e.g., a 200ms micro-interaction that should always feel the same speed. But as a default posture, reach for percentages.
 
-**Related smell:** if you find yourself tweaking `hold()` values inside a segment to match a specific voiceover's pacing, that is a sign the beat boundaries are wrong. The content that needs to align with the voiceover should be gated by its own `waitForNext()` call so the timing comes from the `advances`/`Timing` data, not from hardcoded milliseconds. See [voiceover.md § VO-alignment smell](voiceover.md#vo-alignment-smell) for more detail.
+**Related smell:** if you find yourself tweaking `hold()` values inside a segment to match a specific voiceover's pacing, that is a sign the beat boundaries are wrong. The content that needs to align with the voiceover should be gated by its own `waitForNext()` call so the timing comes from the `advances`/`Timing` data, not from hardcoded milliseconds. See [voiceover.md § VO-alignment smell](audio/voiceover.md#vo-alignment-smell) for more detail.
 
 ## The `advances` array
 

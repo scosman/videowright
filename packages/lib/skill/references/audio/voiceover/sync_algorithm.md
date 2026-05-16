@@ -11,7 +11,7 @@ This is an agent reasoning step, not a deterministic function. You read the per-
 ## Inputs
 
 1. **Per-segment script** from PLAN.md (the `## Script` section with subsections per segment id).
-2. **Provider timing JSON** at `voiceovers/<slug>/provider_timing.json`. This contains per-word or per-character timestamps from the TTS provider or STT transcription.
+2. **Provider timing JSON** at `audio/originals/voiceovers/<slug>/timing.json`. This contains per-word or per-character timestamps from the TTS provider or STT transcription.
 3. **Segment ids** in timeline order, plus each segment's `notes` and `voiceover` hint string.
 4. **Each segment's `advances` array** -- the current timing. You will be replacing these values in the `Timing`, but the array length tells you how many advances each segment needs.
 

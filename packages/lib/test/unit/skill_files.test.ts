@@ -21,6 +21,8 @@ describe("skill file structure", () => {
 
 		const files = readdirSync(refsDir).sort();
 		expect(files).toEqual([
+			"audio",
+			"audio.md",
 			"authoring_segment.md",
 			"create_or_edit_video.md",
 			"dev_server.md",
@@ -32,13 +34,19 @@ describe("skill file structure", () => {
 			"styles.md",
 			"testing.md",
 			"types.md",
-			"voiceover",
-			"voiceover.md",
 		]);
 	});
 
-	it("references/voiceover/ has the expected sub-references", () => {
-		const voDir = resolve(SKILL_ROOT, "references/voiceover");
+	it("references/audio/ has the expected sub-references", () => {
+		const audioDir = resolve(SKILL_ROOT, "references/audio");
+		expect(existsSync(audioDir)).toBe(true);
+
+		const files = readdirSync(audioDir).sort();
+		expect(files).toEqual(["voiceover", "voiceover.md"]);
+	});
+
+	it("references/audio/voiceover/ has the expected sub-references", () => {
+		const voDir = resolve(SKILL_ROOT, "references/audio/voiceover");
 		expect(existsSync(voDir)).toBe(true);
 
 		const files = readdirSync(voDir).sort();

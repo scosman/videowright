@@ -9,7 +9,7 @@ You have a confirmed script in PLAN.md and need to transform it into a provider-
 The `provider_script.md` file is a transformation of the PLAN.md script with provider-specific annotations. It is the text that the user copies into the TTS portal (or the agent sends via API) to generate audio. It lives at:
 
 ```
-videos/<video>/voiceovers/<slug>/provider_script.md
+videos/<video>/audio/originals/voiceovers/<slug>/provider_script.md
 ```
 
 The file is markdown for human readability, but its content is the exact text to paste into the provider. Segment headings are stripped -- only the narration text and annotations are included.
@@ -149,5 +149,5 @@ After generating the provider script:
 1. Show the full script with a brief explanation of the annotations used.
 2. Tell the user:
    > Copy everything below the horizontal rule into the ElevenLabs portal, or the agent will send it via the API. See the provider reference for step-by-step instructions.
-3. Write the file to `voiceovers/<slug>/provider_script.md`.
+3. Write the file to `audio/originals/voiceovers/<slug>/provider_script.md`.
 4. Proceed to the provider walkthrough: [providers/elevenlabs.md](providers/elevenlabs.md).

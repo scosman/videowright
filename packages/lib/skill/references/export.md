@@ -53,8 +53,8 @@ For screen recording, use `videowright dev` and open the video view in a browser
 | `--height <n>` | `1080` | Video height in pixels. |
 | `--fps <n>` | `60` | Frames per second. |
 | `--output <path>` | `output.mp4` | Output file path (relative to cwd). |
-| `--voiceover <slug>` | | Use voiceover from `voiceovers/<slug>/`. |
-| `--voiceover none` | | Disable voiceover (ignore `default_voiceover`). |
+| `--audio-track <id>` | | Use audio track from `audio/tracks/<id>/`. |
+| `--audio-track none` | | Disable audio (ignore `default_audio_track`). |
 | `--verbose` | off | Show progress, frame counts, timing, ffmpeg output on error. |
 
 ### Positional argument
@@ -85,27 +85,27 @@ npx playwright install chromium
 
 ## Audio
 
-When a voiceover is active, `render` muxes the audio file into the output MP4 via ffmpeg:
+When an audio track is active, `render` muxes the audio file into the output MP4 via ffmpeg:
 
 - The audio file is added as a second input to ffmpeg alongside the frame pipe.
 - Audio is encoded as AAC at 192kbps.
 - The `-shortest` flag bounds output to the shorter of video and audio.
-- The voiceover's `Timing` object drives segment advances, so video and audio durations should match.
+- The audio track's `Timing` object drives segment advances, so video and audio durations should match.
 
-### Voiceover selection
+### Audio track selection
 
 ```bash
-# Use a specific voiceover
-npx videowright render --voiceover v1
+# Use a specific audio track
+npx videowright render --audio-track v1
 
-# Suppress voiceover (ignore default_voiceover)
-npx videowright render --voiceover none
+# Suppress audio (ignore default_audio_track)
+npx videowright render --audio-track none
 
-# No flag: use default_voiceover from timeline.ts if set, otherwise silent
+# No flag: use default_audio_track from timeline.ts if set, otherwise silent
 npx videowright render
 ```
 
-If no voiceover is active (no `--voiceover` flag and no `default_voiceover`), the output is silent.
+If no audio track is active (no `--audio-track` flag and no `default_audio_track`), the output is silent.
 
 ## Output
 

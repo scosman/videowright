@@ -59,7 +59,7 @@ interface Timeline {
   meta: TimelineMeta;
   segments: TimelineEntry[];
   default_timing?: Timing;
-  default_voiceover?: Voiceover;
+  default_audio_track?: AudioTrack;
 }
 ```
 
@@ -67,8 +67,8 @@ interface Timeline {
 |---|---|---|
 | `meta` | Yes | Timeline-level metadata. |
 | `segments` | Yes | Ordered array of segment entries. |
-| `default_timing` | No | Standalone timing overrides. Used when no voiceover is active. |
-| `default_voiceover` | No | Default voiceover for this video. See [voiceover.md](voiceover.md). |
+| `default_timing` | No | Standalone timing overrides. Used when no audio track is active. |
+| `default_audio_track` | No | Default audio track for this video. See [audio.md](audio.md). |
 
 ### `TimelineMeta`
 
@@ -124,9 +124,37 @@ type Timing = {
 
 Keys are segment ids; values are advance times in seconds (same units as `SegmentSpec.advances`). A Timing only needs to specify segments it wants to override -- unspecified segments fall back to their own `advances`.
 
+### `AudioTrack`
+
+A rendered audio track for a video. Stored at `videos/<video>/audio/tracks/<id>/track.ts`.
+
+```ts
+type AudioTrack = {
+  audio_file: string;
+  length_s: number;
+  timing: Timing;
+  audio_plan_path?: string;
+  plan_snapshot_path?: string;
+  created_at?: string;
+  notes?: string;
+};
+```
+
+| Field | Required | Purpose |
+|---|---|---|
+| `audio_file` | Yes | Audio file path, relative to `track.ts` directory. Rewritten to absolute by `loadAudioTrack()`. |
+| `length_s` | Yes | Length of the rendered audio in seconds. |
+| `timing` | Yes | Per-segment advance timing synced to this audio track. |
+| `audio_plan_path` | No | Path to the audio plan that produced this track, relative to `track.ts`. |
+| `plan_snapshot_path` | No | Path to the point-in-time plan snapshot, relative to `track.ts`. |
+| `created_at` | No | ISO timestamp when this track was rendered. |
+| `notes` | No | Freeform notes about this track. |
+
+See [audio.md](audio.md) for the audio workflow.
+
 ### `Voiceover`
 
-A single voiceover for a video. Stored at `videos/<video>/voiceovers/<slug>/voiceover.ts`.
+A single voiceover source file. Stored at `videos/<video>/audio/originals/voiceovers/<slug>/voiceover.ts`. Voiceovers are source data used to build audio tracks -- they are not directly referenced by `timeline.ts`.
 
 ```ts
 type Voiceover = {
@@ -148,7 +176,7 @@ type Voiceover = {
 | `notes` | No | Freeform notes about this voiceover. |
 | `eleven_labs_voice_id` | No | ElevenLabs voice ID for TTS generation. Defaults to Asher (`tMvyQtpCVQ0DkixuYm6J`) when omitted. Ignored when provider is `"manual"`. |
 
-See [voiceover.md](voiceover.md) for the full voiceover flow and file conventions.
+See [audio/voiceover.md](audio/voiceover.md) for the full voiceover flow and file conventions.
 
 ## Transition types
 

@@ -96,5 +96,5 @@ When a misalignment is found, present it to the user:
 ## After the script is confirmed
 
 1. Update each segment's `voiceover` field to match its PLAN.md script section.
-2. Run `npx videowright script --write` to generate `voiceover/script.md`.
+2. Run `npx videowright script --write` to generate `voiceover_script/script.md`.
 3. Proceed to [provider_script.md](provider_script.md) for Flow A, or directly to sync for Flow B.
