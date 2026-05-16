@@ -33,15 +33,23 @@ If the user wants a voice-over, load [audio/voiceover.md](audio/voiceover.md). T
 
 ### Sound effects
 
-SFX sourcing will be available in a later phase.
+SFX sourcing (BYO and ElevenLabs) will be available in a later phase. Once sourced, SFX assets live in `audio/originals/sfx/<slug>/` and are referenced by cues in the audio plan.
 
 ### Background music
 
-Music sourcing will be available in a later phase.
+Music sourcing (BYO and ElevenLabs) will be available in a later phase. Once sourced, music assets live in `audio/originals/music/<slug>/` and are referenced by cues in the audio plan.
 
 ### Audio plan, build, and sync
 
-The audio plan/build/sync workflow (authoring `audio_plan.md`, running ffmpeg to produce a track, syncing video timing to the track) will be available in a later phase. For VO-only videos, the track build is handled automatically during the voiceover flow.
+If any audio is present (VO, SFX, or music), the audio plan/build/sync workflow applies:
+
+1. **Audio plan** -- author `audio/audio_plan.md` describing the mix composition. See [audio/audio_plan.md](audio/audio_plan.md) for the format spec, [audio/cue_template.md](audio/cue_template.md) for the per-cue field template, and [audio/styles.md](audio/styles.md) for mix-level guidance.
+2. **Build** -- render the plan into an audio track via ffmpeg. See [audio/build.md](audio/build.md). Uses recipes from [audio/ffmpeg_cookbook.md](audio/ffmpeg_cookbook.md).
+3. **Sync** -- compute per-segment timing from the track. See [audio/sync.md](audio/sync.md).
+
+For **VO-only videos** (no SFX, no music), the plan is minimal (single cue, full file, placed at 0s) and is auto-emitted during the voiceover flow. The user does not need to understand the plan format -- it is created transparently and consumed by build and sync.
+
+For **multi-source mixes** (VO + SFX, VO + music, or all three), the plan is authored explicitly with per-cue volume curves, fades, and a full ffmpeg mix command.
 
 ## File layout
 

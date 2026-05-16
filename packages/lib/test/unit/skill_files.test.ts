@@ -42,7 +42,16 @@ describe("skill file structure", () => {
 		expect(existsSync(audioDir)).toBe(true);
 
 		const files = readdirSync(audioDir).sort();
-		expect(files).toEqual(["voiceover", "voiceover.md"]);
+		expect(files).toEqual([
+			"audio_plan.md",
+			"build.md",
+			"cue_template.md",
+			"ffmpeg_cookbook.md",
+			"styles.md",
+			"sync.md",
+			"voiceover",
+			"voiceover.md",
+		]);
 	});
 
 	it("references/audio/voiceover/ has the expected sub-references", () => {

@@ -32,8 +32,8 @@ When the user asks to "add a voiceover" or "generate a voiceover", ask:
 4. **Provider script.** Transform the PLAN script into `provider_script.md` with v2-targeted annotations (SSML `<break>` tags, punctuation-driven prosody -- no v3 emotion tags). See [voiceover/provider_script.md](voiceover/provider_script.md).
 5. **Audio generation.** Follow the sub-flow for the approach chosen in step 1. See [voiceover/providers/elevenlabs.md](voiceover/providers/elevenlabs.md).
 6. **Sync timing.** Read the provider timing JSON and compute a `Timing` object. See [voiceover/sync_algorithm.md](voiceover/sync_algorithm.md).
-7. **Default voiceover?** Ask whether to set this as the default. If yes, update `timeline.ts` and run a one-time animation sync. See [voiceover/animation_sync.md](voiceover/animation_sync.md).
-8. **Write `voiceover.ts`.** Create the typed module exporting a `Voiceover` object.
+7. **Write `voiceover.ts`.** Create the typed module exporting a `Voiceover` object.
+8. **Audio plan and build.** Create or update `audio/audio_plan.md` with a VO cue pointing at this voiceover. For VO-only videos, the plan is minimal (single cue, full file, placed at 0s -- see [audio_plan.md](audio_plan.md) for the VO-only shortcut). Then build the track via [build.md](build.md). The build workflow handles approval, timeline.ts update, and sync.
 
 ### Curated voice catalog
 
@@ -56,8 +56,8 @@ Portal users skip this catalog -- they pick a voice visually in the ElevenLabs U
 1. **Get the audio.** Ask the user to provide or drop an audio file into `audio/originals/voiceovers/<slug>/`.
 2. **Generate transcript and timing.** Walk the user through ElevenLabs Speech-to-Text to get per-word timing data. See [voiceover/providers/manual.md](voiceover/providers/manual.md).
 3. **Sync timing.** Same as Flow A step 6.
-4. **Default voiceover?** Same as Flow A step 7.
-5. **Write `voiceover.ts`.** Same as Flow A step 8.
+4. **Write `voiceover.ts`.** Same as Flow A step 7.
+5. **Audio plan and build.** Same as Flow A step 8.
 
 ## File and folder conventions
 
