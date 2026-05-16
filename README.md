@@ -1,16 +1,20 @@
-# Videowright
 
-**Create a video with a prompt.**
+# Videowright 
+### Create a video with a prompt
 
 Videowright creates demo videos, explainer videos, and product walkthroughs from your coding agent. Just describe what you want and it generates your video (including audio). Iterate in chat until it's perfect.
 
-<video src="https://github.com/user-attachments/assets/7e046c26-9fe1-425c-b96e-8f40a6ce35ca" width="600" controls></video>
+## Demo - Sound on!
+
+<video src="https://github.com/user-attachments/assets/49152183-eb6e-4e3b-bde3-820f12a99d35" width="600" controls></video>
+
+## Overview
 
 - **Video from prompt** -- generate an animated video, simply from a prompt
 - **AI voice-overs** -- generate narration from a script, then auto-sync video timing to the audio
 - **Six built-in visual styles** -- or create your own from a brand guide or description
 - **Pixel-perfect MP4 export** -- deterministic frame-by-frame rendering, no dropped frames
-- **Hot-reloading dev server** -- iterate on segments in chat, see changes instantly
+- **Hot-reloading dev server** -- iterate in chat, see changes instantly
 - **Works in any major coding agent** -- Claude Code, Codex, opencode, etc
 
 ## Install
