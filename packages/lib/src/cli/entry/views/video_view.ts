@@ -19,10 +19,10 @@ import { applyDevFrameSize, installHudKeyListener, toggleDevHud } from "../dev_f
 
 // Virtual modules
 import {
+	audioTrackNone,
 	consumerRoot,
 	audioFile as injectedAudio,
 	resolvedTiming as injectedTiming,
-	voiceoverNone,
 } from "virtual:vw-globals";
 import segmentGlobRaw from "virtual:vw-segments";
 
@@ -203,18 +203,18 @@ async function bootPlayer(
 	const params = new URLSearchParams(window.location.search);
 	const hideHud = params.has("hideHud");
 
-	// Resolve voiceover timing
+	// Resolve audio track timing
 	let audioFileResolved: string | undefined;
 	let resolvedTimingMap: Record<string, number[]> | undefined;
 
-	if (!voiceoverNone && injectedAudio) {
+	if (!audioTrackNone && injectedAudio) {
 		audioFileResolved = injectedAudio;
-	} else if (!voiceoverNone && !injectedAudio && finalTimeline.default_voiceover?.audio_file) {
+	} else if (!audioTrackNone && !injectedAudio && finalTimeline.default_audio_track?.audio_file) {
 		// In multi-video dev mode, globals.audioFile is not set (dev.ts no
-		// longer resolves a single video's voiceover). Resolve the audio
+		// longer resolves a single video's audio track). Resolve the audio
 		// path client-side using the timeline's absolute path.
 		const videoFolder = timelinePath.replace(/\/[^/]+$/, "");
-		audioFileResolved = `/@fs/${videoFolder}/${finalTimeline.default_voiceover.audio_file}`;
+		audioFileResolved = `/@fs/${videoFolder}/${finalTimeline.default_audio_track.audio_file}`;
 	}
 
 	if (injectedTiming) {
@@ -231,7 +231,7 @@ async function bootPlayer(
 		const resolved = resolveTiming({
 			segments,
 			defaultTiming: finalTimeline.default_timing,
-			defaultVoiceover: voiceoverNone ? undefined : finalTimeline.default_voiceover,
+			defaultAudioTrack: audioTrackNone ? undefined : finalTimeline.default_audio_track,
 		});
 		resolvedTimingMap = resolved.perSegment;
 	}

@@ -1,8 +1,8 @@
 /**
- * Integration test: render with voiceover audio muxing.
+ * Integration test: render with audio track muxing.
  *
  * Creates a minimal fixture project (config, timeline, one segment, one
- * voiceover with a tiny valid mp3), runs `render --voiceover <slug>`, and
+ * audio track with a tiny valid mp3), runs `render --audio-track <id>`, and
  * verifies the output mp4 contains an audio stream via ffprobe.
  *
  * Skips if ffmpeg or Playwright are not available.
@@ -37,23 +37,6 @@ function generateSilentMp3(durationSeconds = 0.5): Buffer {
 		return buf;
 	} catch {
 		return Buffer.alloc(0);
-	}
-}
-
-/**
- * Query the duration of a specific stream type (video or audio) in seconds.
- * Returns undefined if the stream is not present or ffprobe fails.
- */
-function probeStreamDuration(filePath: string, streamType: "v" | "a"): number | undefined {
-	try {
-		const output = execSync(
-			`ffprobe -v error -select_streams ${streamType} -show_entries stream=duration -of csv=p=0 "${filePath}"`,
-			{ encoding: "utf-8" },
-		);
-		const val = Number.parseFloat(output.trim());
-		return Number.isNaN(val) ? undefined : val;
-	} catch {
-		return undefined;
 	}
 }
 
@@ -109,15 +92,15 @@ const tmpDir = join(
 
 function setupFixtureProject(): void {
 	const segDir = join(tmpDir, "segments", "hello");
-	const voDir = join(tmpDir, "videos", "test-video", "voiceovers", "narrator");
-	const voShortDir = join(tmpDir, "videos", "test-video", "voiceovers", "short-narrator");
-	const voLongDir = join(tmpDir, "videos", "test-video", "voiceovers", "long-narrator");
+	const trackDir = join(tmpDir, "videos", "test-video", "audio", "tracks", "v1");
+	const shortTrackDir = join(tmpDir, "videos", "test-video", "audio", "tracks", "short");
+	const longTrackDir = join(tmpDir, "videos", "test-video", "audio", "tracks", "long");
 	const videoDir = join(tmpDir, "videos", "test-video");
 
 	mkdirSync(segDir, { recursive: true });
-	mkdirSync(voDir, { recursive: true });
-	mkdirSync(voShortDir, { recursive: true });
-	mkdirSync(voLongDir, { recursive: true });
+	mkdirSync(trackDir, { recursive: true });
+	mkdirSync(shortTrackDir, { recursive: true });
+	mkdirSync(longTrackDir, { recursive: true });
 
 	writeFileSync(
 		join(tmpDir, "videowright.config.ts"),
@@ -154,59 +137,59 @@ const timeline: Timeline = {
 export default timeline;`,
 	);
 
-	// Original narrator voiceover (0.5s audio, used by existing test)
+	// Audio track v1 (0.5s audio, used by main test)
 	writeFileSync(
-		join(voDir, "voiceover.ts"),
-		`import type { Voiceover } from "videowright";
-const vo: Voiceover = {
-	audio_file: "silence.mp3",
-	provider: "elevenlabs",
+		join(trackDir, "track.ts"),
+		`import type { AudioTrack } from "videowright";
+const track: AudioTrack = {
+	audio_file: "./silence.mp3",
+	length_s: 0.5,
 	timing: { perSegment: { hello: [0.5] } },
 };
-export default vo;`,
+export default track;`,
 	);
 
 	const mp3 = generateSilentMp3();
 	if (mp3.length > 0) {
-		writeFileSync(join(voDir, "silence.mp3"), mp3);
+		writeFileSync(join(trackDir, "silence.mp3"), mp3);
 	}
 
-	// Short narrator: 0.5s audio, shorter than 2s video
+	// Short track: 0.5s audio, shorter than 2s video
 	writeFileSync(
-		join(voShortDir, "voiceover.ts"),
-		`import type { Voiceover } from "videowright";
-const vo: Voiceover = {
-	audio_file: "silence-short.mp3",
-	provider: "elevenlabs",
+		join(shortTrackDir, "track.ts"),
+		`import type { AudioTrack } from "videowright";
+const track: AudioTrack = {
+	audio_file: "./silence-short.mp3",
+	length_s: 0.5,
 	timing: { perSegment: { hello: [2.0] } },
 };
-export default vo;`,
+export default track;`,
 	);
 
 	const mp3Short = generateSilentMp3(0.5);
 	if (mp3Short.length > 0) {
-		writeFileSync(join(voShortDir, "silence-short.mp3"), mp3Short);
+		writeFileSync(join(shortTrackDir, "silence-short.mp3"), mp3Short);
 	}
 
-	// Long narrator: 5s audio, longer than 2s video
+	// Long track: 5s audio, longer than 2s video
 	writeFileSync(
-		join(voLongDir, "voiceover.ts"),
-		`import type { Voiceover } from "videowright";
-const vo: Voiceover = {
-	audio_file: "silence-long.mp3",
-	provider: "elevenlabs",
+		join(longTrackDir, "track.ts"),
+		`import type { AudioTrack } from "videowright";
+const track: AudioTrack = {
+	audio_file: "./silence-long.mp3",
+	length_s: 5.0,
 	timing: { perSegment: { hello: [2.0] } },
 };
-export default vo;`,
+export default track;`,
 	);
 
 	const mp3Long = generateSilentMp3(5.0);
 	if (mp3Long.length > 0) {
-		writeFileSync(join(voLongDir, "silence-long.mp3"), mp3Long);
+		writeFileSync(join(longTrackDir, "silence-long.mp3"), mp3Long);
 	}
 }
 
-describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
+describe.skipIf(!HAS_DEPS)("render with audio track", () => {
 	beforeAll(() => {
 		setupFixtureProject();
 	});
@@ -217,8 +200,8 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 		}
 	});
 
-	it("render_voiceover_produces_mp4_with_audio_stream", async () => {
-		const mp3Path = join(tmpDir, "videos", "test-video", "voiceovers", "narrator", "silence.mp3");
+	it("render_audio_track_produces_mp4_with_audio_stream", async () => {
+		const mp3Path = join(tmpDir, "videos", "test-video", "audio", "tracks", "v1", "silence.mp3");
 		if (!existsSync(mp3Path) || statSync(mp3Path).size === 0) {
 			return; // ffmpeg failed to generate silence mp3
 		}
@@ -231,7 +214,7 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			height: 240,
 			fps: 10,
 			output: outputPath,
-			voiceover: "narrator",
+			audioTrack: "v1",
 		});
 
 		expect(result.outputPath).toBe(outputPath);
@@ -246,7 +229,7 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 		expect(probeOutput.trim()).toBe("audio");
 	}, 60000);
 
-	it("render_without_voiceover_produces_silent_mp4", async () => {
+	it("render_without_audio_track_produces_silent_mp4", async () => {
 		const outputPath = join(tmpDir, "output-silent.mp4");
 		const result = await runRender({
 			cwd: tmpDir,
@@ -255,7 +238,7 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			height: 240,
 			fps: 10,
 			output: outputPath,
-			voiceover: "none",
+			audioTrack: "none",
 		});
 
 		expect(result.outputPath).toBe(outputPath);
@@ -275,8 +258,9 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			tmpDir,
 			"videos",
 			"test-video",
-			"voiceovers",
-			"short-narrator",
+			"audio",
+			"tracks",
+			"short",
 			"silence-short.mp3",
 		);
 		if (!existsSync(mp3Path) || statSync(mp3Path).size === 0) {
@@ -291,7 +275,7 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			height: 240,
 			fps: 10,
 			output: outputPath,
-			voiceover: "short-narrator",
+			audioTrack: "short",
 		});
 
 		expect(result.outputPath).toBe(outputPath);
@@ -322,8 +306,9 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			tmpDir,
 			"videos",
 			"test-video",
-			"voiceovers",
-			"long-narrator",
+			"audio",
+			"tracks",
+			"long",
 			"silence-long.mp3",
 		);
 		if (!existsSync(mp3Path) || statSync(mp3Path).size === 0) {
@@ -338,7 +323,7 @@ describe.skipIf(!HAS_DEPS)("render with voiceover audio", () => {
 			height: 240,
 			fps: 10,
 			output: outputPath,
-			voiceover: "long-narrator",
+			audioTrack: "long",
 		});
 
 		expect(result.outputPath).toBe(outputPath);

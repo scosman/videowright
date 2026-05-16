@@ -7,7 +7,7 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import type { Timing, Voiceover } from "../types.js";
+import type { AudioTrack, Timing } from "../types.js";
 
 export type ValidationResult =
 	| { ok: true; warnings: string[] }
@@ -60,25 +60,17 @@ export function validateTiming(timing: Timing, segmentIds: string[]): Validation
 }
 
 /**
- * Validate a Voiceover object's file references.
+ * Validate an AudioTrack object's file references.
  *
  * - Errors if `audio_file` does not exist on disk.
- * - Warns if `provider_timing_file` is set but does not exist.
  */
-export function validateVoiceover(voiceover: Voiceover, voiceoverFolder: string): ValidationResult {
+export function validateAudioTrack(audioTrack: AudioTrack, videoFolder: string): ValidationResult {
 	const errors: string[] = [];
 	const warnings: string[] = [];
 
-	const audioPath = resolve(voiceoverFolder, voiceover.audio_file);
+	const audioPath = resolve(videoFolder, audioTrack.audio_file);
 	if (!existsSync(audioPath)) {
-		errors.push(`Voiceover audio file not found: ${audioPath}`);
-	}
-
-	if (voiceover.provider_timing_file) {
-		const timingPath = resolve(voiceoverFolder, voiceover.provider_timing_file);
-		if (!existsSync(timingPath)) {
-			warnings.push(`Voiceover provider timing file not found: ${timingPath}`);
-		}
+		errors.push(`Audio track file not found: ${audioPath}`);
 	}
 
 	if (errors.length > 0) {

@@ -8,7 +8,7 @@ const tmpDir = resolve(import.meta.dirname ?? __dirname, "../../.tmp-test-loadVo
 
 function setupFixture(opts?: { skipAudio?: boolean; invalidModule?: boolean }) {
 	const videoFolder = resolve(tmpDir, "test-video");
-	const voFolder = resolve(videoFolder, "voiceovers", "narrator");
+	const voFolder = resolve(videoFolder, "audio", "originals", "voiceovers", "narrator");
 	mkdirSync(voFolder, { recursive: true });
 
 	if (!opts?.skipAudio) {
@@ -45,12 +45,21 @@ describe("loadVoiceover", () => {
 		const videoFolder = setupFixture();
 		const result = await loadVoiceover({ videoFolder, slug: "narrator" });
 
-		const expectedAudioPath = resolve(videoFolder, "voiceovers", "narrator", "narration.mp3");
+		const expectedAudioPath = resolve(
+			videoFolder,
+			"audio",
+			"originals",
+			"voiceovers",
+			"narrator",
+			"narration.mp3",
+		);
 		// loadVoiceover rewrites audio_file to an absolute path
 		expect(result.voiceover.audio_file).toBe(expectedAudioPath);
 		expect(result.voiceover.provider).toBe("elevenlabs");
 		expect(result.voiceover.timing.perSegment.intro).toEqual([2, 4]);
-		expect(result.voiceoverFolder).toBe(resolve(videoFolder, "voiceovers", "narrator"));
+		expect(result.voiceoverFolder).toBe(
+			resolve(videoFolder, "audio", "originals", "voiceovers", "narrator"),
+		);
 		expect(result.audioFilePath).toBe(expectedAudioPath);
 	});
 

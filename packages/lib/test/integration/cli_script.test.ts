@@ -113,7 +113,7 @@ describe("runScript", () => {
 		});
 
 		expect(result.writtenTo).not.toBeUndefined();
-		const expectedPath = join(tmpDir, "videos", "demo", "voiceover", "script.md");
+		const expectedPath = join(tmpDir, "videos", "demo", "voiceover_script", "script.md");
 		expect(result.writtenTo).toBe(expectedPath);
 		expect(existsSync(expectedPath)).toBe(true);
 

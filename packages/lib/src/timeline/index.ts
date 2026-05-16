@@ -1,7 +1,7 @@
 import type { Config, ResolvedTimelineMeta, Segment, Timeline, Transition } from "../types.js";
 
 // Re-export browser-safe helpers only.
-// Node-only helpers (loadVoiceover, validateTiming, validateVoiceover) are
+// Node-only helpers (loadVoiceover, loadAudioTrack, validateTiming, validateAudioTrack) are
 // imported directly from their own modules by CLI code to avoid pulling
 // node:fs into browser bundles.
 export { resolveTiming } from "./resolveTiming.js";

@@ -11,6 +11,7 @@ export type {
 	Timeline,
 	Timing,
 	Voiceover,
+	AudioTrack,
 	Transition,
 	TransitionContext,
 	Config,

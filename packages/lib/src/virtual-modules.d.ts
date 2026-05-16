@@ -11,7 +11,7 @@ declare module "virtual:vw-globals" {
 	export const consumerRoot: string;
 	export const audioFile: string | undefined;
 	export const resolvedTiming: Record<string, number[]> | undefined;
-	export const voiceoverNone: boolean | undefined;
+	export const audioTrackNone: boolean | undefined;
 	export const renderFps: number | undefined;
 }
 

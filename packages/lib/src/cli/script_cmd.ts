@@ -103,11 +103,11 @@ export async function runScript(opts: ScriptOptions): Promise<ScriptResult> {
 	if (write) {
 		// Infer video folder from timeline path: parent dir of timeline.ts
 		const videoDir = dirname(timelinePath);
-		const voiceoverDir = join(videoDir, "voiceover");
-		if (!existsSync(voiceoverDir)) {
-			mkdirSync(voiceoverDir, { recursive: true });
+		const voiceoverScriptDir = join(videoDir, "voiceover_script");
+		if (!existsSync(voiceoverScriptDir)) {
+			mkdirSync(voiceoverScriptDir, { recursive: true });
 		}
-		const outputPath = join(voiceoverDir, "script.md");
+		const outputPath = join(voiceoverScriptDir, "script.md");
 		writeFileSync(outputPath, markdown, "utf-8");
 		writtenTo = outputPath;
 	}

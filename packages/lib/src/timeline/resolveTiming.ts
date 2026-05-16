@@ -2,35 +2,35 @@
  * Resolve the active timing for a playback or render session.
  *
  * Implements the four-level precedence described in the architecture doc:
- *   1. CLI voiceover (explicit --voiceover <slug>)
- *   2. default_voiceover from timeline.ts
+ *   1. CLI audio track (explicit --audio-track <id>)
+ *   2. default_audio_track from timeline.ts
  *   3. default_timing from timeline.ts
  *   4. Per-segment SegmentSpec.advances
  *
- * --voiceover none suppresses levels 1 and 2 but preserves level 3.
+ * --audio-track none suppresses levels 1 and 2 but preserves level 3.
  */
 
-import type { SegmentSpec, Timing, Voiceover } from "../types.js";
+import type { AudioTrack, SegmentSpec, Timing } from "../types.js";
 
 /** Minimal segment shape needed for timing resolution (id + advances). */
 export type TimingSegment = Pick<SegmentSpec, "id" | "advances">;
 
 export type ResolvedTiming = {
-	source: "voiceover" | "default_timing" | "segments";
-	voiceover?: Voiceover;
+	source: "audio_track" | "default_timing" | "segments";
+	audioTrack?: AudioTrack;
 	perSegment: Record<string, number[]>;
 };
 
 export interface ResolveTimingArgs {
 	segments: TimingSegment[];
 	defaultTiming?: Timing;
-	defaultVoiceover?: Voiceover;
-	cliVoiceoverSlug?: string | "none";
-	cliVoiceoverModule?: Voiceover;
+	defaultAudioTrack?: AudioTrack;
+	cliAudioTrackId?: string | "none";
+	cliAudioTrackModule?: AudioTrack;
 }
 
 export function resolveTiming(args: ResolveTimingArgs): ResolvedTiming {
-	const { segments, defaultTiming, defaultVoiceover, cliVoiceoverSlug, cliVoiceoverModule } = args;
+	const { segments, defaultTiming, defaultAudioTrack, cliAudioTrackId, cliAudioTrackModule } = args;
 
 	// Build base from segment advances
 	const base: Record<string, number[]> = {};
@@ -39,23 +39,23 @@ export function resolveTiming(args: ResolveTimingArgs): ResolvedTiming {
 	}
 
 	// Determine the active timing source
-	const isNone = cliVoiceoverSlug === "none";
+	const isNone = cliAudioTrackId === "none";
 
-	// Level 1: explicit CLI voiceover
-	if (!isNone && cliVoiceoverModule) {
+	// Level 1: explicit CLI audio track
+	if (!isNone && cliAudioTrackModule) {
 		return {
-			source: "voiceover",
-			voiceover: cliVoiceoverModule,
-			perSegment: overlayTiming(base, cliVoiceoverModule.timing),
+			source: "audio_track",
+			audioTrack: cliAudioTrackModule,
+			perSegment: overlayTiming(base, cliAudioTrackModule.timing),
 		};
 	}
 
-	// Level 2: default voiceover from timeline
-	if (!isNone && defaultVoiceover) {
+	// Level 2: default audio track from timeline
+	if (!isNone && defaultAudioTrack) {
 		return {
-			source: "voiceover",
-			voiceover: defaultVoiceover,
-			perSegment: overlayTiming(base, defaultVoiceover.timing),
+			source: "audio_track",
+			audioTrack: defaultAudioTrack,
+			perSegment: overlayTiming(base, defaultAudioTrack.timing),
 		};
 	}
 

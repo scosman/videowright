@@ -14,7 +14,7 @@ vi.mock("virtual:vw-globals", () => ({
 	consumerRoot: "/fake/root",
 	audioFile: undefined,
 	resolvedTiming: undefined,
-	voiceoverNone: true,
+	audioTrackNone: true,
 	renderFps: undefined,
 }));
 vi.mock("virtual:vw-segments", () => ({ default: {} }));

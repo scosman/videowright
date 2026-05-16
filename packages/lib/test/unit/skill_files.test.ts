@@ -83,11 +83,13 @@ describe("skill file structure", () => {
 	});
 
 	it("hello_world has voiceover script as a plain reference file", () => {
-		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/voiceover/script.md"))).toBe(true);
-		// No .tmpl version should exist
-		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/voiceover/script.md.tmpl"))).toBe(
-			false,
+		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/voiceover_script/script.md"))).toBe(
+			true,
 		);
+		// No .tmpl version should exist
+		expect(
+			existsSync(resolve(SKILL_ROOT, "assets/hello_world/voiceover_script/script.md.tmpl")),
+		).toBe(false);
 	});
 
 	it("timeline.ts imports style tokens via top-of-file CSS import", () => {
@@ -167,9 +169,9 @@ describe("skill file structure", () => {
 		expect(content).not.toContain("{{");
 	});
 
-	it("voiceover/script.md is a concrete reference with no template placeholders", () => {
+	it("voiceover_script/script.md is a concrete reference with no template placeholders", () => {
 		const content = readFileSync(
-			resolve(SKILL_ROOT, "assets/hello_world/voiceover/script.md"),
+			resolve(SKILL_ROOT, "assets/hello_world/voiceover_script/script.md"),
 			"utf-8",
 		);
 		expect(content).toContain("hello-intro");
@@ -215,6 +217,21 @@ describe("skill file structure", () => {
 		expect(content).toContain("hello-intro");
 		expect(content).toContain("hello-outro");
 		expect(content).toContain("transition");
+		expect(content).toContain("default_audio_track");
+	});
+
+	it("hello_world has audio directory structure", () => {
+		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/audio/audio_plan.md"))).toBe(true);
+		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/audio/tracks/v1/track.ts"))).toBe(
+			true,
+		);
+
+		const trackContent = readFileSync(
+			resolve(SKILL_ROOT, "assets/hello_world/audio/tracks/v1/track.ts"),
+			"utf-8",
+		);
+		expect(trackContent).toContain("AudioTrack");
+		expect(trackContent).toContain("audio_file");
 	});
 
 	const STYLE_PACKS = [

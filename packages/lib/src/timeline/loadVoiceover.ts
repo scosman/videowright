@@ -25,11 +25,18 @@ export interface LoadVoiceoverResult {
 export async function loadVoiceover(args: LoadVoiceoverArgs): Promise<LoadVoiceoverResult> {
 	const { videoFolder, slug } = args;
 
-	const voiceoverPath = resolve(videoFolder, "voiceovers", slug, "voiceover.ts");
+	const voiceoverPath = resolve(
+		videoFolder,
+		"audio",
+		"originals",
+		"voiceovers",
+		slug,
+		"voiceover.ts",
+	);
 	if (!existsSync(voiceoverPath)) {
 		throw new UserError(
 			`Voiceover not found: ${voiceoverPath}`,
-			`Check that voiceovers/${slug}/voiceover.ts exists in your video folder.`,
+			`Check that audio/originals/voiceovers/${slug}/voiceover.ts exists in your video folder.`,
 		);
 	}
 
@@ -53,9 +60,8 @@ export async function loadVoiceover(args: LoadVoiceoverArgs): Promise<LoadVoiceo
 		);
 	}
 
-	// Rewrite audio_file to an absolute path so callers (including render.ts
-	// when the module is used as default_voiceover) can resolve it without
-	// knowing the source folder.
+	// Rewrite audio_file to an absolute path so callers can resolve it
+	// without knowing the source folder.
 	const resolvedVoiceover: Voiceover = {
 		...voiceover,
 		audio_file: audioFilePath,

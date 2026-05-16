@@ -56,7 +56,7 @@ export interface VwGlobals {
 	consumerRoot: string;
 	audioFile?: string;
 	resolvedTiming?: Record<string, number[]>;
-	voiceoverNone?: boolean;
+	audioTrackNone?: boolean;
 	renderFps?: number;
 }
 
@@ -88,7 +88,7 @@ export function globalsVirtualModulePlugin(globals: VwGlobals): Plugin {
 				`export const resolvedTiming = ${globals.resolvedTiming !== undefined ? JSON.stringify(globals.resolvedTiming) : "undefined"};`,
 			);
 			lines.push(
-				`export const voiceoverNone = ${globals.voiceoverNone !== undefined ? JSON.stringify(globals.voiceoverNone) : "undefined"};`,
+				`export const audioTrackNone = ${globals.audioTrackNone !== undefined ? JSON.stringify(globals.audioTrackNone) : "undefined"};`,
 			);
 			lines.push(
 				`export const renderFps = ${globals.renderFps !== undefined ? JSON.stringify(globals.renderFps) : "undefined"};`,

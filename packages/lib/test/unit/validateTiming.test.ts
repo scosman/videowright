@@ -1,8 +1,8 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { validateTiming, validateVoiceover } from "../../src/timeline/validateTiming.js";
-import type { Timing, Voiceover } from "../../src/types.js";
+import { validateAudioTrack, validateTiming } from "../../src/timeline/validateTiming.js";
+import type { AudioTrack, Timing } from "../../src/types.js";
 
 const tmpDir = resolve(import.meta.dirname ?? __dirname, "../../.tmp-test-validateTiming");
 
@@ -84,7 +84,7 @@ describe("validateTiming", () => {
 	});
 });
 
-describe("validateVoiceover", () => {
+describe("validateAudioTrack", () => {
 	beforeEach(() => {
 		mkdirSync(tmpDir, { recursive: true });
 	});
@@ -94,42 +94,26 @@ describe("validateVoiceover", () => {
 	});
 
 	it("missing_audio_file_errors", () => {
-		const vo: Voiceover = {
+		const track: AudioTrack = {
 			audio_file: "nonexistent.mp3",
-			provider: "elevenlabs",
+			length_s: 10,
 			timing: { perSegment: {} },
 		};
-		const result = validateVoiceover(vo, tmpDir);
+		const result = validateAudioTrack(track, tmpDir);
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
-			expect(result.errors[0]).toContain("audio file not found");
+			expect(result.errors[0]).toContain("Audio track file not found");
 		}
 	});
 
-	it("missing_provider_timing_file_warns", () => {
-		writeFileSync(resolve(tmpDir, "narration.mp3"), "fake-audio");
-		const vo: Voiceover = {
-			audio_file: "narration.mp3",
-			provider: "elevenlabs",
-			provider_timing_file: "nonexistent_timing.json",
+	it("valid_audio_track_passes", () => {
+		writeFileSync(resolve(tmpDir, "track.mp3"), "fake-audio");
+		const track: AudioTrack = {
+			audio_file: "track.mp3",
+			length_s: 10,
 			timing: { perSegment: {} },
 		};
-		const result = validateVoiceover(vo, tmpDir);
-		expect(result.ok).toBe(true);
-		if (result.ok) {
-			expect(result.warnings.length).toBeGreaterThan(0);
-			expect(result.warnings[0]).toContain("provider timing file not found");
-		}
-	});
-
-	it("valid_voiceover_with_no_provider_timing_passes", () => {
-		writeFileSync(resolve(tmpDir, "narration.mp3"), "fake-audio");
-		const vo: Voiceover = {
-			audio_file: "narration.mp3",
-			provider: "manual",
-			timing: { perSegment: {} },
-		};
-		const result = validateVoiceover(vo, tmpDir);
+		const result = validateAudioTrack(track, tmpDir);
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.warnings).toHaveLength(0);
