@@ -248,6 +248,41 @@ mesh.position.y = Math.sin(t * 2) * 0.5;
 
 For smooth eased animation (opacity fades, position tweens), prefer WAAPI — it provides sub-frame interpolation that hold-driven loops cannot.
 
+### Percentage-based timing within beats
+
+**Strong default:** express `hold()` durations inside a beat or sub-segment as a percentage of the beat's total time rather than fixed millisecond values.
+
+When a voiceover changes — even slightly — every segment's beat durations shift. If the animations within a beat use hardcoded millisecond timers, those timers no longer fit the new beat length: an animation that filled 80% of a 4-second beat now overruns a 3-second beat, or leaves dead air in a 5-second beat. Percentage-based timing adapts gracefully because the durations scale with the beat.
+
+A typical pattern: compute the beat duration from context (e.g., the total hold time allocated to the current phase), then derive individual timers as fractions of it.
+
+```ts
+// GOOD: timers scale with beat length
+const beatMs = 3000; // total time for this phase
+await ctx.hold(beatMs * 0.2);  // entrance animation: 20% of beat
+items.forEach((item, i) => {
+  (item as HTMLElement).animate(
+    [{ opacity: 0 }, { opacity: 1 }],
+    { duration: beatMs * 0.15, delay: beatMs * 0.25 + i * (beatMs * 0.1), fill: 'forwards' },
+  );
+});
+await ctx.hold(beatMs * 0.8);  // remaining time for content display
+
+// AVOID: fixed timers break when beat length changes
+await ctx.hold(600);
+items.forEach((item, i) => {
+  (item as HTMLElement).animate(
+    [{ opacity: 0 }, { opacity: 1 }],
+    { duration: 450, delay: 750 + i * 300, fill: 'forwards' },
+  );
+});
+await ctx.hold(2400);
+```
+
+This is a best practice, not a hard rule. Fixed timers are appropriate when the duration is truly independent of the beat — e.g., a 200ms micro-interaction that should always feel the same speed. But as a default posture, reach for percentages.
+
+**Related smell:** if you find yourself tweaking `hold()` values inside a segment to match a specific voiceover's pacing, that is a sign the beat boundaries are wrong. The content that needs to align with the voiceover should be gated by its own `waitForNext()` call so the timing comes from the `advances`/`Timing` data, not from hardcoded milliseconds. See [voiceover.md § VO-alignment smell](voiceover.md#vo-alignment-smell) for more detail.
+
 ## The `advances` array
 
 Every segment must declare an `advances` array. It tells the render export pipeline when to fire each advance during automated playback.

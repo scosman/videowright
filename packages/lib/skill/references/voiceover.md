@@ -228,6 +228,12 @@ The default authoring pattern for new videos with voiceover intent:
 5. **Generate the audio** using one of the two flows above.
 6. **Sync timing** to align segment advances with the audio.
 
+## VO-alignment smell
+
+If you are adjusting `hold()` values inside a segment to make an animation line up with a specific voiceover recording, that is a code smell. It means the segment is coupled to one narration — any change to the voiceover (different voice, different pacing, re-recorded take) will require re-tuning those timers.
+
+The fix is structural: content that needs to sync with the voiceover should be gated by `waitForNext()`, so timing comes from the `advances` / `Timing` data rather than from hardcoded milliseconds in the segment code. Add a new advance at the sync point, and let the timers within each beat use percentage-based durations so they scale when beat lengths shift. See [authoring_segment.md § Percentage-based timing within beats](authoring_segment.md#percentage-based-timing-within-beats) for the pattern.
+
 ## `videowright script` CLI
 
 The `script` command reads segments' `voiceover` fields and assembles them into markdown:
