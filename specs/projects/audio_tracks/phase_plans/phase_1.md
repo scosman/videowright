@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: complete
 ---
 
 # Phase 1: Library code + hello-world template
