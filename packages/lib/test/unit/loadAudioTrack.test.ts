@@ -27,7 +27,7 @@ function setupFixture(opts?: {
 		writeFileSync(
 			resolve(trackFolder, "track.ts"),
 			`export default {
-				audio_file: "./track.mp3",
+				audio_file: "./audio/tracks/v1/track.mp3",
 				length_s: 10.5,
 				timing: { perSegment: { intro: [2, 4] } },
 			};`,
@@ -80,7 +80,7 @@ describe("loadAudioTrack", () => {
 	it("missing_length_s_throws_UserError", async () => {
 		const videoFolder = setupFixture({
 			moduleContent: `export default {
-				audio_file: "./track.mp3",
+				audio_file: "./audio/tracks/v1/track.mp3",
 				timing: { perSegment: {} },
 			};`,
 		});
@@ -94,7 +94,7 @@ describe("loadAudioTrack", () => {
 	it("missing_timing_throws_UserError", async () => {
 		const videoFolder = setupFixture({
 			moduleContent: `export default {
-				audio_file: "./track.mp3",
+				audio_file: "./audio/tracks/v1/track.mp3",
 				length_s: 5.0,
 			};`,
 		});
@@ -108,7 +108,7 @@ describe("loadAudioTrack", () => {
 	it("missing_perSegment_throws_UserError", async () => {
 		const videoFolder = setupFixture({
 			moduleContent: `export default {
-				audio_file: "./track.mp3",
+				audio_file: "./audio/tracks/v1/track.mp3",
 				length_s: 5.0,
 				timing: {},
 			};`,

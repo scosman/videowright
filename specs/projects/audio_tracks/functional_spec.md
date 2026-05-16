@@ -200,7 +200,7 @@ Each rendered audio file lives in `audio/tracks/vN/`, parallel to how `voiceover
 
   ```ts
   export const track = {
-    audio_file: "./track.mp3",                          // relative to track.ts
+    audio_file: "./audio/tracks/v1/track.mp3",            // relative to the video folder
     length_s: 28.74,
     timing: { perSegment: { /* ... */ } },              // per-segment advances from sync-to-audio
     audio_plan_path: "../../audio_plan.md",             // relative to track.ts

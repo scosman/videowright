@@ -1,9 +1,9 @@
 import type { Voiceover } from "videowright";
 
 const voiceover: Voiceover = {
-	audio_file: "./voiceovers/v3/audio.mp3",
+	audio_file: "./audio.mp3",
 	provider: "elevenlabs",
-	provider_timing_file: "./voiceovers/v3/timing.json",
+	provider_timing_file: "./timing.json",
 	timing: {
 		perSegment: {
 			"cold-open": [9.475],
@@ -28,7 +28,7 @@ const voiceover: Voiceover = {
 		},
 	},
 	notes:
-		"ElevenLabs API (with-timestamps), voice Asher, model eleven_multilingual_v2. Generated 2026-05-15 from videos/demo_video/voiceovers/v3/provider_script.md. Audio duration 65.25s; install-cta padded with 5s tail hold → total video duration 70.25s.",
+		"ElevenLabs API (with-timestamps), voice Asher, model eleven_multilingual_v2. Generated 2026-05-15 from audio/originals/voiceovers/v3/provider_script.md. Audio duration 65.25s; install-cta padded with 5s tail hold → total video duration 70.25s.",
 };
 
 export default voiceover;

@@ -1,7 +1,7 @@
 import type { AudioTrack } from "videowright";
 
 const track: AudioTrack = {
-	audio_file: "./track.mp3",
+	audio_file: "./audio/tracks/v1/track.mp3",
 	length_s: 12.0,
 	// Empty timing is deliberate: no per-segment overrides yet. Segments fall
 	// back to their own `advances` arrays. Populate after syncing VO to audio.

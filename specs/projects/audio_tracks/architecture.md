@@ -45,10 +45,10 @@ The shape of `audio/tracks/<id>/track.ts`:
 ```ts
 export type AudioTrack = {
   /**
-   * Path to the rendered audio file. On disk in track.ts, relative to the
-   * track.ts file's directory. After loadAudioTrack(), rewritten to absolute.
-   * When inlined as `default_audio_track` in timeline.ts, relative to the
-   * video folder.
+   * Path to the rendered audio file, relative to the video folder (the
+   * directory containing timeline.ts). Both loadAudioTrack() and the
+   * default_audio_track import path resolve this from the video folder.
+   * loadAudioTrack() rewrites it to an absolute path on return.
    */
   audio_file: string;
 
@@ -411,7 +411,7 @@ Once all three videos are migrated and rendering, the migration is complete. No 
 
 1. **No `is_default` flag on `track.ts`.** `timeline.ts`'s `default_audio_track` import is the single source of truth for which track is active. No invariant to enforce, no flag to keep in sync. Activation = updating the import.
 2. **`length_s` derivation** — agent runs `ffprobe` from bash. No library helper.
-3. **`track.ts`'s `audio_file` field** — relative to the track.ts folder on disk (e.g. `./track.mp3`), rewritten to absolute by `loadAudioTrack`. Mirrors existing voiceover.ts behavior.
+3. **`track.ts`'s `audio_file` field** — relative to the video folder (e.g. `./audio/tracks/v1/track.mp3`), rewritten to absolute by `loadAudioTrack`. This differs from `Voiceover.audio_file` which is relative to the voiceover.ts directory; the difference exists because `AudioTrack` objects are imported into `timeline.ts` (which lives in the video folder) so render.ts resolves from there.
 4. **`voiceover/sync_algorithm.md`** — removed/migrated into `audio/sync.md`. No backwards compatibility.
 5. **`generate.sh` for SFX/music** — same shape as VO `generate.sh` (shell script recording the curl command + prompt). Predictable for the agent.
 

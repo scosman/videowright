@@ -1,9 +1,9 @@
 import type { Voiceover } from "videowright";
 
 const voiceover: Voiceover = {
-	audio_file: "./voiceovers/v2/audio.mp3",
+	audio_file: "./audio.mp3",
 	provider: "elevenlabs",
-	provider_timing_file: "./voiceovers/v2/timing.json",
+	provider_timing_file: "./timing.json",
 	timing: {
 		perSegment: {
 			"em-cold-open": [9.991],
@@ -17,7 +17,7 @@ const voiceover: Voiceover = {
 		},
 	},
 	notes:
-		"Copied from demo_video/voiceovers/v2. Audio + provider timing are identical; perSegment keys remapped to em-* IDs for the editorial-mono fresh implementation. Audio ends at 62.16s.",
+		"Copied from demo_video/audio/originals/voiceovers/v2. Audio + provider timing are identical; perSegment keys remapped to em-* IDs for the editorial-mono fresh implementation. Audio ends at 62.16s.",
 };
 
 export default voiceover;

@@ -142,7 +142,7 @@ export default timeline;`,
 		join(trackDir, "track.ts"),
 		`import type { AudioTrack } from "videowright";
 const track: AudioTrack = {
-	audio_file: "./silence.mp3",
+	audio_file: "./audio/tracks/v1/silence.mp3",
 	length_s: 0.5,
 	timing: { perSegment: { hello: [0.5] } },
 };
@@ -159,7 +159,7 @@ export default track;`,
 		join(shortTrackDir, "track.ts"),
 		`import type { AudioTrack } from "videowright";
 const track: AudioTrack = {
-	audio_file: "./silence-short.mp3",
+	audio_file: "./audio/tracks/short/silence-short.mp3",
 	length_s: 0.5,
 	timing: { perSegment: { hello: [2.0] } },
 };
@@ -176,7 +176,7 @@ export default track;`,
 		join(longTrackDir, "track.ts"),
 		`import type { AudioTrack } from "videowright";
 const track: AudioTrack = {
-	audio_file: "./silence-long.mp3",
+	audio_file: "./audio/tracks/long/silence-long.mp3",
 	length_s: 5.0,
 	timing: { perSegment: { hello: [2.0] } },
 };

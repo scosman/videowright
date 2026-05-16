@@ -1,9 +1,9 @@
 import type { Voiceover } from "videowright";
 
 const voiceover: Voiceover = {
-	audio_file: "./voiceovers/v2/audio.mp3",
+	audio_file: "./audio.mp3",
 	provider: "elevenlabs",
-	provider_timing_file: "./voiceovers/v2/timing.json",
+	provider_timing_file: "./timing.json",
 	timing: {
 		perSegment: {
 			"cold-open": [9.991],

@@ -7,13 +7,15 @@
  * segment count and ids, and the consumer repo layout is well-formed.
  */
 
-import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { findConfig, findTimeline } from "../../src/cli/discover.js";
 import { buildNodeSegmentLoaderMap } from "../../src/cli/script_cmd.js";
 import { loadModule } from "../../src/cli/ts_loader.js";
-import type { Timeline } from "../../src/types.js";
+import { resolveTiming } from "../../src/timeline/resolveTiming.js";
+import { validateAudioTrack, validateTiming } from "../../src/timeline/validateTiming.js";
+import type { AudioTrack, Timeline } from "../../src/types.js";
 
 const DEMO_ROOT = resolve(__dirname, "../../../../examples/videowright_demo");
 
@@ -33,7 +35,7 @@ describe("cli_dev_against_demo_smoke", () => {
 		expect(existsSync(DEMO_ROOT)).toBe(true);
 		expect(existsSync(join(DEMO_ROOT, "videowright.config.ts"))).toBe(true);
 		expect(existsSync(join(DEMO_ROOT, "videos/demo_video/timeline.ts"))).toBe(true);
-		expect(existsSync(join(DEMO_ROOT, "videos/demo_video/voiceover/script.md"))).toBe(true);
+		expect(existsSync(join(DEMO_ROOT, "videos/demo_video/voiceover_script/script.md"))).toBe(true);
 		expect(existsSync(join(DEMO_ROOT, "styles/motion-engineering/tokens.css"))).toBe(true);
 		expect(existsSync(join(DEMO_ROOT, "styles/motion-engineering/STYLE.md"))).toBe(true);
 	});
@@ -107,6 +109,140 @@ describe("cli_dev_against_demo_smoke", () => {
 		for (const id of EXPECTED_SEGMENT_IDS) {
 			expect(loaderMap.has(id), `Missing loader for: ${id}`).toBe(true);
 		}
+	});
+
+	it("demo_video has audio-track directory structure", () => {
+		const videoDir = join(DEMO_ROOT, "videos/demo_video");
+		expect(existsSync(join(videoDir, "voiceover_script/script.md"))).toBe(true);
+		expect(existsSync(join(videoDir, "audio/audio_plan.md"))).toBe(true);
+		expect(existsSync(join(videoDir, "audio/originals/voiceovers/v4/audio.mp3"))).toBe(true);
+		expect(existsSync(join(videoDir, "audio/originals/voiceovers/v4/voiceover.ts"))).toBe(true);
+		expect(existsSync(join(videoDir, "audio/originals/voiceovers/v4/timing.json"))).toBe(true);
+		expect(existsSync(join(videoDir, "audio/tracks/v1/track.ts"))).toBe(true);
+		expect(existsSync(join(videoDir, "audio/tracks/v1/track.mp3"))).toBe(true);
+		expect(existsSync(join(videoDir, "audio/tracks/v1/plan_snapshot.md"))).toBe(true);
+		// Old layout should be gone
+		expect(existsSync(join(videoDir, "voiceover"))).toBe(false);
+		expect(existsSync(join(videoDir, "voiceovers"))).toBe(false);
+	});
+
+	it("demo_video timeline uses default_audio_track (not default_voiceover)", async () => {
+		const timelinePath = join(DEMO_ROOT, "videos/demo_video/timeline.ts");
+		const mod = await loadModule(timelinePath);
+		const timeline = mod.default as Timeline;
+
+		expect(timeline.default_audio_track).toBeDefined();
+		expect((timeline as unknown as Record<string, unknown>).default_voiceover).toBeUndefined();
+
+		const track = timeline.default_audio_track as AudioTrack;
+		expect(track.audio_file).toContain("track.mp3");
+		expect(track.length_s).toBeGreaterThan(0);
+		expect(Object.keys(track.timing.perSegment).length).toBe(8);
+		expect(track.timing.perSegment["cold-open"]).toBeDefined();
+	});
+
+	it("demo_editorial_mono timeline uses default_audio_track", async () => {
+		const timelinePath = join(DEMO_ROOT, "videos/demo_editorial_mono/timeline.ts");
+		const mod = await loadModule(timelinePath);
+		const timeline = mod.default as Timeline;
+
+		expect(timeline.default_audio_track).toBeDefined();
+		expect((timeline as unknown as Record<string, unknown>).default_voiceover).toBeUndefined();
+
+		const track = timeline.default_audio_track as AudioTrack;
+		expect(track.timing.perSegment["em-cold-open"]).toBeDefined();
+		expect(Object.keys(track.timing.perSegment).length).toBe(8);
+	});
+
+	it("demo_risograph timeline uses default_audio_track", async () => {
+		const timelinePath = join(DEMO_ROOT, "videos/demo_risograph/timeline.ts");
+		const mod = await loadModule(timelinePath);
+		const timeline = mod.default as Timeline;
+
+		expect(timeline.default_audio_track).toBeDefined();
+		expect((timeline as unknown as Record<string, unknown>).default_voiceover).toBeUndefined();
+
+		const track = timeline.default_audio_track as AudioTrack;
+		expect(track.timing.perSegment["rs-cold-open"]).toBeDefined();
+		expect(Object.keys(track.timing.perSegment).length).toBe(8);
+	});
+
+	it("all three demo audio track files exist on disk", () => {
+		const demos = ["demo_video", "demo_editorial_mono", "demo_risograph"];
+		for (const demo of demos) {
+			const trackMp3 = join(DEMO_ROOT, "videos", demo, "audio/tracks/v1/track.mp3");
+			expect(existsSync(trackMp3), `Missing track.mp3 for ${demo}`).toBe(true);
+		}
+	});
+
+	it("demo_video render pre-flight: audio resolves, timing validates, schedule builds", async () => {
+		// Exercises the same code path render.ts runs before launching the browser.
+		// If this passes, the render would succeed (browser launch is the only
+		// remaining step, and it is blocked by sandbox restrictions in CI/agents).
+		const timelinePath = join(DEMO_ROOT, "videos/demo_video/timeline.ts");
+		const videoFolder = dirname(timelinePath);
+		const mod = await loadModule(timelinePath);
+		const timeline = mod.default as Timeline;
+		const audioTrack = timeline.default_audio_track as AudioTrack;
+
+		// 1. Audio file resolves to an existing mp3
+		const audioFilePath = resolve(videoFolder, audioTrack.audio_file);
+		expect(existsSync(audioFilePath), `Audio file should exist at ${audioFilePath}`).toBe(true);
+		expect(statSync(audioFilePath).size).toBeGreaterThan(100_000); // ~996KB mp3
+
+		// 2. validateAudioTrack passes
+		const trackValidation = validateAudioTrack(audioTrack, videoFolder);
+		expect(trackValidation.ok).toBe(true);
+
+		// 3. validateTiming passes
+		const segmentIds = timeline.segments.map((s) => s.id);
+		const timingValidation = validateTiming(audioTrack.timing, segmentIds);
+		expect(timingValidation.ok).toBe(true);
+
+		// 4. resolveTiming succeeds and picks the audio_track source
+		const resolved = resolveTiming({
+			segments: segmentIds.map((id) => ({ id, advances: [1.0] })),
+			defaultTiming: timeline.default_timing,
+			defaultAudioTrack: timeline.default_audio_track,
+		});
+		expect(resolved.source).toBe("audio_track");
+		expect(Object.keys(resolved.perSegment).length).toBe(8);
+	});
+
+	it("demo_editorial_mono render pre-flight validates", async () => {
+		const timelinePath = join(DEMO_ROOT, "videos/demo_editorial_mono/timeline.ts");
+		const videoFolder = dirname(timelinePath);
+		const mod = await loadModule(timelinePath);
+		const timeline = mod.default as Timeline;
+		const audioTrack = timeline.default_audio_track as AudioTrack;
+
+		const audioFilePath = resolve(videoFolder, audioTrack.audio_file);
+		expect(existsSync(audioFilePath)).toBe(true);
+		expect(validateAudioTrack(audioTrack, videoFolder).ok).toBe(true);
+		expect(
+			validateTiming(
+				audioTrack.timing,
+				timeline.segments.map((s) => s.id),
+			).ok,
+		).toBe(true);
+	});
+
+	it("demo_risograph render pre-flight validates", async () => {
+		const timelinePath = join(DEMO_ROOT, "videos/demo_risograph/timeline.ts");
+		const videoFolder = dirname(timelinePath);
+		const mod = await loadModule(timelinePath);
+		const timeline = mod.default as Timeline;
+		const audioTrack = timeline.default_audio_track as AudioTrack;
+
+		const audioFilePath = resolve(videoFolder, audioTrack.audio_file);
+		expect(existsSync(audioFilePath)).toBe(true);
+		expect(validateAudioTrack(audioTrack, videoFolder).ok).toBe(true);
+		expect(
+			validateTiming(
+				audioTrack.timing,
+				timeline.segments.map((s) => s.id),
+			).ok,
+		).toBe(true);
 	});
 
 	it("config loads via tsx with correct structure", async () => {

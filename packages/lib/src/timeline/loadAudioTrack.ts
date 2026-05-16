@@ -63,7 +63,9 @@ export async function loadAudioTrack(args: LoadAudioTrackArgs): Promise<LoadAudi
 	}
 
 	const trackFolder = dirname(trackPath);
-	const audioFilePath = resolve(trackFolder, audioTrack.audio_file);
+	// audio_file is relative to the video folder (the same convention used when
+	// the track is imported as default_audio_track in timeline.ts).
+	const audioFilePath = resolve(videoFolder, audioTrack.audio_file);
 
 	if (!existsSync(audioFilePath)) {
 		throw new UserError(

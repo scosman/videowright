@@ -82,7 +82,7 @@ Create `audio/tracks/vN/track.ts`:
 import type { AudioTrack } from "videowright";
 
 const track: AudioTrack = {
-  audio_file: "./track.mp3",
+  audio_file: "./audio/tracks/v1/track.mp3",
   length_s: 28.74,
   timing: { perSegment: {} },
   audio_plan_path: "../../audio_plan.md",
@@ -94,11 +94,11 @@ export default track;
 ```
 
 Notes:
-- `audio_file` is relative to the track.ts file.
+- `audio_file` is relative to the **video folder** (the directory containing `timeline.ts`). For a track at `audio/tracks/vN/track.mp3`, use `"./audio/tracks/vN/track.mp3"`.
 - `length_s` comes from ffprobe (step 5). Round to 2 decimal places.
 - `timing` starts as `{ perSegment: {} }` for a new track. If a previous track exists and is active, copy its `timing` as a starting point. The sync stage will update it.
 - `created_at` is the current ISO timestamp.
-- `audio_plan_path` and `plan_snapshot_path` are relative to the track.ts file.
+- `audio_plan_path` and `plan_snapshot_path` are relative to the track.ts file (these are metadata paths, not consumed by the render pipeline).
 
 ### Step 7: Append a render log entry
 

@@ -142,7 +142,7 @@ type AudioTrack = {
 
 | Field | Required | Purpose |
 |---|---|---|
-| `audio_file` | Yes | Audio file path, relative to `track.ts` directory. Rewritten to absolute by `loadAudioTrack()`. |
+| `audio_file` | Yes | Audio file path, relative to the **video folder** (directory containing `timeline.ts`). E.g., `"./audio/tracks/v1/track.mp3"`. Rewritten to absolute by `loadAudioTrack()`. |
 | `length_s` | Yes | Length of the rendered audio in seconds. |
 | `timing` | Yes | Per-segment advance timing synced to this audio track. |
 | `audio_plan_path` | No | Path to the audio plan that produced this track, relative to `track.ts`. |

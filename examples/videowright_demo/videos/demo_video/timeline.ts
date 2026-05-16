@@ -1,12 +1,12 @@
 import "../../styles/motion-engineering/tokens.css";
 import type { Timeline } from "videowright";
-import defaultVoiceover from "./voiceovers/v4/voiceover.js";
+import defaultAudioTrack from "./audio/tracks/v1/track.js";
 
 const timeline: Timeline = {
 	meta: {
 		title: "Videowright Explainer",
 	},
-	default_voiceover: defaultVoiceover,
+	default_audio_track: defaultAudioTrack,
 	segments: [
 		{ id: "cold-open" },
 		{ id: "title-card" },

@@ -101,11 +101,6 @@ export interface Timeline {
 	default_timing?: Timing;
 	/** Default audio track for this video. */
 	default_audio_track?: AudioTrack;
-	/**
-	 * @deprecated Use `default_audio_track` instead. Kept for backward
-	 * compatibility during the migration period (removed in Phase 4).
-	 */
-	default_voiceover?: Voiceover;
 }
 
 // ---- Timing ----
@@ -130,16 +125,23 @@ export type Timing = {
  */
 export type Voiceover = {
 	/**
-	 * Audio file path. In a voiceover.ts file on disk, this is relative to the
-	 * voiceover.ts file's directory. After loading via `loadVoiceover()`, it is
-	 * rewritten to an absolute path.
+	 * Audio file path, relative to the voiceover.ts file's directory (e.g.,
+	 * `"./audio.mp3"`). After loading via `loadVoiceover()`, rewritten to an
+	 * absolute path.
+	 *
+	 * Note: this differs from `AudioTrack.audio_file` which is relative to
+	 * the video folder. The difference exists because voiceover modules are
+	 * loaded by `loadVoiceover()` which knows the voiceover.ts location,
+	 * while audio tracks are imported into timeline.ts and resolved from the
+	 * video folder by render.ts.
 	 */
 	audio_file: string;
 	/** Provider that produced the audio. */
 	provider: "elevenlabs" | "manual";
 	/**
 	 * Provider timing JSON path. Same resolution rules as `audio_file`:
-	 * relative to voiceover.ts on disk, absolute after `loadVoiceover()`.
+	 * relative to voiceover.ts directory on disk, absolute after
+	 * `loadVoiceover()`.
 	 */
 	provider_timing_file?: string;
 	/** Per-segment advance timing synced to this audio. */
@@ -165,10 +167,10 @@ export type Voiceover = {
  */
 export type AudioTrack = {
 	/**
-	 * Path to the rendered audio file. On disk in track.ts, relative to the
-	 * track.ts file's directory. After loadAudioTrack(), rewritten to absolute.
-	 * When inlined as `default_audio_track` in timeline.ts, relative to the
-	 * video folder.
+	 * Path to the rendered audio file, relative to the video folder (the
+	 * directory containing timeline.ts). Both loadAudioTrack() and the
+	 * default_audio_track import path resolve this from the video folder.
+	 * loadAudioTrack() rewrites it to an absolute path on return.
 	 */
 	audio_file: string;
 
