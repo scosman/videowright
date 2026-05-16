@@ -4,7 +4,7 @@
 
 Videowright creates demo videos, explainer videos, and product walkthroughs from your coding agent. Just describe what you want and it generates your video (including audio). Iterate in chat until it's perfect.
 
-<video src="https://github.com/user-attachments/assets/236ab8d1-d5ea-4fe9-b340-e07d9dbf90a4" width="600" controls></video>
+<video src="https://github.com/user-attachments/assets/7e046c26-9fe1-425c-b96e-8f40a6ce35ca" width="600" controls></video>
 
 - **Video from prompt** -- generate an animated video, simply from a prompt
 - **AI voice-overs** -- generate narration from a script, then auto-sync video timing to the audio
