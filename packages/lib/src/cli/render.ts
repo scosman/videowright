@@ -37,6 +37,39 @@ import { promptVideoSelection } from "./prompt.js";
 import { TIME_SHIM_SOURCE } from "./time_shim.js";
 import { loadModule } from "./ts_loader.js";
 
+/**
+ * Inline helper: render a progress bar string for the frame-capture loop.
+ * When stdout is a TTY, returns a single-line `\r`-overwritable bar.
+ * Otherwise returns a plain "Rendered X / Y" line.
+ */
+function formatProgress(
+	frameCount: number,
+	totalFrames: number,
+	fps: number,
+	isTTY: boolean,
+): string {
+	const renderedSec = (frameCount / fps).toFixed(1);
+	const totalSec = (totalFrames / fps).toFixed(1);
+
+	if (!isTTY) {
+		return `Rendered ${renderedSec}s / ${totalSec}s`;
+	}
+
+	const pct = Math.min(Math.round((frameCount / totalFrames) * 100), 100);
+	const suffix = `${String(pct).padStart(3)}%  ${renderedSec}s / ${totalSec}s`;
+	// "[] " + suffix + 2 bracket chars
+	const chrome = 2 + 1 + suffix.length; // "[" + "]" + " " + suffix
+	const columns = process.stdout.columns ?? 80;
+	const barWidth = Math.max(10, Math.min(50, columns - chrome));
+
+	const filled = Math.round((frameCount / totalFrames) * barWidth);
+	const empty = barWidth - filled;
+	const bar = `[${"█".repeat(filled)}${"░".repeat(empty)}] ${suffix}`;
+
+	// Pad to full terminal width so shorter strings overwrite stale chars
+	return `\r${bar.padEnd(columns)}`;
+}
+
 export interface RenderOptions {
 	cwd: string;
 	positional?: string;
@@ -542,14 +575,20 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 
 					// Progress output every 1s of rendered video
 					if (frameCount - lastProgressFrame >= progressIntervalFrames) {
-						const renderedSec = (frameCount / fps).toFixed(1);
-						const totalSec = (totalFrames / fps).toFixed(1);
-						console.log(`Rendered ${renderedSec}s / ${totalSec}s`);
+						const line = formatProgress(frameCount, totalFrames, fps, !!process.stdout.isTTY);
+						if (process.stdout.isTTY) {
+							process.stdout.write(line);
+						} else {
+							console.log(line);
+						}
 						lastProgressFrame = frameCount;
 					}
 				}
 
-				if (verbose) console.log(`\n  total frames: ${frameCount}`);
+				// End the progress bar line so subsequent output starts fresh
+				if (process.stdout.isTTY) process.stdout.write("\n");
+
+				if (verbose) console.log(`  total frames: ${frameCount}`);
 			} finally {
 				ffmpegProc.stdin?.end();
 			}
