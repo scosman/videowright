@@ -41,7 +41,7 @@ Guide the user:
 
 > **Creating your ElevenLabs API key:**
 >
-> 1. Go to https://elevenlabs.io/app/settings/api-keys (sign in if prompted).
+> 1. Go to https://elevenlabs.io/app/developers/api-keys (sign in if prompted).
 > 2. Click **Create API Key**.
 > 3. Give it a name (e.g., "videowright").
 > 4. **Enable these permissions** on the key before creating it. The key creation UI has toggles for which features the key can access. Enable all of the following:
