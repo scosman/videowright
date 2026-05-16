@@ -577,7 +577,12 @@ export class Player {
 	}
 
 	private async handlePrev(): Promise<void> {
-		if (this.state !== "playing" || this.transitioning) return;
+		if (this.state !== "playing" && this.state !== "ended") return;
+		if (this.transitioning) return;
+
+		if (this.state === "ended") {
+			this.state = "playing";
+		}
 
 		const slot = this.getCurrentSlot();
 		if (!slot.runner) return;

@@ -286,6 +286,51 @@ describe("Player integration", () => {
 		player.destroy();
 	});
 
+	it("prev_at_end_of_timeline_goes_to_last_segment", async () => {
+		const mountCalls: string[] = [];
+
+		function makeSeg(id: string): Segment {
+			return makeSegment({
+				id,
+				mount() {
+					mountCalls.push(id);
+				},
+				async play() {},
+			});
+		}
+
+		const segs = [makeSeg("seg-0"), makeSeg("seg-1"), makeSeg("seg-2")];
+		const player = new Player(host);
+		await player.load(
+			makeTimeline(["seg-0", "seg-1", "seg-2"]),
+			makeLoader(segs),
+			makeTransitionLoaders(),
+		);
+		await player.start();
+		await flush();
+
+		// Advance to the end of the timeline
+		pressKey("ArrowRight");
+		await flush(20);
+		pressKey("ArrowRight");
+		await flush(20);
+		// seg-2 has no internal beats, so next -> ended
+		pressKey("ArrowRight");
+		await flush();
+		expect(player.currentState).toBe("ended");
+		expect(player.isEnded).toBe(true);
+
+		// Press prev -- should go back to last segment, clearing ended state
+		pressKey("ArrowLeft");
+		await flush(20);
+		expect(player.currentState).toBe("playing");
+		expect(player.isEnded).toBe(false);
+		expect(player.currentSegmentId).toBe("seg-1");
+		expect(location.hash).toBe("#/seg-1/0");
+
+		player.destroy();
+	});
+
 	it("seek_on_load_to_beat_n", async () => {
 		const beatLog: number[] = [];
 
