@@ -1,6 +1,6 @@
 import "../../styles/motion-engineering/tokens.css";
 import type { Timeline } from "videowright";
-import defaultAudioTrack from "./audio/tracks/v1/track.js";
+import defaultAudioTrack from "./audio/tracks/v3/track.js";
 
 const timeline: Timeline = {
 	meta: {
