@@ -55,8 +55,9 @@ let resizeHandler: (() => void) | null = null;
 /**
  * Toggle the HUD strip visibility. When hidden, the video area grows to fill
  * the freed space and the scale factor is recomputed. The grid template
- * switches between `auto 1fr 80px` (visible) and `auto 1fr 0px` (hidden),
- * preserving the nav row introduced by the multi-video layout.
+ * switches between `auto 1fr 80px` (visible) and `0 1fr 0px` (hidden),
+ * collapsing both the nav row and HUD row so the video uses full height.
+ * The top bar (.vw-top-bar) is also hidden/shown in sync.
  *
  * Returns the new visibility state.
  */
@@ -66,8 +67,24 @@ export function toggleDevHud(): boolean {
 	const layout = document.getElementById("dev-layout");
 	const hudContainer = document.getElementById("dev-hud-container");
 
+	// Toggle the top bar visibility.
+	// IMPORTANT: Do NOT use display:none — that removes the element from the
+	// grid flow, causing subsequent grid items to shift into the wrong tracks.
+	// Instead use visibility:hidden + overflow:hidden so it stays in its grid
+	// track (which is collapsed to height 0 via grid-template-rows).
+	const topBar = layout?.querySelector(".vw-top-bar") as HTMLElement | null;
+	if (topBar) {
+		if (hudVisible) {
+			topBar.style.visibility = "";
+			topBar.style.overflow = "";
+		} else {
+			topBar.style.visibility = "hidden";
+			topBar.style.overflow = "hidden";
+		}
+	}
+
 	if (layout) {
-		layout.style.gridTemplateRows = hudVisible ? "auto 1fr 80px" : "auto 1fr 0px";
+		layout.style.gridTemplateRows = hudVisible ? "auto 1fr 80px" : "0 1fr 0px";
 	}
 	if (hudContainer) {
 		// Hide only the inner HUD content (.vw-hud), NOT the container itself.

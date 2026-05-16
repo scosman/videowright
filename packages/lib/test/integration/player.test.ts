@@ -281,7 +281,7 @@ describe("Player integration", () => {
 
 		// Verify HUD shows "end of timeline"
 		const hudText = host.querySelector(".vw-hud")?.textContent ?? "";
-		expect(hudText).toContain("End of timeline");
+		expect(hudText).toContain("END OF TIMELINE");
 
 		player.destroy();
 	});

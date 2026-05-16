@@ -39,10 +39,6 @@ const HUD_STYLES = `
 	color: #fff;
 	z-index: 9999;
 }
-/* Normal HUD bar: single-row horizontal layout, no wrapping.
-   Designed to fit within a fixed 80px strip without clipping.
-   This height must match HUD_HEIGHT in dev_frame.ts and the CSS
-   in index.html (#dev-hud-container height/min-height/max-height). */
 .vw-hud-inner {
 	position: absolute;
 	bottom: 0;
@@ -56,35 +52,62 @@ const HUD_STYLES = `
 	gap: 6px 16px;
 	align-items: center;
 	height: 100%;
+	max-width: 100vw;
 	max-height: 80px;
 	overflow: hidden;
 }
-.vw-hud-item { white-space: nowrap; flex-shrink: 0; }
-.vw-hud-label { opacity: 0.6; margin-right: 4px; }
-.vw-hud-vo {
-	opacity: 0.8;
-	font-style: italic;
+.vw-hud-info {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	flex: 0 0 auto;
+	max-width: 30vw;
+	min-width: 0;
+	gap: 2px;
+}
+.vw-hud-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.vw-hud-item {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	flex-shrink: 0;
+}
+.vw-hud-label { opacity: 0.6; margin-right: 4px; }
+.vw-hud-separator { opacity: 0.5; }
+.vw-hud-vo {
+	opacity: 0.8;
+	font-style: italic;
 	min-width: 0;
-	flex: 0 1 auto;
+	flex: 1 1 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	max-height: 80px;
 }
 .vw-hud-keys {
 	opacity: 0.4;
 	font-size: 11px;
-	white-space: nowrap;
 	margin-left: auto;
-	flex-shrink: 0;
+	flex: 0 0 auto;
+	display: grid;
+	grid-template-columns: auto auto;
+	grid-template-rows: repeat(3, auto);
+	gap: 0 12px;
+	max-height: 80px;
+	overflow-y: auto;
 }
+.vw-hud-key-item { white-space: nowrap; }
 .vw-hud-ended {
+	font-size: 10px;
+	text-transform: uppercase;
+	opacity: 0.7;
+	line-height: 1;
 	position: absolute;
-	top: 14px;
-	right: 14px;
-	background: rgba(0,0,0,0.75);
-	padding: 6px 12px;
-	border-radius: 4px;
-	pointer-events: auto;
+	top: -12px;
+	left: 0;
 }
 /* Error display: horizontal layout for fixed-height HUD strip.
    Left accent + icon | two-line title+message (truncated) | reload button.
@@ -163,6 +186,15 @@ const HUD_STYLES = `
 .vw-hud-play:hover { background: rgba(255,255,255,0.3); }
 `;
 
+const KEY_BINDINGS = [
+	"→: next",
+	"←: prev",
+	"Space: play/pause",
+	"R: restart",
+	"H: HUD",
+	"1-9: jump",
+];
+
 function formatTime(ms: number): string {
 	const s = Math.floor(ms / 1000);
 	const m = Math.floor(s / 60);
@@ -200,7 +232,6 @@ export function createHud(options?: HudOptions): Hud {
 	let isVisible = true;
 
 	// Persistent play button -- created once, updated on each render.
-	// Avoids recreating and re-attaching listeners on every update() call.
 	let playBtn: HTMLButtonElement | null = null;
 	if (options?.onPlayToggle) {
 		playBtn = document.createElement("button");
@@ -227,13 +258,6 @@ export function createHud(options?: HudOptions): Hud {
 				return;
 			}
 
-			if (state.ended) {
-				const badge = document.createElement("div");
-				badge.className = "vw-hud-ended";
-				badge.textContent = "End of timeline";
-				el.appendChild(badge);
-			}
-
 			if (!isVisible) return;
 
 			const inner = document.createElement("div");
@@ -246,12 +270,62 @@ export function createHud(options?: HudOptions): Hud {
 				inner.appendChild(playBtn);
 			}
 
-			addItem(inner, "segment", state.segmentId);
-			addItem(inner, "beat", String(state.beat));
-			addItem(inner, "seg time", formatTime(state.segmentTime));
-			addItem(inner, "total", formatTime(state.totalTime));
-			addItem(inner, "mode", state.mode);
+			// Info column: segment label + timing row
+			const info = document.createElement("div");
+			info.className = "vw-hud-info";
 
+			// Ended indicator (absolutely positioned above segment line)
+			if (state.ended) {
+				const badge = document.createElement("div");
+				badge.className = "vw-hud-ended";
+				badge.textContent = "END OF TIMELINE";
+				info.appendChild(badge);
+			}
+
+			// Row 0: segment label
+			const row0 = document.createElement("div");
+			row0.className = "vw-hud-row";
+			const segItem = document.createElement("span");
+			segItem.className = "vw-hud-item";
+			const segLabel = document.createElement("span");
+			segLabel.className = "vw-hud-label";
+			segLabel.textContent = "segment:";
+			segItem.appendChild(segLabel);
+			segItem.appendChild(document.createTextNode(`${state.beat} ${state.segmentId}`));
+			row0.appendChild(segItem);
+			info.appendChild(row0);
+
+			// Row 1: timing row
+			const row1 = document.createElement("div");
+			row1.className = "vw-hud-row";
+
+			const segTimeItem = document.createElement("span");
+			segTimeItem.className = "vw-hud-item";
+			const segTimeLabel = document.createElement("span");
+			segTimeLabel.className = "vw-hud-label";
+			segTimeLabel.textContent = "seg time:";
+			segTimeItem.appendChild(segTimeLabel);
+			segTimeItem.appendChild(document.createTextNode(formatTime(state.segmentTime)));
+			row1.appendChild(segTimeItem);
+
+			const separator = document.createElement("span");
+			separator.className = "vw-hud-separator";
+			separator.textContent = "·";
+			row1.appendChild(separator);
+
+			const totalItem = document.createElement("span");
+			totalItem.className = "vw-hud-item";
+			const totalLabel = document.createElement("span");
+			totalLabel.className = "vw-hud-label";
+			totalLabel.textContent = "total:";
+			totalItem.appendChild(totalLabel);
+			totalItem.appendChild(document.createTextNode(formatTime(state.totalTime)));
+			row1.appendChild(totalItem);
+
+			info.appendChild(row1);
+			inner.appendChild(info);
+
+			// Voiceover (only when truthy)
 			if (state.voiceover) {
 				const vo = document.createElement("div");
 				vo.className = "vw-hud-vo";
@@ -259,9 +333,15 @@ export function createHud(options?: HudOptions): Hud {
 				inner.appendChild(vo);
 			}
 
+			// Keyboard shortcuts
 			const keys = document.createElement("div");
 			keys.className = "vw-hud-keys";
-			keys.textContent = "→: next | ←: prev | Space: play/pause | R: restart | H: HUD | 1-9: jump";
+			for (const binding of KEY_BINDINGS) {
+				const keyItem = document.createElement("span");
+				keyItem.className = "vw-hud-key-item";
+				keyItem.textContent = binding;
+				keys.appendChild(keyItem);
+			}
 			inner.appendChild(keys);
 
 			el.appendChild(inner);
@@ -284,19 +364,6 @@ export function createHud(options?: HudOptions): Hud {
 	};
 
 	return hud;
-}
-
-function addItem(parent: HTMLElement, label: string, value: string): void {
-	const span = document.createElement("span");
-	span.className = "vw-hud-item";
-
-	const lbl = document.createElement("span");
-	lbl.className = "vw-hud-label";
-	lbl.textContent = `${label}:`;
-
-	span.appendChild(lbl);
-	span.appendChild(document.createTextNode(value));
-	parent.appendChild(span);
 }
 
 function renderError(error: { segmentId: string; message: string; stack?: string }): HTMLElement {
@@ -322,12 +389,9 @@ function renderError(error: { segmentId: string; message: string; stack?: string
 	const msg = document.createElement("div");
 	msg.className = "vw-hud-error-message";
 	msg.textContent = error.message;
-	// Full message + stack available on hover via title attribute
 	msg.title = error.stack ? `${error.message}\n\n${error.stack}` : error.message;
 	textBlock.appendChild(msg);
 
-	// Click the error text to log the full stack trace to the console,
-	// since the fixed-height HUD strip is too small for inline display.
 	textBlock.addEventListener("click", () => {
 		if (error.stack) {
 			console.error(

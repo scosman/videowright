@@ -282,9 +282,9 @@ describe("toggleDevHud", () => {
 		expect(toggleDevHud()).toBe(true);
 	});
 
-	it("sets grid template to auto 1fr 0px when hiding HUD", () => {
+	it("sets grid template to 0 1fr 0px when hiding HUD", () => {
 		toggleDevHud();
-		expect(layout.style.gridTemplateRows).toBe("auto 1fr 0px");
+		expect(layout.style.gridTemplateRows).toBe("0 1fr 0px");
 	});
 
 	it("restores grid template to auto 1fr 80px when showing HUD", () => {
