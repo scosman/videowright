@@ -33,11 +33,25 @@ If the user wants a voice-over, load [audio/voiceover.md](audio/voiceover.md). T
 
 ### Sound effects
 
-SFX sourcing (BYO and ElevenLabs) will be available in a later phase. Once sourced, SFX assets live in `audio/originals/sfx/<slug>/` and are referenced by cues in the audio plan.
+If the user wants sound effects, load [audio/sfx/sfx.md](audio/sfx/sfx.md). This covers:
+
+- BYO (user-provided audio) and ElevenLabs (AI-generated) sourcing flows
+- `sfx.ts` metadata authoring
+- Per-asset approval UX (Approve / Discard and request changes)
+- Integration into the audio plan as cues
+
+SFX assets live in `audio/originals/sfx/<slug>/` and are referenced by cues in the audio plan.
 
 ### Background music
 
-Music sourcing (BYO and ElevenLabs) will be available in a later phase. Once sourced, music assets live in `audio/originals/music/<slug>/` and are referenced by cues in the audio plan.
+If the user wants background music, load [audio/music/music.md](audio/music/music.md). This covers:
+
+- BYO (user-provided audio) and ElevenLabs (AI-generated) sourcing flows
+- `music.ts` metadata authoring (rich free-text notes for BPM, key, mood, structure)
+- Per-asset approval UX (Approve / Discard and request changes)
+- Integration into the audio plan as cues with volume curves and ducking
+
+Music assets live in `audio/originals/music/<slug>/` and are referenced by cues in the audio plan.
 
 ### Audio plan, build, and sync
 
@@ -69,8 +83,16 @@ videos/<video-slug>/
           timing.json
           provider_script.md
           generate.sh
-      sfx/                             # slug-named subfolders (future)
-      music/                           # slug-named subfolders (future)
+      sfx/                             # slug-named subfolders
+        keyboard_typing/
+          audio.mp3
+          sfx.ts
+          generate.sh
+      music/                           # slug-named subfolders
+        uplift_piano/
+          audio.mp3
+          music.ts
+          generate.sh
     tracks/                            # rendered audio tracks
       v1/
         track.ts                       # typed AudioTrack object

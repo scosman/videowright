@@ -47,6 +47,8 @@ describe("skill file structure", () => {
 			"build.md",
 			"cue_template.md",
 			"ffmpeg_cookbook.md",
+			"music",
+			"sfx",
 			"styles.md",
 			"sync.md",
 			"voiceover",
@@ -69,6 +71,28 @@ describe("skill file structure", () => {
 		]);
 
 		const providerFiles = readdirSync(resolve(voDir, "providers")).sort();
+		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md"]);
+	});
+
+	it("references/audio/sfx/ has the expected sub-references", () => {
+		const sfxDir = resolve(SKILL_ROOT, "references/audio/sfx");
+		expect(existsSync(sfxDir)).toBe(true);
+
+		const files = readdirSync(sfxDir).sort();
+		expect(files).toEqual(["providers", "sfx.md"]);
+
+		const providerFiles = readdirSync(resolve(sfxDir, "providers")).sort();
+		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md"]);
+	});
+
+	it("references/audio/music/ has the expected sub-references", () => {
+		const musicDir = resolve(SKILL_ROOT, "references/audio/music");
+		expect(existsSync(musicDir)).toBe(true);
+
+		const files = readdirSync(musicDir).sort();
+		expect(files).toEqual(["music.md", "providers"]);
+
+		const providerFiles = readdirSync(resolve(musicDir, "providers")).sort();
 		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md"]);
 	});
 
