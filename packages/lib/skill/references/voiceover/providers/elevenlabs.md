@@ -12,8 +12,8 @@ This question is asked at the start of Flow A (before style intake). Present the
 
 > Two ways to generate the voiceover with ElevenLabs:
 >
-> 1. **API key (recommended for repeated use)** -- set up once in `.env`, then the agent generates audio and timings via curl.
-> 2. **Portal (web UI, no setup)** -- the agent walks you through TTS in the ElevenLabs web portal, then STT to extract timings.
+> 1. **API key (recommended for repeated use)** -- set up once in `.env`, then the agent generates audio and timings via curl. **Requires a paid ElevenLabs plan** (not available on the free tier). Note: granting the agent API access means it will spend your ElevenLabs credits, which costs real money.
+> 2. **Portal (web UI, works with any plan)** -- the agent walks you through TTS in the ElevenLabs web portal, then STT to extract timings.
 >
 > API key is faster and reusable across projects. Portal needs no setup but takes more clicks per video.
 >
@@ -29,7 +29,7 @@ After the user picks, if they chose **API key**, immediately present the curated
 
 Before generating audio, warn the user about costs:
 
-> **Cost notice:** ElevenLabs charges credits for TTS generation. On paid plans, a 60-second voiceover (~900 characters) costs roughly 900-1,000 credits, which is a small fraction of most plan quotas. Free-tier accounts get a limited monthly character allowance.
+> **Cost notice:** ElevenLabs charges credits for TTS generation. A 60-second voiceover (~900 characters) costs roughly 900-1,000 credits, which is a small fraction of most paid plan quotas.
 >
 > Check your plan's remaining quota at https://elevenlabs.io/app/subscription before generating.
 
@@ -39,10 +39,19 @@ Before generating audio, warn the user about costs:
 
 Guide the user:
 
+> **Creating your ElevenLabs API key:**
+>
 > 1. Go to https://elevenlabs.io/app/settings/api-keys (sign in if prompted).
 > 2. Click **Create API Key**.
-> 3. Give it a name (e.g., "videowright") and create it.
-> 4. Copy the key.
+> 3. Give it a name (e.g., "videowright").
+> 4. **Enable these permissions** on the key before creating it. The key creation UI has toggles for which features the key can access. Enable all of the following:
+>    - **Text to Speech** -- required for generating voiceover audio.
+>    - **Speech to Text** -- required for extracting word-level timing from audio.
+>    - **Sound Effects** -- for upcoming SFX generation features.
+>    - **Music Generation** -- for upcoming background music features.
+>
+>    If you don't see individual permission toggles, create the key with full access -- the default may already include all required permissions.
+> 5. Click **Create** and copy the key.
 
 **Storage rules -- do NOT paste the key into chat:**
 
@@ -57,7 +66,16 @@ The agent reads the key via `process.env.ELEVENLABS_API_KEY` when running curl c
 
 ### Step 3: Voice (already selected)
 
-The voice was chosen during approach selection (Flow A step 1). The selected voice ID should already be in `.env` as `ELEVENLABS_VOICE_ID`. No action needed here -- proceed to audio generation.
+The voice was chosen during approach selection (Flow A step 1). Use this voice ID when constructing the API call below, and write it to the `eleven_labs_voice_id` field when creating `voiceover.ts` in step 8. If no voice was explicitly chosen, default to Asher (`tMvyQtpCVQ0DkixuYm6J`). No action needed here -- proceed to audio generation.
+
+The voice ID lookup table for the curated catalog:
+
+| Voice | ID |
+|---|---|
+| Asher (default) | `tMvyQtpCVQ0DkixuYm6J` |
+| Cecily | `Uc7anshoV8mdBhDnEZEX` |
+| Don | `8IbUB2LiiCZ85IJAHNnZ` |
+| Hanna | `Hh0rE70WfnSFN80K8uJC` |
 
 ### Step 4: Generate audio with timestamps
 
@@ -65,13 +83,18 @@ Use the text-to-speech-with-timestamps endpoint. This returns both the audio and
 
 **Endpoint:** `POST https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/with-timestamps`
 
+The agent reads the voice ID from the `eleven_labs_voice_id` field in `voiceover.ts`. If not set, default to Asher: `tMvyQtpCVQ0DkixuYm6J`.
+
 The agent constructs and runs a curl command like this:
 
 ```bash
 # Read the provider script (everything below the --- line)
 SCRIPT_TEXT=$(sed '1,/^---$/d' "videos/<video>/voiceovers/<slug>/provider_script.md")
 
-curl -X POST "https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}/with-timestamps" \
+# Voice ID from eleven_labs_voice_id (default: Asher tMvyQtpCVQ0DkixuYm6J)
+VOICE_ID="<selected voice ID>"
+
+curl -X POST "https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}/with-timestamps" \
   -H "xi-api-key: ${ELEVENLABS_API_KEY}" \
   -H "Content-Type: application/json" \
   -d "$(jq -n \
@@ -246,6 +269,10 @@ Fields:
 - `end`: seconds from audio start when the word ends
 
 The exact JSON structure may vary by ElevenLabs endpoint or export version. Adapt by looking for word-level entries with start/end timestamps. The sync algorithm needs: word text, start time, end time.
+
+## Known limitations
+
+- **`<break>` tags cannot appear at the very start of audio.** ElevenLabs does not support a `<break time="Ns" />` tag as the first element in the provider script. The TTS engine requires spoken text before the first break. If the video needs an initial silent pause before narration begins, that must be handled separately (e.g., by adding a leading silent segment in the timeline). A proper initial-pause feature is planned but not yet available.
 
 ## Troubleshooting
 

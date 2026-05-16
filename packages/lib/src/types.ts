@@ -144,6 +144,12 @@ export type Voiceover = {
 	timing: Timing;
 	/** Freeform notes about this voiceover. */
 	notes?: string;
+	/**
+	 * ElevenLabs voice ID for this voiceover. Used by the API flow to select
+	 * the voice for TTS generation. When omitted, defaults to Asher
+	 * (`tMvyQtpCVQ0DkixuYm6J`). Ignored when provider is "manual".
+	 */
+	eleven_labs_voice_id?: string;
 };
 
 // ---- Transition ----

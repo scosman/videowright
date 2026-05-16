@@ -40,7 +40,7 @@ Ask: "I'll set up a Videowright project here. This will create the directory str
 
 If the user says no, stop.
 
-### Step 2 -- Scaffold directories
+### Step 2 -- Scaffold directories and gitignore
 
 Create the consumer repo directory structure:
 
@@ -54,6 +54,8 @@ Create the consumer repo directory structure:
 ```
 
 Only create directories that do not already exist. Do not create any files inside these directories.
+
+**Ensure `.env` is in `.gitignore`.** Check if a `.gitignore` file exists at the repo root. If it does not exist, create one. In either case, verify that `.env` is listed as an ignored pattern. If it is not present, add `.env` to the file. This prevents API keys and other secrets from being committed to the repository.
 
 ### Step 3 -- Pick first style
 

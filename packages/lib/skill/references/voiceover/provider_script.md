@@ -74,6 +74,8 @@ Syntax: `<break time="X.Xs" />` where `X.X` is seconds (e.g., `"1.5s"`, `"0.8s"`
 
 For pauses under 0.5 seconds, ellipses and em-dashes often sound more natural than a `<break>` tag. For pauses over 0.5 seconds, use `<break>`.
 
+**Important: `<break>` cannot be the first element in the script.** ElevenLabs does not support a `<break>` tag at the very start of the text -- the TTS engine requires spoken text before the first break. If the video needs an initial silent pause before narration begins, start with a spoken word and place the first `<break>` after it, or handle the initial silence through video timing (e.g., a leading silent segment).
+
 ### Step 4: Handle segment boundaries
 
 The provider script is one continuous block of text (not divided by segment). Segment boundaries from PLAN.md become natural pause points in the provider script. Insert a `<break>` tag at each segment transition to give the audio natural breathing room:
@@ -107,7 +109,7 @@ Write the provider script as a single markdown file:
 # Provider Script
 
 > Provider: ElevenLabs v2 (eleven_multilingual_v2)
-> Voice: [voice name and ID from selection, e.g. "Asher (tMvyQtpCVQ0DkixuYm6J)"]
+> Voice: [voice name from selection, e.g. "Asher"]
 > Style notes: Conversational, warm
 
 ---

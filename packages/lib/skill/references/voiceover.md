@@ -39,15 +39,15 @@ When the user asks to "add a voiceover" or "generate a voiceover", ask:
 
 When the user picks the **API key** approach in step 1, immediately present this catalog (default is **Asher** if no preference):
 
-| # | Voice | Description |
-|---|---|---|
-| 1 | **Asher** (`tMvyQtpCVQ0DkixuYm6J`) | Warm, conversational male voice with confident, grounded delivery. Good default for explainers, narration, and commercial reads. |
-| 2 | **Cecily** (`Uc7anshoV8mdBhDnEZEX`) | Warm middle-aged African-American female voice, West Coast. Engaging for ads, social, and brand storytelling. |
-| 3 | **Don** (`8IbUB2LiiCZ85IJAHNnZ`) | Young American male voice, casual and approachable. Great for social, storytelling, and audiobook-style narration. |
-| 4 | **Hanna** (`Hh0rE70WfnSFN80K8uJC`) | Professional American female voice. Best for informative narration, e-learning, and corporate voiceover. |
-| 5 | **Other** | User provides their own ElevenLabs voice ID (browse at https://elevenlabs.io/app/voice-library). |
+| # | Voice | Description | Preview |
+|---|---|---|---|
+| 1 | **Asher** | Warm, clear, and conversational male voice with confident, grounded delivery. Natural pacing and friendly authority give him an engaging presence that holds attention without feeling forced. Ideal for podcasts, narration, explainers, and authentic commercial reads. Works especially well as a default voice because of his versatility across different content types and tones. | [Listen](https://elevenlabs.io/community/voice-library/asher-tMvyQtpCVQ0DkixuYm6J) |
+| 2 | **Cecily** | Warm, versatile female voice from the West Coast with an engaging, approachable delivery. Her natural warmth and conversational style make her equally effective for advertisements, social media content, and brand storytelling. She can shift between polished and casual registers without losing authenticity. A strong choice when you want a voice that feels relatable and trustworthy across a range of content. | [Listen](https://elevenlabs.io/community/voice-library/cecily-Uc7anshoV8mdBhDnEZEX) |
+| 3 | **Don** | Young American male voice with a casual, approachable tone that feels natural and engaging. Light, clear, and expressive -- perfect for conversations with listeners in a relaxed way. This style works especially well for social media content, storytelling, and audiobooks, where relatability and flow are key. The voice carries warmth and clarity, making it easy to listen to over long sessions from narration to digital campaigns. | [Listen](https://elevenlabs.io/community/voice-library/don-8IbUB2LiiCZ85IJAHNnZ) |
+| 4 | **Hanna** | Professional American female voice with a polished, authoritative delivery. Clear articulation and steady pacing make her an excellent choice for informative narration, e-learning modules, and corporate voiceover. She conveys competence and credibility without sounding stiff or robotic. Best when you need a voice that commands attention while remaining approachable in instructional or business contexts. | [Listen](https://elevenlabs.io/community/voice-library/hanna-Hh0rE70WfnSFN80K8uJC) |
+| 5 | **Other** | Provide any ElevenLabs voice ID. Browse voices at the [ElevenLabs Voice Library](https://elevenlabs.io/app/voice-library) to find one that fits your project. | -- |
 
-If the user does not pick, default to **Asher**. Add the selected voice ID to `.env` as `ELEVENLABS_VOICE_ID`.
+If the user does not pick, default to **Asher**. Save the selected voice ID to the `eleven_labs_voice_id` field in the `voiceover.ts` file (not as an env var). If the user picks "Other", ask them to provide the voice ID.
 
 Portal users skip this catalog -- they pick a voice visually in the ElevenLabs UI during audio generation (step 5).
 
@@ -90,6 +90,7 @@ type Voiceover = {
   provider_timing_file?: string;  // path relative to the voiceover.ts file
   timing: Timing;
   notes?: string;
+  eleven_labs_voice_id?: string;  // ElevenLabs voice ID; defaults to Asher if omitted
 };
 ```
 
@@ -125,6 +126,7 @@ const voiceover: Voiceover = {
   audio_file: './narration.mp3',
   provider: 'elevenlabs',
   provider_timing_file: './provider_timing.json',
+  eleven_labs_voice_id: 'tMvyQtpCVQ0DkixuYm6J', // Asher
   timing: {
     perSegment: {
       'intro':          [4.2],

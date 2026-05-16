@@ -135,6 +135,7 @@ type Voiceover = {
   provider_timing_file?: string;
   timing: Timing;
   notes?: string;
+  eleven_labs_voice_id?: string;
 };
 ```
 
@@ -145,6 +146,7 @@ type Voiceover = {
 | `provider_timing_file` | No | Provider timing JSON path, relative to `voiceover.ts` directory. |
 | `timing` | Yes | Per-segment advance timing synced to this audio. |
 | `notes` | No | Freeform notes about this voiceover. |
+| `eleven_labs_voice_id` | No | ElevenLabs voice ID for TTS generation. Defaults to Asher (`tMvyQtpCVQ0DkixuYm6J`) when omitted. Ignored when provider is `"manual"`. |
 
 See [voiceover.md](voiceover.md) for the full voiceover flow and file conventions.
 
