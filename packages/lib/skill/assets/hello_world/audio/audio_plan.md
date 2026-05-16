@@ -2,12 +2,12 @@
 
 ## Plan
 
-No audio sources configured yet. The hello-world template ships with a silent
-placeholder track (`tracks/v1/track.mp3`) so that `videowright render` works
-out of the box. To add audio, run `videowright script --write` to generate a
+No audio configured. The hello-world template ships silent — `videowright
+render` produces a video-only MP4 when `default_audio_track` is unset on the
+timeline. To add audio, run `videowright script --write` to generate a
 voiceover script, send it to your TTS provider (or use ElevenLabs via the
-skill), then place the result in `audio/originals/voiceovers/v1/` and rebuild
-the track.
+skill), then place the result in `audio/originals/voiceovers/v1/` and build a
+track under `audio/tracks/v1/`.
 
 ## Log
 

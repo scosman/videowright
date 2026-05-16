@@ -258,21 +258,18 @@ describe("skill file structure", () => {
 		expect(content).toContain("hello-intro");
 		expect(content).toContain("hello-outro");
 		expect(content).toContain("transition");
-		expect(content).toContain("default_audio_track");
 	});
 
-	it("hello_world has audio directory structure", () => {
-		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/audio/audio_plan.md"))).toBe(true);
-		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/audio/tracks/v1/track.ts"))).toBe(
-			true,
-		);
-
-		const trackContent = readFileSync(
-			resolve(SKILL_ROOT, "assets/hello_world/audio/tracks/v1/track.ts"),
+	it("hello_world ships silent with no default_audio_track", () => {
+		const timelineContent = readFileSync(
+			resolve(SKILL_ROOT, "assets/hello_world/timeline.ts"),
 			"utf-8",
 		);
-		expect(trackContent).toContain("AudioTrack");
-		expect(trackContent).toContain("audio_file");
+		expect(timelineContent).not.toContain("default_audio_track");
+		expect(timelineContent).not.toMatch(/audio\/tracks\//);
+
+		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/audio/audio_plan.md"))).toBe(true);
+		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/audio/tracks"))).toBe(false);
 	});
 
 	const STYLE_PACKS = [
