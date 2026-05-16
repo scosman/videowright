@@ -9,15 +9,16 @@ const MASCOT = `  ▐▛███▜▌
  ▝▜█████▛▘
    ▘▘ ▝▝`;
 
-const USER_PROMPT =
-	"update the title card to our latest branding (name, tagline, design guide, colors), and add some motion";
+const USER_PROMPT = "update the title card to our latest branding and style";
 const AGENT_LINE_1 = "Updating segments/title-card.tsx, styles/tokens.css…";
 const AGENT_LINE_2 = "Done. Hot-reloaded.";
 
 export default defineSegment({
 	id: "interactive-dev",
-	advances: [10.0],
-	voiceover: "Iterate in chat. The dev server hot-reloads. Type a change. See it.",
+	// Two advances: first lands after VO says "hot reloads" (~4.0s in), second
+	// is segment end after a long hold (~3s) so viewers SEE the hot reload.
+	advances: [4.0, 7.5],
+	voiceover: "Request changes in your coding agent, and the preview hot reloads.",
 
 	mount(el) {
 		host = el;
@@ -439,7 +440,10 @@ export default defineSegment({
 			{ ...opts, duration: 300 },
 		);
 
-		await ctx.hold(250);
+		// GATE: wait for VO to land "hot reloads" before triggering the swap.
+		// This sync makes the visual hot-reload land *after* the audible cue,
+		// not before. After the swap, the segment holds for ~3s on the result.
+		await ctx.waitForNext();
 
 		// Hot-reload moment — browser swaps from basic VideoRight card → real
 		// motion-engineering Videowright title card, with the same WAAPI motion
@@ -506,8 +510,9 @@ export default defineSegment({
 			delay: 800,
 		});
 
-		// Hold on the finished title card to the end of the segment
-		await ctx.hold(1500);
+		// Long hold on the finished title card so the viewer registers the
+		// hot-reload result. Then waitForNext lands us at segment end.
+		await ctx.waitForNext();
 	},
 
 	unmount() {

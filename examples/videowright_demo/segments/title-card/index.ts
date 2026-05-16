@@ -5,7 +5,7 @@ let host: HTMLElement | null = null;
 export default defineSegment({
 	id: "title-card",
 	advances: [3.0],
-	voiceover: "Videowright turns a coding agent into a video team.",
+	voiceover: "Videowright turns a coding agent into a video team, using any web technologies.",
 
 	mount(el) {
 		host = el;

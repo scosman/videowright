@@ -6,6 +6,19 @@ import rocketAnimation from "../../rocket-launch.json";
 let host: HTMLElement | null = null;
 let lottieInstance: AnimationItem | null = null;
 
+// SVG-panel center (used in both mount() and play())
+const SVG_CX = 400;
+const SVG_CY = 240;
+
+// Panel-boundary advances (segment-relative seconds). Each waitForNext()
+// in play() consumes one entry; the final entry transitions to the next
+// segment. The voiceover.ts perSegment override (when present) takes
+// precedence in render mode — keep these in sync with that file.
+// Aligned to the v3 script cue words (0.15s before each section's first
+// keyword): "Any library" (2.62) / "Advanced 3 D" (5.08) / "Even your
+// real product UI" (8.33) / next segment start "Request changes" (17.56).
+const ADVANCES = [2.473, 4.934, 8.185, 17.414];
+
 type ThreeScene = {
 	renderer: THREE.WebGLRenderer;
 	scene: THREE.Scene;
@@ -51,9 +64,9 @@ function panel(id: string, label: string): string {
 
 export default defineSegment({
 	id: "web-tech-gallery",
-	advances: [24.0],
+	advances: ADVANCES,
 	voiceover:
-		"SVG. Charting libraries. Advanced 3D and motion. Even your real product UI, rendered from your own React components. No new framework. No animation DSL. If your stack runs in a browser, Videowright supports it.",
+		"That includes animated SVG. Any library, like charting libraries. Advanced 3D and motion, like Three.js or Lottie. Even your real product UI, rendered from your app's codebase. If your stack runs in a browser, Videowright supports it.",
 
 	mount(el) {
 		host = el;
@@ -81,7 +94,7 @@ export default defineSegment({
           background: var(--color-surface);
           overflow: hidden;
         ">
-          ${panel("p-svg", "SVG")}
+          ${panel("p-svg", "Animated SVG")}
           ${panel("p-charts", "ECharts")}
           ${panel("p-3d", "Three.js + Lottie")}
           ${panel("p-app", "Your App's UI")}
@@ -130,8 +143,42 @@ export default defineSegment({
       </div>
     `;
 
-		// --- SVG panel: animated circles tracing paths ---
+		// --- SVG panel: orbital system with rotating arcs, radar sweep,
+		//     Lissajous comet, twinkling dots, and pulsing hub. All SVG. ---
 		const svgBody = el.querySelector('[data-ref="p-svg-body"]') as HTMLElement;
+		const cx = SVG_CX;
+		const cy = SVG_CY;
+		const orbitRadii = [60, 110, 160, 210, 260];
+		const planets = [
+			{ r: 60, startDeg: 0, dur: 2200, size: 5, color: "var(--color-accent)" },
+			{ r: 110, startDeg: 120, dur: 3000, size: 7, color: "var(--cyan)" },
+			{ r: 160, startDeg: 50, dur: 4200, size: 9, color: "url(#g1)" },
+			{ r: 210, startDeg: 200, dur: 5800, size: 6, color: "var(--color-accent)" },
+			{ r: 260, startDeg: 320, dur: 7400, size: 8, color: "var(--cyan)" },
+			{ r: 160, startDeg: 240, dur: 4200, size: 5, color: "var(--cyan)" },
+		];
+
+		// Pre-generated arc paths (partial circles)
+		const arcPath = (radius: number, startDeg: number, sweepDeg: number) => {
+			const start = ((startDeg - 90) * Math.PI) / 180;
+			const end = ((startDeg + sweepDeg - 90) * Math.PI) / 180;
+			const x1 = cx + Math.cos(start) * radius;
+			const y1 = cy + Math.sin(start) * radius;
+			const x2 = cx + Math.cos(end) * radius;
+			const y2 = cy + Math.sin(end) * radius;
+			const large = sweepDeg > 180 ? 1 : 0;
+			return `M ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2}`;
+		};
+
+		// Twinkle dots in the background — pre-randomized positions
+		const twinkleDots = Array.from({ length: 26 }).map((_, i) => {
+			const a = (i * 137.5 * Math.PI) / 180; // golden angle distribution
+			const r = 280 + ((i * 23) % 90);
+			const x = cx + Math.cos(a) * r * 0.9;
+			const y = cy + Math.sin(a) * r * 0.55;
+			return { x, y, delay: (i * 137) % 1800 };
+		});
+
 		svgBody.innerHTML = `
       <svg viewBox="0 0 800 480" style="width: 100%; height: 100%;">
         <defs>
@@ -139,22 +186,100 @@ export default defineSegment({
             <stop offset="0" stop-color="var(--cyan)" />
             <stop offset="1" stop-color="var(--color-accent)" />
           </linearGradient>
+          <radialGradient id="hubGlow" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="var(--color-accent)" stop-opacity="0.9" />
+            <stop offset="0.6" stop-color="var(--color-accent)" stop-opacity="0.25" />
+            <stop offset="1" stop-color="var(--color-accent)" stop-opacity="0" />
+          </radialGradient>
+          <linearGradient id="sweepGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="var(--color-accent)" stop-opacity="0" />
+            <stop offset="1" stop-color="var(--color-accent)" stop-opacity="0.55" />
+          </linearGradient>
+          <linearGradient id="cometGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="var(--cyan)" stop-opacity="0" />
+            <stop offset="1" stop-color="var(--cyan)" stop-opacity="0.85" />
+          </linearGradient>
         </defs>
+
+        <!-- Background twinkle dots -->
+        <g data-ref="svg-twinkles">
+          ${twinkleDots
+						.map(
+							(d, i) => `<circle data-twinkle="${i}" data-delay="${d.delay}"
+                cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="1.4"
+                fill="var(--color-fg)" style="opacity: 0;" />`,
+						)
+						.join("")}
+        </g>
+
+        <!-- Radar sweep beam (rotates around hub) -->
+        <g data-ref="svg-sweep" style="transform-origin: ${cx}px ${cy}px; opacity: 0;">
+          <path d="M ${cx} ${cy} L ${cx + 280} ${cy - 80} A 290 290 0 0 1 ${cx + 280} ${cy + 80} Z"
+            fill="url(#sweepGrad)" opacity="0.45" />
+        </g>
+
+        <!-- Concentric dashed orbit rings -->
         <g data-ref="svg-orbits">
-          <circle cx="400" cy="240" r="180" fill="none" stroke="var(--color-border)" stroke-width="1" stroke-dasharray="4 6" style="opacity: 0;"/>
-          <circle cx="400" cy="240" r="120" fill="none" stroke="var(--color-border)" stroke-width="1" stroke-dasharray="4 6" style="opacity: 0;"/>
-          <circle cx="400" cy="240" r="60" fill="none" stroke="var(--color-border)" stroke-width="1" stroke-dasharray="4 6" style="opacity: 0;"/>
+          ${orbitRadii
+						.map(
+							(r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+                stroke="var(--color-border)" stroke-width="1"
+                stroke-dasharray="4 6" style="opacity: 0;" />`,
+						)
+						.join("")}
         </g>
-        <g data-ref="svg-orb-1" style="transform-origin: 400px 240px;">
-          <circle cx="580" cy="240" r="10" fill="url(#g1)" />
+
+        <!-- Rotating partial arcs (4 of them, different speeds) -->
+        <g data-ref="svg-arc-1" style="transform-origin: ${cx}px ${cy}px;">
+          <path d="${arcPath(85, 0, 140)}" fill="none"
+            stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round"
+            style="opacity: 0.85;" />
         </g>
-        <g data-ref="svg-orb-2" style="transform-origin: 400px 240px;">
-          <circle cx="520" cy="240" r="7" fill="var(--cyan)" />
+        <g data-ref="svg-arc-2" style="transform-origin: ${cx}px ${cy}px;">
+          <path d="${arcPath(135, 0, 80)}" fill="none"
+            stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"
+            style="opacity: 0.7;" />
         </g>
-        <g data-ref="svg-orb-3" style="transform-origin: 400px 240px;">
-          <circle cx="460" cy="240" r="5" fill="var(--color-accent)" />
+        <g data-ref="svg-arc-3" style="transform-origin: ${cx}px ${cy}px;">
+          <path d="${arcPath(185, 0, 110)}" fill="none"
+            stroke="var(--color-accent)" stroke-width="1.5" stroke-linecap="round"
+            stroke-dasharray="3 8" style="opacity: 0.6;" />
         </g>
-        <circle cx="400" cy="240" r="14" fill="var(--color-bg)" stroke="var(--color-accent)" stroke-width="2"/>
+        <g data-ref="svg-arc-4" style="transform-origin: ${cx}px ${cy}px;">
+          <path d="${arcPath(235, 0, 60)}" fill="none"
+            stroke="var(--cyan)" stroke-width="2.5" stroke-linecap="round"
+            style="opacity: 0.6;" />
+        </g>
+
+        <!-- Lissajous comet trail -->
+        <path data-ref="svg-comet-trail" fill="none"
+          stroke="url(#cometGrad)" stroke-width="2.5" stroke-linecap="round"
+          opacity="0.85" />
+        <circle data-ref="svg-comet-head" cx="${cx}" cy="${cy}" r="4.5"
+          fill="var(--cyan)" style="opacity: 0;" />
+
+        <!-- Planets on orbits -->
+        <g data-ref="svg-planets">
+          ${planets
+						.map(
+							(
+								p,
+								i,
+							) => `<g data-planet="${i}" data-radius="${p.r}" data-start="${p.startDeg}" data-dur="${p.dur}"
+                style="transform-origin: ${cx}px ${cy}px; opacity: 0;">
+              <circle cx="${cx + p.r}" cy="${cy}" r="${p.size}" fill="${p.color}" />
+            </g>`,
+						)
+						.join("")}
+        </g>
+
+        <!-- Hub: glow + ring + inner core -->
+        <circle data-ref="svg-hub-glow" cx="${cx}" cy="${cy}" r="38"
+          fill="url(#hubGlow)" style="opacity: 0;" />
+        <circle data-ref="svg-hub-ring" cx="${cx}" cy="${cy}" r="18"
+          fill="var(--color-bg)" stroke="var(--color-accent)" stroke-width="2" />
+        <circle data-ref="svg-hub-core" cx="${cx}" cy="${cy}" r="5"
+          fill="var(--color-accent)" />
       </svg>
     `;
 
@@ -781,16 +906,32 @@ export default defineSegment({
             <div data-ref="toast" style="
               position: absolute;
               right: 28px; bottom: 28px;
-              padding: 12px 18px;
-              background: #07101a;
-              border: 1px solid var(--color-border);
-              border-radius: 8px;
-              display: flex; align-items: center; gap: 10px;
+              padding: 22px 32px;
+              background: linear-gradient(180deg, #0e2218 0%, #07181a 100%);
+              border: 1px solid rgba(159, 199, 122, 0.55);
+              border-radius: 12px;
+              box-shadow:
+                0 0 0 1px rgba(159, 199, 122, 0.18),
+                0 18px 44px rgba(0, 0, 0, 0.55),
+                0 0 30px rgba(159, 199, 122, 0.18);
+              display: flex; align-items: center; gap: 18px;
               opacity: 0;
               transform: translateY(8px);
             ">
-              <span style="color: #9fc77a;">✓</span>
-              <span style="font-size: 13px;">Note sent · payment retry queued</span>
+              <span style="
+                display: inline-flex; align-items: center; justify-content: center;
+                width: 32px; height: 32px;
+                border-radius: 50%;
+                background: rgba(159, 199, 122, 0.18);
+                color: #9fc77a;
+                font-size: 22px;
+                font-weight: 600;
+                box-shadow: 0 0 12px rgba(159, 199, 122, 0.35) inset;
+              ">✓</span>
+              <span style="font-size: 26px; font-weight: 500; color: #e6f1d8;">
+                Note sent
+                <span style="color: var(--color-muted); font-weight: 400; margin-left: 8px;">· payment retry queued</span>
+              </span>
             </div>
           </section>
         </main>
@@ -842,48 +983,168 @@ export default defineSegment({
 				.finished.catch(() => {});
 		};
 
-		// Panel windows (segment-relative): SVG 0.0–1.6, ECharts 1.6–3.6,
-		// Three.js+Lottie 3.6–7.0, App UI 7.0–16.2 (two-phase dashboard → customers).
-		// App UI lands slightly after the VO mention of "your real product UI" (4.4s)
-		// to give Three.js breathing room without dragging the dashboard.
-		const startT = ctx.clock();
-		const waitUntil = async (relMs: number) => {
-			const elapsed = ctx.clock() - startT;
-			const remaining = relMs - elapsed;
-			if (remaining > 0) await ctx.hold(remaining);
-		};
+		// Panel boundaries are now manual (`ctx.waitForNext()`) so the four
+		// sections — SVG / ECharts / Three.js+Lottie / App UI — transition on
+		// VO advances (see ADVANCES at module top). App UI is the only
+		// internal-timed section; its phases fire as percentages of the time
+		// available (ADVANCES[3] - ADVANCES[2]).
 
-		// === SVG panel (0.0–2.0s) ===
+		// === SVG panel — cut to it before VO says "animated S V G".
+		// Richer system: dashed orbits, partial arcs, planets, radar sweep,
+		// Lissajous comet trail, twinkle dots, pulsing hub glow. ===
 		await showPanel('[data-ref="p-svg"]');
-		// Fade orbit rings in
+
+		// Fade dashed orbit rings in (staggered)
 		host?.querySelectorAll('[data-ref="svg-orbits"] circle').forEach((c, i) => {
 			(c as SVGCircleElement).animate([{ opacity: 0 }, { opacity: 1 }], {
 				...opts,
-				duration: 400,
-				delay: 200 + i * 100,
+				duration: 360,
+				delay: 100 + i * 70,
 			});
 		});
-		const orb1 = host?.querySelector('[data-ref="svg-orb-1"]') as SVGGElement;
-		const orb2 = host?.querySelector('[data-ref="svg-orb-2"]') as SVGGElement;
-		const orb3 = host?.querySelector('[data-ref="svg-orb-3"]') as SVGGElement;
-		orb1.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], {
-			duration: 4000,
-			iterations: Number.POSITIVE_INFINITY,
-			easing: "linear",
+
+		// Twinkle dots — each pulses on a per-dot delay loop
+		const twinkleEls = host?.querySelectorAll("[data-twinkle]");
+		if (twinkleEls) {
+			for (const dot of twinkleEls) {
+				const el = dot as SVGCircleElement;
+				const delay = Number.parseInt(el.getAttribute("data-delay") || "0", 10);
+				el.animate(
+					[{ opacity: 0 }, { opacity: 0.85 }, { opacity: 0.1 }, { opacity: 0.85 }, { opacity: 0 }],
+					{
+						duration: 2400,
+						delay,
+						iterations: Number.POSITIVE_INFINITY,
+						easing: "ease-in-out",
+					},
+				);
+			}
+		}
+
+		// Radar sweep — rotates continuously
+		const svgSweep = host?.querySelector('[data-ref="svg-sweep"]') as SVGGElement;
+		svgSweep.animate([{ opacity: 0 }, { opacity: 1 }], {
+			...opts,
+			duration: 400,
+			delay: 300,
 		});
-		orb2.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(-360deg)" }], {
-			duration: 3000,
-			iterations: Number.POSITIVE_INFINITY,
-			easing: "linear",
-		});
-		orb3.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], {
-			duration: 2000,
+		svgSweep.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], {
+			duration: 3800,
 			iterations: Number.POSITIVE_INFINITY,
 			easing: "linear",
 		});
 
-		// === ECharts panel (1.6–3.6s) ===
-		await waitUntil(1600);
+		// Arcs — different rotation speeds and directions
+		const arc1 = host?.querySelector('[data-ref="svg-arc-1"]') as SVGGElement;
+		const arc2 = host?.querySelector('[data-ref="svg-arc-2"]') as SVGGElement;
+		const arc3 = host?.querySelector('[data-ref="svg-arc-3"]') as SVGGElement;
+		const arc4 = host?.querySelector('[data-ref="svg-arc-4"]') as SVGGElement;
+		arc1.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], {
+			duration: 4800,
+			iterations: Number.POSITIVE_INFINITY,
+			easing: "linear",
+		});
+		arc2.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(-360deg)" }], {
+			duration: 3200,
+			iterations: Number.POSITIVE_INFINITY,
+			easing: "linear",
+		});
+		arc3.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], {
+			duration: 6400,
+			iterations: Number.POSITIVE_INFINITY,
+			easing: "linear",
+		});
+		arc4.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(-360deg)" }], {
+			duration: 2400,
+			iterations: Number.POSITIVE_INFINITY,
+			easing: "linear",
+		});
+
+		// Planets — each on its own orbit
+		const planetEls = host?.querySelectorAll("[data-planet]");
+		if (planetEls) {
+			for (const p of planetEls) {
+				const el = p as SVGGElement;
+				const start = Number.parseFloat(el.getAttribute("data-start") || "0");
+				const dur = Number.parseFloat(el.getAttribute("data-dur") || "4000");
+				el.animate([{ opacity: 0 }, { opacity: 1 }], {
+					...opts,
+					duration: 400,
+					delay: 100,
+				});
+				el.animate(
+					[{ transform: `rotate(${start}deg)` }, { transform: `rotate(${start + 360}deg)` }],
+					{ duration: dur, iterations: Number.POSITIVE_INFINITY, easing: "linear" },
+				);
+			}
+		}
+
+		// Hub glow pulse + core scale-pulse
+		const hubGlow = host?.querySelector('[data-ref="svg-hub-glow"]') as SVGCircleElement;
+		const hubCore = host?.querySelector('[data-ref="svg-hub-core"]') as SVGCircleElement;
+		hubGlow.animate([{ opacity: 0 }, { opacity: 1 }], {
+			...opts,
+			duration: 500,
+			delay: 200,
+		});
+		hubGlow.animate(
+			[
+				{ transform: "scale(1)", transformOrigin: `${SVG_CX}px ${SVG_CY}px` },
+				{ transform: "scale(1.25)", transformOrigin: `${SVG_CX}px ${SVG_CY}px` },
+				{ transform: "scale(1)", transformOrigin: `${SVG_CX}px ${SVG_CY}px` },
+			],
+			{ duration: 1800, iterations: Number.POSITIVE_INFINITY, easing: "ease-in-out" },
+		);
+		hubCore.animate(
+			[
+				{ transform: "scale(1)", transformOrigin: `${SVG_CX}px ${SVG_CY}px` },
+				{ transform: "scale(1.4)", transformOrigin: `${SVG_CX}px ${SVG_CY}px` },
+				{ transform: "scale(1)", transformOrigin: `${SVG_CX}px ${SVG_CY}px` },
+			],
+			{ duration: 1800, iterations: Number.POSITIVE_INFINITY, easing: "ease-in-out" },
+		);
+
+		// Lissajous-tracing comet — ctx.clock()-driven trail across the panel.
+		const cometTrail = host?.querySelector('[data-ref="svg-comet-trail"]') as SVGPathElement;
+		const cometHead = host?.querySelector('[data-ref="svg-comet-head"]') as SVGCircleElement;
+		cometHead.animate([{ opacity: 0 }, { opacity: 1 }], {
+			...opts,
+			duration: 400,
+			delay: 200,
+		});
+
+		const cometStart = ctx.clock();
+		const cometTick = () => {
+			if (ctx.signal.aborted) return;
+			const t = (ctx.clock() - cometStart) / 1000;
+			// Lissajous around the hub: 3:4 ratio, drift over time
+			const ax = 250;
+			const ay = 150;
+			const f1 = 0.7;
+			const f2 = 0.95;
+			const phase = t * 0.4;
+			// Build a tail of the last 60 sample points
+			const samples = 60;
+			const dt = 0.04;
+			let path = "";
+			for (let i = 0; i < samples; i++) {
+				const ti = t - (samples - 1 - i) * dt;
+				const px = SVG_CX + Math.sin(ti * f1 * 2 * Math.PI + phase) * ax;
+				const py = SVG_CY + Math.sin(ti * f2 * 2 * Math.PI * 1.5) * ay;
+				path += `${i === 0 ? "M" : "L"} ${px.toFixed(1)} ${py.toFixed(1)} `;
+			}
+			cometTrail.setAttribute("d", path);
+			// Head position = last sample
+			const hx = SVG_CX + Math.sin(t * f1 * 2 * Math.PI + phase) * ax;
+			const hy = SVG_CY + Math.sin(t * f2 * 2 * Math.PI * 1.5) * ay;
+			cometHead.setAttribute("cx", hx.toFixed(1));
+			cometHead.setAttribute("cy", hy.toFixed(1));
+			if (!ctx.signal.aborted) requestAnimationFrame(cometTick);
+		};
+		requestAnimationFrame(cometTick);
+
+		// === ECharts panel — manual advance (waitForNext) on "Any library". ===
+		await ctx.waitForNext();
 		await hidePanel('[data-ref="p-svg"]');
 		await showPanel('[data-ref="p-charts"]');
 		const barEls = host?.querySelectorAll("[data-bar]");
@@ -942,8 +1203,8 @@ export default defineSegment({
 		radarTo = radarTarget2;
 		radarStartT = ctx.clock();
 
-		// === Three.js + Lottie panel (3.6–7.0s) — "wow" hold, then yields to App UI ===
-		await waitUntil(3600);
+		// === Three.js + Lottie panel — manual advance on "Advanced 3 D". ===
+		await ctx.waitForNext();
 		await hidePanel('[data-ref="p-charts"]');
 		await showPanel('[data-ref="p-3d"]');
 
@@ -1113,12 +1374,24 @@ export default defineSegment({
 		};
 		requestAnimationFrame(lottieTick);
 
-		// === App UI panel (7.0s → end) — two-phase enterprise SaaS demo ===
-		await waitUntil(7000);
+		// === App UI panel — manual advance on "Even your real product UI".
+		// Internal phases are timed as a percentage of the section length so
+		// the sequence adjusts automatically if ADVANCES is retuned. Section
+		// length = ADVANCES[3] - ADVANCES[2]. ===
+		await ctx.waitForNext();
 		await hidePanel('[data-ref="p-3d"]');
 		await showPanel('[data-ref="p-app"]');
 
-		// --- Phase 1: Dashboard (7.0 → 11.0s) ---
+		const appUiDurMs = (ADVANCES[3] - ADVANCES[2]) * 1000;
+		const appUiStart = ctx.clock();
+		const appHoldUntilPct = async (pct: number) => {
+			const target = appUiDurMs * pct;
+			const elapsed = ctx.clock() - appUiStart;
+			const remaining = target - elapsed;
+			if (remaining > 0) await ctx.hold(remaining);
+		};
+
+		// --- Phase 1: Dashboard ---
 
 		// KPI cards stagger in with number count-up
 		const kpiCards = host?.querySelectorAll("[data-kpi]");
@@ -1137,11 +1410,14 @@ export default defineSegment({
 			el: HTMLElement;
 			target: string;
 		}> = [];
-		for (const el of host?.querySelectorAll("[data-target]") ?? []) {
-			kpiTargets.push({
-				el: el as HTMLElement,
-				target: (el as HTMLElement).getAttribute("data-target") || "",
-			});
+		const targetEls = host?.querySelectorAll("[data-target]");
+		if (targetEls) {
+			for (const el of targetEls) {
+				kpiTargets.push({
+					el: el as HTMLElement,
+					target: (el as HTMLElement).getAttribute("data-target") || "",
+				});
+			}
 		}
 
 		const countUpStart = ctx.clock();
@@ -1240,8 +1516,8 @@ export default defineSegment({
 			});
 		});
 
-		// --- Phase 2 transition (11.0 → 11.5s): tab switch to Customers ---
-		await waitUntil(11000);
+		// --- Phase 2 transition: tab switch to Customers (fires at 43% of section) ---
+		await appHoldUntilPct(0.43);
 
 		// Sidebar nav highlight moves from Dashboard to Customers
 		const dashNav = host?.querySelector('[data-nav="dashboard"]') as HTMLElement;
@@ -1285,8 +1561,8 @@ export default defineSegment({
 			);
 		});
 
-		// --- Phase 2 action (12.4 → end): type a note, click send, toast ---
-		await waitUntil(12400);
+		// --- Phase 2 action (fires at 59% of section): type a note, click send, toast ---
+		await appHoldUntilPct(0.59);
 
 		const actionPanel = host?.querySelector('[data-ref="action-panel"]') as HTMLElement;
 		actionPanel.animate(
@@ -1332,9 +1608,9 @@ export default defineSegment({
 			{ ...opts, duration: 320, fill: "forwards" },
 		);
 
-		// Hold to end
-		await waitUntil(16200);
-		clearInterval(ticker);
+		// play() returns once the toast lands; the final advance ends the
+		// segment. The T-coord ticker keeps running until abort cleans it up
+		// (registered on ctx.signal).
 	},
 
 	unmount() {

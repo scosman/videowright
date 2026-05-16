@@ -5,7 +5,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "npx videowright dev",
-		"render": "npx videowright render"
+		"render": "npx videowright render",
+		"record": "npx videowright record"
 	},
 	"dependencies": {
 		"@types/three": "^0.184.1",

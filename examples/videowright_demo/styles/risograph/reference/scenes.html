@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Risograph — Reference Scenes</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #2a2620; font-family: var(--font-body); }
+  .ri-canvas { position: absolute; inset: 0; background: var(--color-bg); color: var(--color-fg); overflow: hidden; }
+  /* Grain layer */
+  .ri-canvas::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    opacity: 0.18; mix-blend-mode: multiply;
+  }
+  .ri-display { font-family: var(--font-display); font-weight: 900; line-height: 0.9; letter-spacing: -0.025em; text-transform: none; }
+  .ri-body    { font-family: var(--font-body); }
+  .ri-mono    { font-family: var(--font-mono); }
+  .ri-pink    { color: var(--color-accent); }
+  .ri-blue    { color: var(--color-fg); }
+  .ri-yellow  { color: var(--color-second); }
+  /* Misregistered text — wrap the text in a misreg span and we render twice */
+  .misreg { position: relative; display: inline-block; }
+  .misreg .ghost {
+    position: absolute; left: 3px; top: 3px; color: var(--color-accent);
+    z-index: 0; pointer-events: none;
+  }
+  .misreg .top { position: relative; z-index: 1; color: var(--color-fg); }
+  .misreg.pink .ghost { color: var(--color-fg); }
+  .misreg.pink .top { color: var(--color-accent); }
+  .ri-tag { display: inline-block; padding: 6px 12px; background: var(--color-second); color: var(--color-fg); font-family: var(--font-body); font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<div id="root"></div>
+<script type="text/babel" src="animations.jsx"></script>
+<script type="text/babel">
+const SCENE = 4;
+
+// Misregistered text (display only)
+function Misreg({ children, pink = false, style = {} }) {
+  return <span className={`misreg ${pink ? 'pink' : ''}`} style={style}>
+    <span className="ghost" aria-hidden="true">{children}</span>
+    <span className="top">{children}</span>
+  </span>;
+}
+
+// Stop-motion stamp-in: jumps from 0 → 1 in 4 frames over `dur`, with slight rotation jitter
+function Stamp({ at = 0, dur = 0.35, rot = 0, jitter = 2, children, style = {} }) {
+  const { localTime } = useSprite();
+  const p = clamp((localTime - at) / dur, 0, 1);
+  const step = Math.floor(p * 5) / 5;   // 5 frames
+  // Jitter while stamping in, then settle
+  const jit = step < 1 ? (Math.sin(step * 23) * jitter) : 0;
+  const op = step === 0 ? 0 : 1;
+  const sc = 0.85 + step * 0.15;
+  return <div style={{ ...style, opacity: op, transform: `rotate(${rot + jit}deg) scale(${sc})`, transformOrigin: 'center' }}>{children}</div>;
+}
+
+// Counter that ticks
+function Ticker({ to, at = 0, dur = 1.0, suffix = '' }) {
+  const { localTime } = useSprite();
+  const p = clamp((localTime - at) / dur, 0, 1);
+  const step = Math.floor(p * 12) / 12;
+  return <span>{Math.round(to * step)}{suffix}</span>;
+}
+
+// Pink flash transition — last 200ms of each scene flashes pink
+function FlashOut() {
+  const { localTime, duration } = useSprite();
+  const remain = duration - localTime;
+  const op = remain < 0.15 ? clamp((0.15 - remain) / 0.05, 0, 1) : 0;
+  return <div style={{ position: 'absolute', inset: 0, background: 'var(--color-accent)', opacity: op, mixBlendMode: 'multiply', pointerEvents: 'none', zIndex: 10 }} />;
+}
+
+function Counter() {
+  const t = useTime();
+  const i = Math.min(9, Math.floor(t / SCENE));
+  return <div className="ri-display ri-pink" style={{ position: 'absolute', right: 80, top: 60, fontSize: 36, transform: 'rotate(-3deg)' }}>
+    ★ {String(i+1).padStart(2,'0')}/10 ★
+  </div>;
+}
+
+// ─── Scene 1 — Title ─────────────────────────────────────────────
+function S1() {
+  return <Sprite start={0} end={SCENE}>
+    {/* Pink star top-left */}
+    <Stamp at={0.2} rot={-15} style={{ position: 'absolute', left: 140, top: 140 }}>
+      <svg width="160" height="160"><polygon points="80,0 100,60 160,60 110,100 130,160 80,124 30,160 50,100 0,60 60,60" fill="var(--color-accent)" /></svg>
+    </Stamp>
+    <Stamp at={0.5} rot={-2} style={{ position: 'absolute', left: 120, top: 320 }}>
+      <div className="ri-mono" style={{ fontSize: 22, letterSpacing: '0.1em', fontWeight: 600 }}>BEACON · LONG-RUNNING AGENTS</div>
+    </Stamp>
+    <Stamp at={0.9} rot={-2} style={{ position: 'absolute', left: 120, top: 380 }}>
+      <div className="ri-display" style={{ fontSize: 380 }}>
+        <Misreg>BEACON.</Misreg>
+      </div>
+    </Stamp>
+    <Stamp at={1.5} rot={2} style={{ position: 'absolute', left: 280, top: 780 }}>
+      <div className="ri-display ri-pink" style={{ fontSize: 92 }}>agents that don't forget.</div>
+    </Stamp>
+    <Stamp at={2.0} rot={-4} style={{ position: 'absolute', right: 200, top: 700 }}>
+      <svg width="120" height="120"><polygon points="60,0 70,50 120,60 70,70 60,120 50,70 0,60 50,50" fill="var(--color-second)" /></svg>
+    </Stamp>
+    <Counter />
+    <FlashOut />
+  </Sprite>;
+}
+
+// ─── Scene 2 — Section ───────────────────────────────────────────
+function S2() {
+  return <Sprite start={SCENE} end={SCENE*2}>
+    <Stamp at={0.3} rot={-4} style={{ position: 'absolute', left: 80, top: 100 }}>
+      <div className="ri-display ri-pink" style={{ fontSize: 760, lineHeight: 0.85 }}>
+        <Misreg pink>02</Misreg>
+      </div>
+    </Stamp>
+    <Stamp at={1.0} rot={-2} style={{ position: 'absolute', left: 700, top: 560 }}>
+      <div className="ri-display" style={{ fontSize: 200 }}>
+        <Misreg>the architecture</Misreg>
+      </div>
+    </Stamp>
+    <Stamp at={1.6} rot={1} style={{ position: 'absolute', left: 720, top: 820 }}>
+      <div className="ri-body" style={{ fontSize: 30, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>memory · reasoning · recovery</div>
+    </Stamp>
+    <Counter />
+    <FlashOut />
+  </Sprite>;
+}
+
+// ─── Scene 3 — Kinetic ───────────────────────────────────────────
+function S3() {
+  const words = [
+    { t: 'most', rot: -2, pink: false, size: 200 },
+    { t: 'agents', rot: 1, pink: false, size: 220 },
+    { t: 'fail', rot: -3, pink: false, size: 240 },
+    { t: 'because', rot: 1, pink: false, size: 180 },
+    { t: 'they', rot: -1, pink: false, size: 200 },
+    { t: 'forget.', rot: 2, pink: true, size: 360 },
+  ];
+  return <Sprite start={SCENE*2} end={SCENE*3}>
+    <div style={{ position: 'absolute', left: 120, top: 220, right: 120 }}>
+      {words.map((w, i) => (
+        <Stamp key={i} at={0.3 + i*0.22} rot={w.rot} style={{ display: 'inline-block', marginRight: 30, verticalAlign: 'baseline' }}>
+          <div className="ri-display" style={{ fontSize: w.size, color: w.pink ? 'var(--color-accent)' : 'var(--color-fg)' }}>
+            <Misreg pink={w.pink}>{w.t}</Misreg>
+          </div>
+        </Stamp>
+      ))}
+    </div>
+    <Counter />
+    <FlashOut />
+  </Sprite>;
+}
+
+// ─── Scene 4 — Bullet ────────────────────────────────────────────
+function S4() {
+  const items = [
+    { n: '01', t: 'context decays.',          tag: null },
+    { n: '02', t: 'tools drift.',             tag: null },
+    { n: '03', t: 'plans go stale.',          tag: 'main fail' },
+    { n: '04', t: 'errors compound.',         tag: null },
+    { n: '05', t: 'recovery means restart.',  tag: null },
+  ];
+  return <Sprite start={SCENE*3} end={SCENE*4}>
+    <Stamp at={0.2} rot={-2} style={{ position: 'absolute', left: 120, top: 120 }}>
+      <div className="ri-display" style={{ fontSize: 140 }}><Misreg>where agents break:</Misreg></div>
+    </Stamp>
+    <div style={{ position: 'absolute', left: 140, right: 140, top: 380 }}>
+      {items.map((it, i) => (
+        <Stamp key={it.n} at={0.7 + i*0.18} rot={(i%2===0?-0.5:0.5)} style={{ display: 'flex', alignItems: 'baseline', gap: 32, padding: '14px 0' }}>
+          <span className="ri-display ri-pink" style={{ fontSize: 96, minWidth: 130 }}>{it.n}</span>
+          <span className="ri-display ri-blue" style={{ fontSize: 76 }}>{it.t}</span>
+          {it.tag && <span className="ri-tag" style={{ marginLeft: 'auto', transform: 'rotate(-2deg)' }}>{it.tag}</span>}
+        </Stamp>
+      ))}
+    </div>
+    <Counter />
+    <FlashOut />
+  </Sprite>;
+}
+
+// ─── Scene 5 — Stat ──────────────────────────────────────────────
+function S5() {
+  return <Sprite start={SCENE*4} end={SCENE*5}>
+    <Stamp at={0.2} rot={-1} style={{ position: 'absolute', left: 120, top: 120 }}>
+      <div className="ri-mono" style={{ fontSize: 22, letterSpacing: '0.1em', fontWeight: 700, textTransform: 'uppercase' }}>★ failure data · Q1 2026</div>
+    </Stamp>
+    {/* Big riso pink blob */}
+    <Stamp at={0.4} rot={4} style={{ position: 'absolute', left: 140, top: 240 }}>
+      <svg width="1300" height="700" style={{ overflow: 'visible' }}>
+        <ellipse cx="650" cy="350" rx="640" ry="310" fill="var(--color-accent)" />
+      </svg>
+    </Stamp>
+    <Stamp at={0.8} rot={-3} style={{ position: 'absolute', left: 280, top: 360 }}>
+      <div className="ri-display" style={{ fontSize: 560, color: 'var(--color-bg)', lineHeight: 0.85 }}>
+        <Misreg><Ticker to={84} at={0.9} dur={1.0} />%</Misreg>
+      </div>
+    </Stamp>
+    <Stamp at={2.0} rot={-1} style={{ position: 'absolute', left: 140, bottom: 140, width: 1300 }}>
+      <div className="ri-body" style={{ fontSize: 40, fontWeight: 600, lineHeight: 1.3 }}>
+        of agent failures happen <span className="ri-pink">after</span> the 4th tool call. one bad memory step and the rest is rebuild.
+      </div>
+      <div className="ri-mono" style={{ fontSize: 16, marginTop: 14, letterSpacing: '0.1em' }}>BEACON.LOGS · N=12,840</div>
+    </Stamp>
+    <Counter />
+    <FlashOut />
+  </Sprite>;
+}
+
+// ─── Scene 6 — Feature ───────────────────────────────────────────
+function S6() {
+  return <Sprite start={SCENE*5} end={SCENE*6}>
+    {/* Left: riso cut-paper shape */}
+    <Stamp at={0.3} rot={-3} style={{ position: 'absolute', left: 100, top: 200 }}>
+      <svg width="720" height="720" style={{ overflow: 'visible' }}>
+        {/* Pink shape behind */}
+        <path d="M 80 100 Q 360 -20 640 120 Q 720 380 580 600 Q 280 720 100 540 Q 20 320 80 100 Z" fill="var(--color-accent)" />
+      </svg>
+    </Stamp>
+    <Stamp at={0.5} rot={2} style={{ position: 'absolute', left: 160, top: 260 }}>
+      <svg width="700" height="700" style={{ overflow: 'visible' }}>
+        {/* Stacked memory rectangles */}
+        {[0,1,2,3].map(i => (
+          <g key={i}>
+            <rect x={60} y={80 + i*120} width={520} height={92} fill="var(--color-fg)" />
+            <text x={90} y={140 + i*120} fontFamily="var(--font-mono)" fontWeight="700" fontSize="32" fill="var(--color-bg)">snap_{String(i).padStart(3,'0')}</text>
+            <text x={520} y={140 + i*120} fontFamily="var(--font-mono)" fontWeight="700" fontSize="32" fill={i===2 ? 'var(--color-second)' : 'var(--color-bg)'}>{i===2 ? '↶' : '✓'}</text>
+          </g>
+        ))}
+      </svg>
+    </Stamp>
+    {/* Right copy */}
+    <Stamp at={0.4} rot={-1} style={{ position: 'absolute', right: 120, top: 180 }}>
+      <div className="ri-mono ri-pink" style={{ fontSize: 22, letterSpacing: '0.15em', fontWeight: 700 }}>★ FEATURE 01 / 03</div>
+    </Stamp>
+    <Stamp at={0.7} rot={-2} style={{ position: 'absolute', right: 120, top: 240, width: 720 }}>
+      <div className="ri-display" style={{ fontSize: 130 }}><Misreg>checkpoint memory.</Misreg></div>
+    </Stamp>
+    <Stamp at={1.3} rot={0} style={{ position: 'absolute', right: 120, top: 560, width: 720 }}>
+      <div className="ri-body" style={{ fontSize: 30, lineHeight: 1.45, fontWeight: 500 }}>
+        we snapshot the agent's reasoning at every tool boundary. when a plan goes stale, the agent <span className="ri-pink" style={{ fontWeight: 700 }}>rewinds</span> to the last point its world model was correct.
+      </div>
+    </Stamp>
+    <Stamp at={1.8} rot={-1} style={{ position: 'absolute', right: 120, bottom: 160, width: 720, display: 'flex', gap: 36, paddingTop: 24, borderTop: '4px solid var(--color-fg)' }}>
+      <div><div className="ri-mono" style={{ fontSize: 13, letterSpacing: '0.15em', fontWeight: 700 }}>SNAP/MIN</div><div className="ri-display ri-pink" style={{ fontSize: 110 }}><Ticker to={120} at={1.9} /></div></div>
+      <div><div className="ri-mono" style={{ fontSize: 13, letterSpacing: '0.15em', fontWeight: 700 }}>RESTORE</div><div className="ri-display ri-pink" style={{ fontSize: 110 }}><Ticker to={9} at={1.9} suffix="ms" /></div></div>
+    </Stamp>
+    <Counter />
+    <FlashOut />
+  </Sprite>;
+}
+
+// ─── Scene 7 — 3 cards ───────────────────────────────────────────
+function S7() {
+  const cards = [
+    { name: 'memory',    sub: 'remembers', shape: 'circ', col: 'pink' },
+    { name: 'reasoning', sub: 'revises',   shape: 'tri',  col: 'blue' },
+    { name: 'recovery',  sub: 'rewinds',   shape: 'sq',   col: 'pink' },
+  ];
+  return <Sprite start={SCENE*6} end={SCENE*7}>
+    <Stamp at={0.2} rot={-2} style={{ position: 'absolute', left: 120, top: 120 }}>
+      <div className="ri-display" style={{ fontSize: 140 }}><Misreg>three primitives.</Misreg></div>
+    </Stamp>
+    <div style={{ position: 'absolute', left: 140, right: 140, top: 400, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 48 }}>
+      {cards.map((c, i) => (
+        <Stamp key={c.name} at={0.7 + i*0.2} rot={(i%2===0?-2:2)}>
+          <div style={{ background: c.col === 'pink' ? 'var(--color-accent)' : 'var(--color-fg)', padding: 36, minHeight: 560, color: c.col === 'pink' ? 'var(--color-fg)' : 'var(--color-bg)' }}>
+            <div className="ri-mono" style={{ fontSize: 16, letterSpacing: '0.2em', fontWeight: 700 }}>0{i+1} / 03</div>
+            <svg width="100%" height="260" style={{ marginTop: 32 }}>
+              {c.shape === 'circ' && <circle cx="50%" cy="130" r="100" fill="var(--color-bg)" />}
+              {c.shape === 'tri'  && <polygon points="200,30 380,230 20,230" fill="var(--color-accent)" />}
+              {c.shape === 'sq'   && <rect x="80" y="30" width="240" height="200" fill="var(--color-bg)" transform="rotate(-4 200 130)" />}
+            </svg>
+            <div className="ri-display" style={{ fontSize: 90, marginTop: 32 }}>{c.name}</div>
+            <div className="ri-body" style={{ fontSize: 26, fontWeight: 600, marginTop: 4, opacity: 0.85 }}>~ {c.sub} ~</div>
+          </div>
+        </Stamp>
+      ))}
+    </div>
+    <Counter />
+    <FlashOut />
+  </Sprite>;
+}
+
+// ─── Scene 8 — UI showcase (flat 2-color UI) ─────────────────────
+function S8() {
+  return <Sprite start={SCENE*7} end={SCENE*8}>
+    <Stamp at={0.2} rot={-2} style={{ position: 'absolute', left: 120, top: 100 }}>
+      <div className="ri-display" style={{ fontSize: 110 }}><Misreg>the console.</Misreg></div>
+    </Stamp>
+    <Stamp at={0.6} rot={-0.5} style={{ position: 'absolute', left: 120, top: 320, right: 120 }}>
+      <div style={{ position: 'relative', height: 700, background: 'var(--color-fg)', color: 'var(--color-bg)' }}>
+        {/* Pink misregistration ghost layer */}
+        <div style={{ position: 'absolute', inset: 0, left: 4, top: 4, background: 'var(--color-accent)', mixBlendMode: 'multiply', opacity: 0.6 }} />
+        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '220px 1fr 260px', height: '100%' }}>
+          <div style={{ padding: 24, borderRight: '3px solid var(--color-bg)' }}>
+            <div className="ri-display ri-pink" style={{ fontSize: 28, marginBottom: 24 }}>BEACON</div>
+            {['runs','memory','plans','tools','traces','evals'].map((x, i) => (
+              <div key={x} className="ri-body" style={{ padding: '10px 12px', fontSize: 18, fontWeight: 700, background: i===1 ? 'var(--color-accent)' : 'transparent', color: i===1 ? 'var(--color-fg)' : 'var(--color-bg)' }}>★ {x}</div>
+            ))}
+          </div>
+          <div style={{ padding: 28 }}>
+            <div className="ri-mono" style={{ fontSize: 14, letterSpacing: '0.2em', fontWeight: 700, marginBottom: 22 }}>TIMELINE · 41AC</div>
+            <svg width="100%" height="200">
+              <line x1="20" y1="100" x2="98%" y2="100" stroke="var(--color-bg)" strokeWidth="3" />
+              {[0.05,0.18,0.31,0.44,0.57,0.70,0.83,0.95].map((p, i) => (
+                <g key={i}>
+                  <circle cx={`${p*100}%`} cy="100" r={i===5 ? 16 : 10} fill={i===5 ? 'var(--color-accent)' : 'var(--color-bg)'} stroke="var(--color-bg)" strokeWidth="3" />
+                </g>
+              ))}
+            </svg>
+            <div className="ri-display ri-pink" style={{ fontSize: 40, marginTop: 28 }}>★ active: snap_006</div>
+            <div className="ri-mono" style={{ fontSize: 16, marginTop: 16, lineHeight: 1.7, fontWeight: 600 }}>
+              <div>[t05] tool.search → 12 results</div>
+              <div style={{ color: 'var(--color-accent)' }}>[t06] plan.revise → step 4 dropped</div>
+              <div>[t07] memory.snap → ok</div>
+            </div>
+          </div>
+          <div style={{ padding: 24, borderLeft: '3px solid var(--color-bg)' }}>
+            <div className="ri-mono" style={{ fontSize: 14, letterSpacing: '0.2em', fontWeight: 700, marginBottom: 16 }}>MEMORY</div>
+            {[0,1,2,3,4,5,6,7].map(i => (
+              <div key={i} className="ri-mono" style={{ fontSize: 13, padding: '6px 0', display: 'flex', justifyContent: 'space-between', color: i === 5 ? 'var(--color-accent)' : 'var(--color-bg)', fontWeight: 700 }}>
+                <span>snap_{String(i).padStart(3,'0')}</span><span>{i === 5 ? '● now' : (i*0.4).toFixed(1)+'s'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Stamp>
+    <Counter />
+    <FlashOut />
+  </Sprite>;
+}
+
+// ─── Scene 9 — Content ───────────────────────────────────────────
+function S9() {
+  return <Sprite start={SCENE*8} end={SCENE*9}>
+    <Stamp at={0.2} rot={-3} style={{ position: 'absolute', left: 120, top: 140 }}>
+      <div className="ri-display" style={{ fontSize: 160 }}><Misreg>what we believe.</Misreg></div>
+    </Stamp>
+    <div style={{ position: 'absolute', left: 140, right: 140, top: 460 }}>
+      <Stamp at={0.7} rot={-1}>
+        <div className="ri-body" style={{ fontSize: 44, lineHeight: 1.4, fontWeight: 600, maxWidth: 1500 }}>
+          the next decade of AI is not about <span style={{ background: 'var(--color-accent)', padding: '0 8px', boxDecorationBreak: 'clone' }}>bigger models</span>.
+        </div>
+      </Stamp>
+      <Stamp at={1.4} rot={1} style={{ marginTop: 36 }}>
+        <div className="ri-body" style={{ fontSize: 36, lineHeight: 1.4, maxWidth: 1500, fontWeight: 500 }}>
+          it's about agents that can <span className="ri-pink" style={{ fontWeight: 700 }}>run long enough to matter</span> — and the unglamorous infrastructure that lets them.
+        </div>
+      </Stamp>
+      <Stamp at={2.0} rot={-2} style={{ marginTop: 60 }}>
+        <div className="ri-display ri-pink" style={{ fontSize: 40 }}>★ ★ ★</div>
+        <div className="ri-mono" style={{ fontSize: 18, fontWeight: 700, letterSpacing: '0.15em', marginTop: 10 }}>BEACON TEAM · 2026.05</div>
+      </Stamp>
+    </div>
+    <Counter />
+    <FlashOut />
+  </Sprite>;
+}
+
+// ─── Scene 10 — CTA ──────────────────────────────────────────────
+function S10() {
+  return <Sprite start={SCENE*9} end={SCENE*10}>
+    <Stamp at={0.2} rot={-15} style={{ position: 'absolute', left: 120, top: 140 }}>
+      <svg width="180" height="180"><polygon points="90,0 110,70 180,70 122,112 145,180 90,140 35,180 58,112 0,70 70,70" fill="var(--color-second)" /></svg>
+    </Stamp>
+    <Stamp at={0.5} rot={-2} style={{ position: 'absolute', left: 0, right: 0, top: 320, textAlign: 'center' }}>
+      <div className="ri-display" style={{ fontSize: 320 }}>
+        <Misreg pink>start it.</Misreg>
+      </div>
+    </Stamp>
+    <Stamp at={1.4} rot={2} style={{ position: 'absolute', left: 0, right: 0, top: 680, textAlign: 'center' }}>
+      <div className="ri-display ri-blue" style={{ fontSize: 120, display: 'inline-block', background: 'var(--color-accent)', padding: '12px 36px' }}>beacon.run</div>
+    </Stamp>
+    <Stamp at={1.9} rot={12} style={{ position: 'absolute', right: 200, bottom: 200 }}>
+      <svg width="140" height="140"><polygon points="70,0 86,54 140,54 96,86 112,140 70,108 28,140 44,86 0,54 54,54" fill="var(--color-accent)" /></svg>
+    </Stamp>
+    <Stamp at={2.4} rot={0} style={{ position: 'absolute', left: 0, right: 0, bottom: 80, textAlign: 'center' }}>
+      <div className="ri-mono" style={{ fontSize: 18, fontWeight: 700, letterSpacing: '0.25em' }}>★ BEACON · MAY 2026 ★</div>
+    </Stamp>
+    <Counter />
+  </Sprite>;
+}
+
+function App() {
+  return (
+    <Stage width={1920} height={1080} duration={SCENE*10} background="var(--color-bg)" persistKey="risograph-ref">
+      <div className="ri-canvas">
+        <S1 /><S2 /><S3 /><S4 /><S5 /><S6 /><S7 /><S8 /><S9 /><S10 />
+      </div>
+    </Stage>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -6,7 +6,7 @@ export default defineSegment({
 	id: "install-cta",
 	advances: [10.0],
 	voiceover:
-		"Paste a script into your coding agent. You'll have a video before your coffee's cold.",
+		"Install Videowright and ask your agent to build your video. You'll have a video, before your coffee is cold.",
 
 	mount(el) {
 		host = el;

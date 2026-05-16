@@ -68,7 +68,7 @@ export default defineSegment({
 	id: "pixel-perfect-export",
 	advances: [10.0],
 	voiceover:
-		"One command renders a deterministic MP4. Not a screen recording. Frame by frame, pixel-exact.",
+		"One command exports your video. It's deterministic, pixel-perfect rendering. Not a screen capture.",
 
 	mount(el) {
 		host = el;
@@ -161,7 +161,7 @@ export default defineSegment({
           position: absolute;
           left: 50%; top: 50%;
           transform: translate(-50%, -50%) scale(0.85);
-          width: 1560px; height: 820px;
+          width: 1600px; height: 900px;
           background: #0a0f14;
           border: 1px solid var(--color-accent);
           box-shadow: 0 40px 100px rgba(0,0,0,0.7),
@@ -191,7 +191,7 @@ export default defineSegment({
               font-family: var(--font-mono); font-size: 16px;
               color: var(--color-accent);
               letter-spacing: 0.12em;
-            ">FRAME-IDENTICAL ✓</div>
+            ">PIXEL-PERFECT ✓</div>
           </div>
 
           <!-- Video surface -->
@@ -202,6 +202,30 @@ export default defineSegment({
             overflow: hidden;
           ">
             ${titleCardMarkup()}
+
+            <!-- Big floating play icon — reads the surface as a paused video.
+                 Rendered visible from mount so it rides the player window's
+                 own fade-in animation; no separate animation. -->
+            <div data-ref="big-play" style="
+              position: absolute;
+              left: 50%; top: 50%;
+              transform: translate(-50%, -50%);
+              width: 180px; height: 180px;
+              border-radius: 50%;
+              background: rgba(0, 0, 0, 0.55);
+              box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.18),
+                0 12px 40px rgba(0, 0, 0, 0.6);
+              backdrop-filter: blur(2px);
+              -webkit-backdrop-filter: blur(2px);
+              display: flex; align-items: center; justify-content: center;
+              z-index: 4;
+              pointer-events: none;
+            ">
+              <svg width="74" height="84" viewBox="0 0 74 84" style="margin-left: 12px;">
+                <polygon points="0,0 74,42 0,84" fill="#ffffff" />
+              </svg>
+            </div>
           </div>
 
           <!-- Player controls -->

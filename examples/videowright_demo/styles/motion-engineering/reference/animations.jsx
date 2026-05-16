@@ -25,23 +25,13 @@ const Easing = {
 
 	// Cubic
 	easeInCubic: (t) => t * t * t,
-	easeOutCubic: (t) => {
-		const u = t - 1;
-		return u * u * u + 1;
-	},
+	easeOutCubic: (t) => (t - 1) ** 3 + 1,
 	easeInOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1),
 
 	// Quart
 	easeInQuart: (t) => t * t * t * t,
-	easeOutQuart: (t) => {
-		const u = t - 1;
-		return 1 - u * u * u * u;
-	},
-	easeInOutQuart: (t) => {
-		if (t < 0.5) return 8 * t * t * t * t;
-		const u = t - 1;
-		return 1 - 8 * u * u * u * u;
-	},
+	easeOutQuart: (t) => 1 - (t - 1) ** 4,
+	easeInOutQuart: (t) => (t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (t - 1) ** 4),
 
 	// Expo
 	easeInExpo: (t) => (t === 0 ? 0 : 2 ** (10 * (t - 1))),
@@ -611,7 +601,7 @@ function PlaybackBar({ time, duration, playing, onPlayPause, onReset, onSeek, on
 			}}
 		>
 			<IconButton onClick={onReset} title="Return to start (0)">
-				<svg width="14" height="14" viewBox="0 0 14 14" fill="none" role="img" aria-label="Reset">
+				<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
 					<path
 						d="M3 2v10M12 2L5 7l7 5V2z"
 						stroke="currentColor"
@@ -623,12 +613,12 @@ function PlaybackBar({ time, duration, playing, onPlayPause, onReset, onSeek, on
 			</IconButton>
 			<IconButton onClick={onPlayPause} title="Play/pause (space)">
 				{playing ? (
-					<svg width="14" height="14" viewBox="0 0 14 14" fill="none" role="img" aria-label="Pause">
+					<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
 						<rect x="3" y="2" width="3" height="10" fill="currentColor" />
 						<rect x="8" y="2" width="3" height="10" fill="currentColor" />
 					</svg>
 				) : (
-					<svg width="14" height="14" viewBox="0 0 14 14" fill="none" role="img" aria-label="Play">
+					<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
 						<path d="M3 2l9 5-9 5V2z" fill="currentColor" />
 					</svg>
 				)}

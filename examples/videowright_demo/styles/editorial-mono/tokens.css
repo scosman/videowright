@@ -1,0 +1,44 @@
+/* Editorial Mono — design tokens
+ * Black ink on cream paper. One red accent. Long-form editorial feel.
+ */
+
+:root {
+	/* Core palette */
+	--color-bg: #f2efe8; /* warm cream paper */
+	--color-fg: #14110e; /* near-black ink */
+	--color-accent: #c8392c; /* editorial red */
+
+	/* Extended palette */
+	--color-muted: #7b756b; /* warm gray for secondary type */
+	--color-border: #d9d3c7; /* hairline rule, very subtle */
+	--color-surface: #ebe7dd; /* slightly darker paper for cards */
+
+	/* Typography */
+	--font-display: "Instrument Serif", "Times New Roman", serif;
+	--font-body: "Geist", "Helvetica Neue", system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+	/* Spacing (px on 1920×1080 canvas) */
+	--space-sm: 16px;
+	--space-md: 32px;
+	--space-lg: 64px;
+	--space-xl: 128px;
+
+	/* Motion */
+	--duration-fast: 220ms;
+	--duration-normal: 480ms;
+	--duration-slow: 900ms;
+
+	/* Template-specific extensions */
+	--radius-sm: 2px; /* almost no rounding — print sensibility */
+	--radius-md: 4px;
+	--stagger: 80ms; /* base stagger increment */
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* easeOutQuart */
+	--ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+	--rule-weight: 1px; /* hairline rule */
+	--scene-hold: 4s; /* default per-scene duration */
+
+	/* Safe area for 1920×1080 */
+	--safe-x: 128px;
+	--safe-y: 96px;
+}

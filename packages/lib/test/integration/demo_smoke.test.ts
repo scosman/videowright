@@ -97,9 +97,12 @@ describe("cli_dev_against_demo_smoke", () => {
 		expect(galleryEntry?.transition).toBe("fade");
 	});
 
-	it("buildNodeSegmentLoaderMap discovers all 8 segments", () => {
+	it("buildNodeSegmentLoaderMap discovers all expected segments", () => {
 		const loaderMap = buildNodeSegmentLoaderMap(DEMO_ROOT);
-		expect(loaderMap.size).toBe(8);
+		// At minimum, all segments referenced by the demo timeline must be discovered.
+		// Additional segments (e.g. style-pack variants like em-* and rs-*) may also
+		// exist on disk, so we only assert a lower bound on the total count.
+		expect(loaderMap.size).toBeGreaterThanOrEqual(EXPECTED_SEGMENT_IDS.length);
 
 		for (const id of EXPECTED_SEGMENT_IDS) {
 			expect(loaderMap.has(id), `Missing loader for: ${id}`).toBe(true);

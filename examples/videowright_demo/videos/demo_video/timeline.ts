@@ -1,6 +1,6 @@
 import "../../styles/motion-engineering/tokens.css";
 import type { Timeline } from "videowright";
-import defaultVoiceover from "./voiceovers/v2/voiceover.js";
+import defaultVoiceover from "./voiceovers/v4/voiceover.js";
 
 const timeline: Timeline = {
 	meta: {

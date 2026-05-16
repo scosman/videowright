@@ -3,14 +3,13 @@ import type { Voiceover } from "videowright";
 const voiceover: Voiceover = {
 	audio_file: "./voiceovers/v2/audio.mp3",
 	provider: "elevenlabs",
-	eleven_labs_voice_id: "tMvyQtpCVQ0DkixuYm6J", // Asher
 	provider_timing_file: "./voiceovers/v2/timing.json",
 	timing: {
 		perSegment: {
 			"cold-open": [9.991],
 			"title-card": [4.51],
-			"web-tech-gallery": [16.37],
-			"interactive-dev": [5.129],
+			"web-tech-gallery": [19.0],
+			"interactive-dev": [4.0, 7.5],
 			"pixel-perfect-export": [7.59],
 			"voiceover-sync": [7.33],
 			"any-coding-agent": [6.58],
