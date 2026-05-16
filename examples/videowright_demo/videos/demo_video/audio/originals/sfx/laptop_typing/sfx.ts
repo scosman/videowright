@@ -2,7 +2,7 @@ type SfxAsset = {
 	name: string;
 	description: string;
 	length_s: number;
-	source: "elevenlabs" | "user";
+	source: "elevenlabs" | "user" | "openverse";
 	notes?: string;
 };
 

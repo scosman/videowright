@@ -6,7 +6,7 @@ You were routed here from [audio.md](../../audio.md) because the user wants to a
 
 ## Overview
 
-Each SFX is a short audio clip stored in `audio/originals/sfx/<slug>/`. SFX assets are immutable once used in a rendered track. The agent sources them (BYO or ElevenLabs), gets user approval, then references them in the audio plan as cues.
+Each SFX is a short audio clip stored in `audio/originals/sfx/<slug>/`. SFX assets are immutable once used in a rendered track. The agent sources them (BYO, ElevenLabs, or Openverse), gets user approval, then references them in the audio plan as cues.
 
 ## Sourcing decision
 
@@ -16,11 +16,13 @@ Ask the user how they want to source sound effects:
 >
 > 1. **Bring your own** -- drop an audio file (mp3/wav) into the project and I will set it up.
 > 2. **Generate with ElevenLabs** -- describe the sound you want and I will generate it via the ElevenLabs Sound Generation API. **Requires a paid plan and API key.**
+> 3. **Search Openverse** -- search for freely-licensed sound effects online. No API key required, free to use.
 
 Based on the answer, load the appropriate provider reference:
 
 - **BYO** -- load [providers/manual.md](providers/manual.md)
 - **ElevenLabs** -- load [providers/elevenlabs.md](providers/elevenlabs.md)
+- **Openverse** -- load [providers/openverse.md](providers/openverse.md)
 
 If the user wants multiple SFX, they may use different sources for each. Ask per-asset or batch as appropriate.
 
@@ -74,7 +76,7 @@ Fields:
 | `name` | Yes | Human-readable name for display and reference. |
 | `description` | Yes | One-line summary of what the sound is. Used by the agent when selecting SFX for cues. |
 | `length_s` | Yes | Duration in seconds, measured via ffprobe. Round to 1 decimal place. |
-| `source` | Yes | `"elevenlabs"` or `"user"`. Records provenance. |
+| `source` | Yes | `"elevenlabs"`, `"user"`, or `"openverse"`. Records provenance. |
 | `notes` | No | Free-text observations about the sound. Useful detail: loop points, transient positions, frequency character, anything that helps place it in a mix. |
 
 If the `SfxAsset` type is not yet exported from videowright, use an inline type annotation or `any` -- the shape is what matters.

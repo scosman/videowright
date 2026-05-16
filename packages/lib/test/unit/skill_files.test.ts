@@ -82,7 +82,7 @@ describe("skill file structure", () => {
 		expect(files).toEqual(["providers", "sfx.md"]);
 
 		const providerFiles = readdirSync(resolve(sfxDir, "providers")).sort();
-		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md"]);
+		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md", "openverse.md"]);
 	});
 
 	it("references/audio/music/ has the expected sub-references", () => {
@@ -93,7 +93,7 @@ describe("skill file structure", () => {
 		expect(files).toEqual(["music.md", "providers"]);
 
 		const providerFiles = readdirSync(resolve(musicDir, "providers")).sort();
-		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md"]);
+		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md", "openverse.md"]);
 	});
 
 	it("hello_world has timeline as a plain reference file", () => {

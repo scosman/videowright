@@ -58,16 +58,16 @@ Music metadata should be richer than SFX. Ask the user:
 >    - Instrument palette
 >    - Licensing info (if relevant)
 >
-> Even partial info is useful -- I can figure out some details by listening.
+> Even partial info is useful -- I will ask follow-up questions if needed.
 
 ### Agent-observed details
 
 After the user provides their info, the agent should also note any additional observations in `notes`:
 
-- If BPM was not provided, estimate by counting beats in a clear section
-- Note any obvious structural transitions (energy changes, instrument entrances)
-- Note whether the track has a clean ending or fades out
-- Note whether it loops well
+- If BPM was not provided, ask the user to estimate or measure it after listening
+- Ask the user about any structural transitions (energy changes, instrument entrances)
+- Ask whether the track has a clean ending or fades out
+- Ask whether it loops well
 
 Combine user-provided info and agent observations into the `notes` field.
 
@@ -135,6 +135,6 @@ No `generate.sh` for BYO assets.
 | Track has vocals | Warn that vocals may conflict with voiceover. Suggest an instrumental version if available, or note that heavy ducking will be needed. |
 | Track is very short (< 10s) | May need looping. Note loop-ability in `notes`. See [../../ffmpeg_cookbook.md](../../ffmpeg_cookbook.md) for `aloop`. |
 | Track is very long (> 5min) | Fine -- the audio plan will use `Slice:` to take only the needed portion. |
-| User does not know BPM/key | That is fine. The agent can estimate BPM by listening. Key is optional. Write what is known. |
+| User does not know BPM/key | That is fine. BPM is optional -- ask the user to estimate if needed. Key is optional. Write what is known. |
 | User mentions licensing/attribution | Record in `notes` (e.g., "Licensed via Artlist, attribution required in credits"). The agent does not enforce licensing. |
 | User wants to replace after approval | Cannot edit in place. Source a new version in a new slug folder and update audio plan cues. |

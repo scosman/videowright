@@ -35,7 +35,7 @@ If the user wants a voice-over, load [audio/voiceover.md](audio/voiceover.md). T
 
 If the user wants sound effects, load [audio/sfx/sfx.md](audio/sfx/sfx.md). This covers:
 
-- BYO (user-provided audio) and ElevenLabs (AI-generated) sourcing flows
+- BYO (user-provided audio), ElevenLabs (AI-generated), and Openverse (free search) sourcing flows
 - `sfx.ts` metadata authoring
 - Per-asset approval UX (Approve / Discard and request changes)
 - Integration into the audio plan as cues
@@ -46,7 +46,7 @@ SFX assets live in `audio/originals/sfx/<slug>/` and are referenced by cues in t
 
 If the user wants background music, load [audio/music/music.md](audio/music/music.md). This covers:
 
-- BYO (user-provided audio) and ElevenLabs (AI-generated) sourcing flows
+- BYO (user-provided audio), ElevenLabs (AI-generated), and Openverse (free search) sourcing flows
 - `music.ts` metadata authoring (rich free-text notes for BPM, key, mood, structure)
 - Per-asset approval UX (Approve / Discard and request changes)
 - Integration into the audio plan as cues with volume curves and ducking

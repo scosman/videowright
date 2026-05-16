@@ -6,7 +6,7 @@ You were routed here from [audio.md](../../audio.md) because the user wants to a
 
 ## Overview
 
-Each music asset is a slug-named folder under `audio/originals/music/`. Music assets are immutable once used in a rendered track. The agent sources them (BYO or ElevenLabs), gets user approval, then references them in the audio plan as cues with volume curves and ducking.
+Each music asset is a slug-named folder under `audio/originals/music/`. Music assets are immutable once used in a rendered track. The agent sources them (BYO, ElevenLabs, or Openverse), gets user approval, then references them in the audio plan as cues with volume curves and ducking.
 
 ## Sourcing decision
 
@@ -16,11 +16,13 @@ Ask the user how they want to source background music:
 >
 > 1. **Bring your own** -- drop an audio file (mp3/wav) into the project and I will set it up.
 > 2. **Generate with ElevenLabs** -- describe the music you want and I will generate it via the ElevenLabs Music Generation API. **Requires a paid plan and API key.**
+> 3. **Search Openverse** -- search for freely-licensed music online. No API key required, free to use.
 
 Based on the answer, load the appropriate provider reference:
 
 - **BYO** -- load [providers/manual.md](providers/manual.md)
 - **ElevenLabs** -- load [providers/elevenlabs.md](providers/elevenlabs.md)
+- **Openverse** -- load [providers/openverse.md](providers/openverse.md)
 
 ## Folder structure
 
@@ -79,7 +81,7 @@ Fields:
 | `name` | Yes | Human-readable name for display and reference. |
 | `description` | Yes | One-line summary of the track's character. |
 | `length_s` | Yes | Duration in seconds, measured via ffprobe. Round to 1 decimal place. |
-| `source` | Yes | `"elevenlabs"` or `"user"`. Records provenance. |
+| `source` | Yes | `"elevenlabs"`, `"user"`, or `"openverse"`. Records provenance. |
 | `notes` | Yes (strongly encouraged) | Free-text musical detail. See "What to capture in notes" below. |
 
 If the `MusicAsset` type is not yet exported from videowright, use an inline type annotation or `any` -- the shape is what matters.

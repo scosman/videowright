@@ -132,8 +132,8 @@ After the curl command succeeds:
      audio/originals/music/<slug>/audio.mp3
    ```
 
-3. **Listen and analyze the track.** Before writing metadata, play the track and note:
-   - BPM (count beats over 10s, multiply by 6)
+3. **Ask the user to listen and describe the track.** Before writing metadata, ask the user to play the track and report:
+   - BPM (can often be inferred from the prompt's requested tempo; otherwise ask the user to estimate)
    - Key (if discernible)
    - Structure (where sections change, where the energy peaks)
    - Any notable moments (beat drops, transitions, loop points)
