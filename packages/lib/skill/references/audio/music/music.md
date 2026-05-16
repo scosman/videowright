@@ -10,7 +10,7 @@ Each music asset is a slug-named folder under `audio/originals/music/`. Music as
 
 ## Sourcing decision
 
-Ask the user how they want to source background music:
+Ask the user how they want to source background music. Always ask when starting a new sourcing job, even if existing music in the project used a specific source -- don't assume continuity with prior assets.
 
 > How would you like to source background music?
 >

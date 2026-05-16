@@ -10,7 +10,7 @@ Each SFX is a short audio clip stored in `audio/originals/sfx/<slug>/`. SFX asse
 
 ## Sourcing decision
 
-Ask the user how they want to source sound effects:
+Ask the user how they want to source sound effects. Always ask when starting a new sourcing job, even if existing SFX in the project used a specific source -- don't assume continuity with prior assets.
 
 > How would you like to source sound effects?
 >
