@@ -7,11 +7,10 @@
  * segment count and ids, and the consumer repo layout is well-formed.
  */
 
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { findConfig, findTimeline } from "../../src/cli/discover.js";
-import { buildNodeSegmentLoaderMap } from "../../src/cli/script_cmd.js";
 import { loadModule } from "../../src/cli/ts_loader.js";
 import { resolveTiming } from "../../src/timeline/resolveTiming.js";
 import { validateAudioTrack, validateTiming } from "../../src/timeline/validateTiming.js";
@@ -99,15 +98,19 @@ describe("cli_dev_against_demo_smoke", () => {
 		expect(galleryEntry?.transition).toBe("fade");
 	});
 
-	it("buildNodeSegmentLoaderMap discovers all expected segments", () => {
-		const loaderMap = buildNodeSegmentLoaderMap(DEMO_ROOT);
-		// At minimum, all segments referenced by the demo timeline must be discovered.
+	it("segments directory contains all expected segment subdirectories", () => {
+		const segmentsDir = join(DEMO_ROOT, "segments");
+		const entries = readdirSync(segmentsDir).filter((entry) => {
+			const entryPath = join(segmentsDir, entry);
+			return statSync(entryPath).isDirectory() && existsSync(join(entryPath, "index.ts"));
+		});
+		// At minimum, all segments referenced by the demo timeline must be present.
 		// Additional segments (e.g. style-pack variants like em-* and rs-*) may also
 		// exist on disk, so we only assert a lower bound on the total count.
-		expect(loaderMap.size).toBeGreaterThanOrEqual(EXPECTED_SEGMENT_IDS.length);
+		expect(entries.length).toBeGreaterThanOrEqual(EXPECTED_SEGMENT_IDS.length);
 
 		for (const id of EXPECTED_SEGMENT_IDS) {
-			expect(loaderMap.has(id), `Missing loader for: ${id}`).toBe(true);
+			expect(entries.includes(id), `Missing segment directory: ${id}`).toBe(true);
 		}
 	});
 

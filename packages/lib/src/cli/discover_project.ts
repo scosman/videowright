@@ -1,6 +1,6 @@
 /**
  * Shared project discovery: finds config and timeline, throws UserError on missing.
- * Used by dev, script, and render commands.
+ * Used by dev and render commands.
  */
 
 import { statSync } from "node:fs";

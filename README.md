@@ -62,7 +62,7 @@ Videowright supports a full voiceover pipeline: write a narration script, genera
 
 The workflow:
 
-1. **Write the script.** Draft voiceover copy organized by segment in your video's PLAN.md (or ask videowright to). The `npx videowright script` command assembles all segments' voiceover text into a single markdown document for review or handoff.
+1. **Write the script.** Draft voiceover copy organized by segment in your video's PLAN.md (or ask videowright to).
 2. **Generate audio.** Record your own audio, or use AI text-to-speech. ElevenLabs is supported out of the box.
 3. **Get timestamps.** Run the audio through speech-to-text to get per-word timing data. This tells Videowright exactly when each line is spoken.
 4. **Sync.** The agent computes a timing object that maps each segment's advances to the audio timestamps. Video beats land on the narration automatically.
@@ -81,7 +81,7 @@ Just chat with videowright about edits you want to make, and it does the rest. I
 
 ## CLI
 
-Three CLI commands:
+Two CLI commands:
 
 - **`npx videowright dev`** -- Dev server with a homepage listing all videos in the project. Click a video to open the player with hot reload. Hide the HUD for a clean screen-recording surface.
 - **`npx videowright render [slug]`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect output.

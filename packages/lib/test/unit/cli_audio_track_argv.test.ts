@@ -21,8 +21,9 @@ describe("argv parser: --audio-track flag", () => {
 		);
 	});
 
-	it("script_rejects_audio_track_flag", () => {
+	it("script_is_unknown_command", () => {
 		expect(() => parseArgv(["script", "--audio-track", "v1"])).toThrow(ArgvError);
+		expect(() => parseArgv(["script", "--audio-track", "v1"])).toThrow("Unknown command: script");
 	});
 
 	it("no_audio_track_flag_leaves_undefined", () => {

@@ -1,6 +1,6 @@
 /**
  * videowright CLI main logic.
- * Parses argv, dispatches to dev, script, and render subcommands.
+ * Parses argv, dispatches to dev and render subcommands.
  * The binary entry point is bin.ts (not this file).
  */
 
@@ -37,11 +37,9 @@ const HELP_TEXT = `Usage: videowright <command> [options]
 Commands:
   dev              Start the dev server with hot reload
   render [video]   Deterministic frame-by-frame MP4 export via Playwright + ffmpeg
-  script [path]    Assemble voiceover script as Markdown
 
 Options:
   --port <n>            Dev server port (default: 5173)
-  --write               Write script to file instead of stdout (script only)
   --width <n>           Video width in pixels (render only, default: 1920)
   --height <n>          Video height in pixels (render only, default: 1080)
   --fps <n>             Frames per second (render only, default: 60)
@@ -109,22 +107,6 @@ export async function main(argv?: string[]): Promise<number> {
 				process.on("SIGINT", onSignal);
 				process.on("SIGTERM", onSignal);
 			});
-			return 0;
-		}
-
-		if (command === "script") {
-			const { runScript } = await import("./script_cmd.js");
-			const result = await runScript({
-				cwd,
-				positional,
-				write: flags.write,
-				verbose: flags.verbose,
-			});
-			if (result.writtenTo) {
-				console.log(`Script written to ${result.writtenTo}`);
-			} else {
-				process.stdout.write(result.markdown);
-			}
 			return 0;
 		}
 

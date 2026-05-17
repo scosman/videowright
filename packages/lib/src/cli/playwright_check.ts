@@ -1,7 +1,7 @@
 /**
  * Playwright availability check.
  * Playwright is an optional runtime dependency -- only needed for the render command.
- * Dynamic import so consumers who only use dev/script don't pay the cost.
+ * Dynamic import so consumers who only use dev don't pay the cost.
  */
 
 import { UserError } from "./errors.js";

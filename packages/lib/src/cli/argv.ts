@@ -5,14 +5,13 @@
 
 import { parseArgs } from "node:util";
 
-export type Command = "dev" | "script" | "render" | "help" | "version";
+export type Command = "dev" | "render" | "help" | "version";
 
 export interface ParsedArgs {
 	command: Command;
 	positional?: string;
 	flags: {
 		port?: number;
-		write?: boolean;
 		verbose?: boolean;
 		width?: number;
 		height?: number;
@@ -22,7 +21,7 @@ export interface ParsedArgs {
 	};
 }
 
-const KNOWN_COMMANDS = new Set<string>(["dev", "script", "render"]);
+const KNOWN_COMMANDS = new Set<string>(["dev", "render"]);
 
 /** Flags that only apply to the `render` command. Rejected on all other commands. */
 const RENDER_ONLY_FLAGS = ["width", "height", "fps", "output"] as const;
@@ -66,7 +65,6 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 		args: remaining,
 		options: {
 			port: { type: "string" },
-			write: { type: "boolean", default: false },
 			verbose: { type: "boolean", default: false },
 			width: { type: "string" },
 			height: { type: "string" },
@@ -142,7 +140,6 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 		positional: positionals[0],
 		flags: {
 			port,
-			write: values.write as boolean,
 			verbose: values.verbose as boolean,
 			width,
 			height,

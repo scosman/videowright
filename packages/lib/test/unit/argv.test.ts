@@ -7,7 +7,6 @@ describe("argv parser", () => {
 		expect(result.command).toBe("dev");
 		expect(result.positional).toBeUndefined();
 		expect(result.flags.port).toBeUndefined();
-		expect(result.flags.write).toBe(false);
 		expect(result.flags.verbose).toBe(false);
 	});
 
@@ -27,26 +26,6 @@ describe("argv parser", () => {
 		const result = parseArgv(["dev", "--verbose"]);
 		expect(result.command).toBe("dev");
 		expect(result.flags.verbose).toBe(true);
-	});
-
-	it("argv_script_no_args", () => {
-		const result = parseArgv(["script"]);
-		expect(result.command).toBe("script");
-		expect(result.positional).toBeUndefined();
-		expect(result.flags.write).toBe(false);
-	});
-
-	it("argv_script_with_write", () => {
-		const result = parseArgv(["script", "--write"]);
-		expect(result.command).toBe("script");
-		expect(result.flags.write).toBe(true);
-	});
-
-	it("argv_script_with_path_and_write", () => {
-		const result = parseArgv(["script", "videos/demo/timeline.ts", "--write"]);
-		expect(result.command).toBe("script");
-		expect(result.positional).toBe("videos/demo/timeline.ts");
-		expect(result.flags.write).toBe(true);
 	});
 
 	it("argv_help", () => {

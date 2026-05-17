@@ -14,7 +14,7 @@ This is a single file because the underlying mechanics — segments, timeline co
 These reference files cover the building blocks. Load them as needed — do not re-read this section's summaries when the full reference is available.
 
 - **[authoring_segment.md](authoring_segment.md)** — segment lifecycle (`mount`/`play`/`unmount`), `defineSegment`, timing with `ctx.waitForNext()` and `ctx.hold(ms)`, render-safe animation patterns (WAAPI, `ctx.clock()`, patterns and recommendations), idempotency, any-web-tech guidance.
-- **[audio.md](audio.md)** — audio workflow (voiceover, SFX, music), the `voiceover` field on segments, VO-first authoring pattern, `videowright script` CLI, file conventions, CLI usage (`--audio-track`).
+- **[audio.md](audio.md)** — audio workflow (voiceover, SFX, music), the `voiceover` field on segments, VO-first authoring pattern, script assembly, file conventions, CLI usage (`--audio-track`).
 - **[styles.md](styles.md)** — style folder structure, how segments consume tokens via CSS variables, switching styles, the timeline.ts import convention.
 - **[project_structure.md](project_structure.md)** — consumer repo layout, file-ownership rules (top-level dirs are shared, per-video files live in `videos/<name>/`).
 - **[types.md](types.md)** — quick reference for `Segment`, `PlayerContext`, `Timeline`, `TimelineMeta`, `Config`.
@@ -106,8 +106,8 @@ The voiceover system has two parts that stay in sync:
 Steps:
 
 1. Create `videos/<name>/voiceover_script/script.md` with the full script, organized by segment id (one `## segment-id` heading per segment).
-2. Verify each segment's `voiceover` field matches its section in the script. These must stay in sync — `videowright script` can regenerate one from the other.
-3. See [audio.md](audio.md) for the audio workflow and [audio/voiceover.md](audio/voiceover.md) for the VO-first authoring pattern and `videowright script` usage.
+2. Verify each segment's `voiceover` field matches its section in the script. These must stay in sync — regenerate `script.md` by assembling all segments' voiceover text whenever they change.
+3. See [audio.md](audio.md) for the audio workflow and [audio/voiceover.md](audio/voiceover.md) for the VO-first authoring pattern and script assembly format.
 
 ### Step 5 — Shared resources
 
@@ -189,7 +189,7 @@ Common edit operations:
 
 **Rewrite voiceover:**
 1. Edit the `voiceover` field on affected segments.
-2. Run `npx videowright script` to regenerate `voiceover_script/script.md` from the updated segment fields. See [audio/voiceover.md](audio/voiceover.md).
+2. Regenerate `voiceover_script/script.md` by assembling all segments' updated `voiceover` fields. See [audio/voiceover.md](audio/voiceover.md).
 
 **Edit a segment's content:**
 1. Modify `segments/<id>/index.ts` directly.

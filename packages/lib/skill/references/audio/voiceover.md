@@ -224,7 +224,7 @@ export default defineSegment({
 This field is:
 
 - **Shown in the HUD** during dev mode.
-- **Collected by `videowright script`** into a single markdown document.
+- **Collected into `voiceover_script/script.md`** by the agent when assembling the full script.
 - **Used by the agent** to understand the segment's narrative purpose when editing.
 
 It is a display hint, not the canonical voiceover audio source. The canonical audio comes from the `Voiceover` object in `voiceover.ts`.
@@ -246,16 +246,9 @@ If you are adjusting `hold()` values inside a segment to make an animation line 
 
 The fix is structural: content that needs to sync with the voiceover should be gated by `waitForNext()`, so timing comes from the `advances` / `Timing` data rather than from hardcoded milliseconds in the segment code. Add a new advance at the sync point, and let the timers within each beat use percentage-based durations so they scale when beat lengths shift. See [authoring_segment.md § Percentage-based timing within beats](../authoring_segment.md#percentage-based-timing-within-beats) for the pattern.
 
-## `videowright script` CLI
+## Assembling the voiceover script
 
-The `script` command reads segments' `voiceover` fields and assembles them into markdown:
-
-```bash
-npx videowright script              # print to stdout
-npx videowright script --write      # write to voiceover_script/script.md
-```
-
-See the `videowright script` section below for output format and `--write` behavior.
+The agent reads each segment's `voiceover` field and assembles them into a single markdown document at `voiceover_script/script.md`.
 
 ### Output format
 
@@ -273,15 +266,11 @@ Voiceover text for the second segment.
 *No voiceover: segment-id-3, segment-id-4*
 ```
 
-### `--write` flag
-
-With `--write`, the script is written to `videos/<name>/voiceover_script/script.md`. Without `--write`, it prints to stdout.
-
 ## Keeping things in sync
 
 The `voiceover` field on each segment and `voiceover_script/script.md` are two representations of the same content:
 
-- **After editing `voiceover` fields** on segments, run `npx videowright script --write` to regenerate `script.md`.
+- **After editing `voiceover` fields** on segments, regenerate `script.md` by assembling all segments' voiceover text.
 - **After editing `script.md`** directly, update each segment's `voiceover` field to match.
 
 ## Edge cases
@@ -289,7 +278,7 @@ The `voiceover` field on each segment and `voiceover_script/script.md` are two r
 | Situation | Behavior |
 |---|---|
 | User wants VO but has no script yet | Draft one during the build phase based on the video's purpose and segment outline. |
-| User changes audio intent from silent to voiceover mid-project | Add `voiceover` fields to existing segments. Run `videowright script --write`. Follow the voiceover flow to generate audio and timing. |
+| User changes audio intent from silent to voiceover mid-project | Add `voiceover` fields to existing segments. Assemble the script into `voiceover_script/script.md`. Follow the voiceover flow to generate audio and timing. |
 | Audio file missing on disk | CLI errors before playback or render starts with a clear message and path. |
 | `--audio-track <id>` with non-existent track | CLI errors with a hint to check the `audio/tracks/` folder. |
 | Browser autoplay blocked | Audio is silent until the user clicks the play button (which counts as a user gesture). |

@@ -41,7 +41,7 @@ export default defineSegment({
 |---|---|---|
 | `id` | Yes | Unique identifier. Must match the folder name under `segments/`. |
 | `advances` | Yes | Timing array for automated playback (render export; see below). |
-| `voiceover` | No | VO text for this segment. Used by `videowright script` and shown in the HUD. |
+| `voiceover` | No | VO text for this segment. Assembled into `voiceover_script/script.md` and shown in the HUD. |
 | `notes` | No | Freeform notes. Not rendered anywhere. |
 | `mount(el, ctx)` | No | Called when the player gives the segment its host `HTMLElement`. Set up DOM here. |
 | `play(ctx)` | Yes | Main animation logic. Must return a `Promise<void>`. The segment ends when play resolves. |
