@@ -15,9 +15,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const DEMO_ROOT = resolve(__dirname, "../../../../examples/videowright_demo");
 
-// The root URL now shows a homepage with video cards. The player only mounts
-// at /<video-slug>/, so all tests target the demo_video slug directly.
-const VIDEO_PATH = "demo_video/";
+// The root URL now shows a homepage with video cards. The player mounts
+// at /video/<video-slug>/, so all tests target the demo_video slug directly.
+const VIDEO_PATH = "video/demo_video/";
 
 // Ordered segment IDs in demo_video's timeline.
 const SEGMENT_IDS = [
