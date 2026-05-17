@@ -537,6 +537,25 @@
 	color: var(--text-tertiary);
 }
 
+.vw-modal__open-player {
+	display: inline-block;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--accent);
+	background: var(--accent-dim);
+	border: 1px solid var(--accent);
+	border-radius: var(--radius-sm);
+	padding: 8px 16px;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background var(--duration) var(--ease-out), color var(--duration) var(--ease-out);
+}
+
+.vw-modal__open-player:hover {
+	background: var(--accent);
+	color: var(--bg-base);
+}
+
 /* ---- Hide-HUD Tab ---- */
 
 .vw-hide-hud-tab {

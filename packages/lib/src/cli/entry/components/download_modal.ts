@@ -11,6 +11,8 @@ export interface DownloadModalProps {
 	slug: string;
 	title: string;
 	onClose: () => void;
+	/** When true, the player is visible and screen-record tips apply. */
+	hasPlayer?: boolean;
 }
 
 /**
@@ -24,7 +26,7 @@ export function renderDownloadModal(props: DownloadModalProps): () => void {
 		existing.remove();
 	}
 
-	const { slug, title, onClose } = props;
+	const { slug, title, onClose, hasPlayer = false } = props;
 
 	// Backdrop
 	const backdrop = document.createElement("div");
@@ -127,21 +129,30 @@ export function renderDownloadModal(props: DownloadModalProps): () => void {
 
 	const recordDesc = document.createElement("p");
 	recordDesc.className = "vw-modal__desc";
-	recordDesc.textContent =
-		"Capture in a live browser with your screen recorder. Manual pace, great for live VO.";
+	recordDesc.textContent = hasPlayer
+		? "Capture in a live browser with your screen recorder. Manual pace, great for live VO."
+		: "Open the video player to use your screen recorder.";
 	recordCol.appendChild(recordDesc);
 
-	const tips = document.createElement("ul");
-	tips.className = "vw-modal__tips";
+	if (hasPlayer) {
+		const tips = document.createElement("ul");
+		tips.className = "vw-modal__tips";
 
-	const tipItems = ["Press H to hide HUD", "→ next | ← prev", "Space to play/pause"];
-	for (const tipText of tipItems) {
-		const li = document.createElement("li");
-		li.textContent = tipText;
-		tips.appendChild(li);
+		const tipItems = ["Press H to hide HUD", "→ next | ← prev", "Space to play/pause"];
+		for (const tipText of tipItems) {
+			const li = document.createElement("li");
+			li.textContent = tipText;
+			tips.appendChild(li);
+		}
+
+		recordCol.appendChild(tips);
+	} else {
+		const openPlayerBtn = document.createElement("a");
+		openPlayerBtn.className = "vw-modal__open-player";
+		openPlayerBtn.href = `/video/${slug}`;
+		openPlayerBtn.textContent = "Open Player";
+		recordCol.appendChild(openPlayerBtn);
 	}
-
-	recordCol.appendChild(tips);
 	columns.appendChild(recordCol);
 
 	dialog.appendChild(columns);

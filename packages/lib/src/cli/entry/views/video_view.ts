@@ -63,6 +63,7 @@ export function renderVideoView(projectInfo: ProjectInfo, slug: string): HTMLEle
 			renderDownloadModal({
 				slug: video.slug,
 				title: video.title,
+				hasPlayer: true,
 				onClose: () => {},
 			});
 		},

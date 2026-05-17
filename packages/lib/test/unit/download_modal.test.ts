@@ -55,7 +55,7 @@ describe("renderDownloadModal", () => {
 	});
 
 	it("download_modal_screen_record_column_has_tips", () => {
-		renderDownloadModal({ slug: "demo", title: "Demo", onClose: vi.fn() });
+		renderDownloadModal({ slug: "demo", title: "Demo", hasPlayer: true, onClose: vi.fn() });
 
 		const tips = document.querySelector(".vw-modal__tips");
 		expect(tips).not.toBeNull();
@@ -63,6 +63,26 @@ describe("renderDownloadModal", () => {
 		const items = tips?.querySelectorAll("li");
 		expect(items).toHaveLength(3);
 		expect(items?.[0]?.textContent).toContain("Press H");
+	});
+
+	it("download_modal_no_player_shows_open_player_button", () => {
+		renderDownloadModal({ slug: "demo", title: "Demo", onClose: vi.fn() });
+
+		const openPlayerBtn = document.querySelector(".vw-modal__open-player") as HTMLAnchorElement;
+		expect(openPlayerBtn).not.toBeNull();
+		expect(openPlayerBtn.textContent).toBe("Open Player");
+		expect(openPlayerBtn.href).toContain("/video/demo");
+
+		// Tips should NOT be rendered
+		const tips = document.querySelector(".vw-modal__tips");
+		expect(tips).toBeNull();
+	});
+
+	it("download_modal_has_player_does_not_show_open_player_button", () => {
+		renderDownloadModal({ slug: "demo", title: "Demo", hasPlayer: true, onClose: vi.fn() });
+
+		const openPlayerBtn = document.querySelector(".vw-modal__open-player");
+		expect(openPlayerBtn).toBeNull();
 	});
 
 	it("download_modal_close_via_x_button", () => {
@@ -155,7 +175,7 @@ describe("renderDownloadModal", () => {
 	});
 
 	it("download_modal_focus_trap_wraps_tab_forward", () => {
-		renderDownloadModal({ slug: "demo", title: "Demo", onClose: vi.fn() });
+		renderDownloadModal({ slug: "demo", title: "Demo", hasPlayer: true, onClose: vi.fn() });
 
 		const closeBtn = document.querySelector(".vw-modal__close") as HTMLElement;
 		const copyBtn = document.querySelector(".vw-copy-btn") as HTMLElement;
@@ -175,7 +195,7 @@ describe("renderDownloadModal", () => {
 	});
 
 	it("download_modal_focus_trap_wraps_shift_tab_backward", () => {
-		renderDownloadModal({ slug: "demo", title: "Demo", onClose: vi.fn() });
+		renderDownloadModal({ slug: "demo", title: "Demo", hasPlayer: true, onClose: vi.fn() });
 
 		const closeBtn = document.querySelector(".vw-modal__close") as HTMLElement;
 		const copyBtn = document.querySelector(".vw-copy-btn") as HTMLElement;
