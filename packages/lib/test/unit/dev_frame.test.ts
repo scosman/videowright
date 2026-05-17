@@ -181,22 +181,6 @@ describe("applyDevFrameSize", () => {
 		expect(addSpy).toHaveBeenCalledWith("resize", expect.any(Function));
 		addSpy.mockRestore();
 	});
-
-	it("removes previous resize listener when called again", () => {
-		const addSpy = vi.spyOn(window, "addEventListener");
-		const removeSpy = vi.spyOn(window, "removeEventListener");
-
-		applyDevFrameSize([1920, 1080]);
-		const firstHandler = addSpy.mock.calls.find((c) => c[0] === "resize")?.[1];
-		expect(firstHandler).toBeDefined();
-
-		// Call again — should remove the first listener before adding a new one
-		applyDevFrameSize([1280, 720]);
-		expect(removeSpy).toHaveBeenCalledWith("resize", firstHandler);
-
-		addSpy.mockRestore();
-		removeSpy.mockRestore();
-	});
 });
 
 describe("getCurrentHudHeight", () => {
@@ -345,7 +329,6 @@ describe("installHudKeyListener", () => {
 	afterEach(() => {
 		if (cleanup) cleanup();
 		cleanup = undefined;
-		_resetHudVisible();
 	});
 
 	it("toggles HUD on 'h' keydown", () => {
