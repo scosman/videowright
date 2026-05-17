@@ -96,10 +96,6 @@ The test suite is robust: unit tests, integration tests, and end-to-end tests th
 
 If you encounter an error, describe it to your coding agent. A good agent can quickly diagnose and repair most issues. It's usually in the project files, but if you find one in the library please submit an issue or a patch.
 
-## Will this just produce a bunch of 'AI Slop' videos?
-
-Maybe! The difference between a good video and slop comes down to taste and iteration. Short one-off prompt on a template with an AI voice-over, yeah probably slop. Put a lot of work into a script, describe visuals in detail, build a style guide for your brand, refine over many iterations -- this can produce some pretty good videos. The core tech is capable of great animations, but the human drives quality.
-
 ## Development
 
 Run all checks (lint, typecheck, tests) locally:
