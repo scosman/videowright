@@ -88,14 +88,6 @@ Two CLI modes, depending on where you are in the workflow:
 
 A videowright project can contain many videos. Build up your style over time, maintaning consistency in your brand. Reuse segments across videos (intros, outros, transitions, CTAs).
 
-## How Videowright Was Built
-
-Videowright is [vibe crafted](https://github.com/scosman/vibe-crafting) -- a form of agentic coding with structured specs, thorough tests, and a human driving core technical decisions. It's not perfect, but since it's designed to produce one-off videos (not run in production), that's fine.
-
-The test suite is robust: unit tests, integration tests, and end-to-end tests that include pixel-perfect rendering checks. These verify that animations driven by `requestAnimationFrame`, `setTimeout`, CSS keyframes, and the Web Animations API all produce identical frames across runs -- the determinism guarantee that makes `videowright render` work.
-
-If you encounter an error, describe it to your coding agent. A good agent can quickly diagnose and repair most issues. It's usually in the project files, but if you find one in the library please submit an issue or a patch.
-
 ## Development
 
 Run all checks (lint, typecheck, tests) locally:
