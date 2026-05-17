@@ -74,16 +74,16 @@ Edits appear almost instantly. You do not need to restart the dev server when ed
 
 ## Audio playback
 
-When the video has a `default_voiceover` set in `timeline.ts`, the dev server loads the voiceover audio and enables synced playback:
+When the video has a `default_audio_track` set in `timeline.ts`, the dev server loads the audio and enables synced playback:
 
 - The play button in the HUD starts auto-advance with audio playing through an HTML `<audio>` element.
 - Audio is synced to the player's logical timeline position.
 - Manual navigation (arrow keys, clicking, number keys) pauses audio and stops auto-advance.
 - Pressing play again resumes from the current position.
 
-If no `default_voiceover` is set, the play button still works — it auto-advances silently using `default_timing` or segment `advances`.
+If no `default_audio_track` is set, the play button still works — it auto-advances silently using `default_timing` or segment `advances`.
 
-`dev` does not accept a `--voiceover` flag. It always uses `default_voiceover` from `timeline.ts`. To test a specific voiceover, set it as the default.
+`dev` does not accept an `--audio-track` flag. It always uses `default_audio_track` from `timeline.ts`. To test a specific audio track, set it as the default.
 
 ## HUD (Heads-Up Display)
 

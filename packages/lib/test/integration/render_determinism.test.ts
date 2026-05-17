@@ -123,7 +123,7 @@ describe.skipIf(!HAS_DEPS)("render determinism via JS injection", () => {
 			height: 240,
 			fps: 10,
 			output: outputPath,
-			voiceover: "none",
+			audioTrack: "none",
 		});
 
 		expect(result.outputPath).toBe(outputPath);
@@ -146,7 +146,7 @@ describe.skipIf(!HAS_DEPS)("render determinism via JS injection", () => {
 			height: 240,
 			fps: 10,
 			output: outputPath,
-			voiceover: "none",
+			audioTrack: "none",
 		});
 
 		// Verify via ffprobe that the container duration matches expected

@@ -23,11 +23,11 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { applyMetaDefaults, validateSegmentAdvances } from "../timeline/index.js";
-import { loadVoiceover } from "../timeline/loadVoiceover.js";
+import { loadAudioTrack } from "../timeline/loadAudioTrack.js";
 import type { ResolvedTiming, TimingSegment } from "../timeline/resolveTiming.js";
 import { resolveTiming } from "../timeline/resolveTiming.js";
-import { validateTiming, validateVoiceover } from "../timeline/validateTiming.js";
-import type { Config, Timeline, VideoSummary, Voiceover } from "../types.js";
+import { validateAudioTrack, validateTiming } from "../timeline/validateTiming.js";
+import type { AudioTrack, Config, Timeline, VideoSummary } from "../types.js";
 import { findConfig, resolveSlugOrPath } from "./discover.js";
 import { discoverAllVideos } from "./discover_project.js";
 import { UserError } from "./errors.js";
@@ -78,7 +78,7 @@ export interface RenderOptions {
 	fps?: number;
 	output?: string;
 	verbose?: boolean;
-	voiceover?: string;
+	audioTrack?: string;
 }
 
 export interface RenderResult {
@@ -229,70 +229,68 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	const { width, height, fps } = resolveRenderParams(opts, timeline, config);
 	const frameMs = 1000 / fps;
 
-	// 2b. Resolve voiceover if requested
+	// 2b. Resolve audio track if requested
 	const videoFolder = dirname(timelinePath);
-	const voiceoverSuppressed = opts.voiceover === "none";
+	const audioTrackSuppressed = opts.audioTrack === "none";
 	let audioFilePath: string | undefined;
-	let cliVoiceoverModule: Voiceover | undefined;
+	let cliAudioTrackModule: AudioTrack | undefined;
 
-	if (!voiceoverSuppressed && opts.voiceover) {
-		// loadVoiceover rewrites audio_file to an absolute path, validates
-		// file existence, so the returned voiceover object is self-contained.
-		const voResult = await loadVoiceover({
+	if (!audioTrackSuppressed && opts.audioTrack) {
+		// loadAudioTrack rewrites audio_file to an absolute path, validates
+		// file existence, so the returned audio track object is self-contained.
+		const trackResult = await loadAudioTrack({
 			videoFolder,
-			slug: opts.voiceover,
+			trackId: opts.audioTrack,
 		});
-		audioFilePath = voResult.audioFilePath;
-		cliVoiceoverModule = voResult.voiceover;
+		audioFilePath = trackResult.audioFilePath;
+		cliAudioTrackModule = trackResult.audioTrack;
 
 		if (verbose) {
-			console.log(`voiceover: ${opts.voiceover} (${audioFilePath})`);
+			console.log(`audio track: ${opts.audioTrack} (${audioFilePath})`);
 		}
-	} else if (!voiceoverSuppressed && timeline.default_voiceover) {
-		// default_voiceover.audio_file is relative to the video folder (the
-		// directory containing timeline.ts) per the Voiceover type contract.
-		const defaultAudioPath = resolve(videoFolder, timeline.default_voiceover.audio_file);
+	} else if (!audioTrackSuppressed && timeline.default_audio_track) {
+		// default_audio_track.audio_file is relative to the video folder (the
+		// directory containing timeline.ts) per the AudioTrack type contract.
+		const defaultAudioPath = resolve(videoFolder, timeline.default_audio_track.audio_file);
 		if (!existsSync(defaultAudioPath)) {
 			throw new UserError(
-				`Default voiceover audio file not found: ${defaultAudioPath}`,
-				"Check the audio_file path in your timeline's default_voiceover.",
+				`Audio file not found: ${defaultAudioPath}`,
+				"Check the audio_file path in your timeline's default_audio_track.",
 			);
 		}
 		audioFilePath = defaultAudioPath;
 
 		if (verbose) {
-			console.log(`voiceover: default (${audioFilePath})`);
+			console.log(`audio track: default (${audioFilePath})`);
 		}
 	}
 
-	// Validate the active voiceover before proceeding.
-	const activeVoiceover =
-		cliVoiceoverModule ?? (!voiceoverSuppressed ? timeline.default_voiceover : undefined);
-	if (activeVoiceover) {
-		// File-existence validation: skip for CLI voiceovers because
-		// loadVoiceover already checked audio_file and threw on missing.
-		// Run for default_voiceover where no prior check has been done
-		// (the existsSync above only checked the audio file, not
-		// provider_timing_file).
-		if (!cliVoiceoverModule) {
-			const voValidation = validateVoiceover(activeVoiceover, videoFolder);
-			if (!voValidation.ok) {
+	// Validate the active audio track before proceeding.
+	const activeAudioTrack =
+		cliAudioTrackModule ?? (!audioTrackSuppressed ? timeline.default_audio_track : undefined);
+	if (activeAudioTrack) {
+		// File-existence validation: skip for CLI audio tracks because
+		// loadAudioTrack already checked audio_file and threw on missing.
+		// Run for default_audio_track where no prior check has been done.
+		if (!cliAudioTrackModule) {
+			const trackValidation = validateAudioTrack(activeAudioTrack, videoFolder);
+			if (!trackValidation.ok) {
 				throw new UserError(
-					`Voiceover validation failed:\n${voValidation.errors.join("\n")}`,
-					"Check voiceover file paths.",
+					`Audio track validation failed:\n${trackValidation.errors.join("\n")}`,
+					"Check audio track file paths.",
 				);
 			}
-			for (const w of voValidation.warnings) {
+			for (const w of trackValidation.warnings) {
 				console.warn(`Warning: ${w}`);
 			}
 		}
 
 		const segmentIds = timeline.segments.map((s) => s.id);
-		const timingValidation = validateTiming(activeVoiceover.timing, segmentIds);
+		const timingValidation = validateTiming(activeAudioTrack.timing, segmentIds);
 		if (!timingValidation.ok) {
 			throw new UserError(
-				`Voiceover timing validation failed:\n${timingValidation.errors.join("\n")}`,
-				"Check the timing object in your voiceover.ts file.",
+				`Audio track timing validation failed:\n${timingValidation.errors.join("\n")}`,
+				"Check the timing object in your track.ts file.",
 			);
 		}
 		for (const w of timingValidation.warnings) {
@@ -454,14 +452,14 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 				advances: advancesMap[entry.id] ?? [],
 			}));
 
-			// Resolve timing using the four-level precedence. Voiceover timing
+			// Resolve timing using the four-level precedence. Audio track timing
 			// overlays on top of segment advances from the browser.
 			const resolved: ResolvedTiming = resolveTiming({
 				segments: browserSegments,
 				defaultTiming: timeline.default_timing,
-				defaultVoiceover: timeline.default_voiceover,
-				cliVoiceoverSlug: opts.voiceover,
-				cliVoiceoverModule,
+				defaultAudioTrack: timeline.default_audio_track,
+				cliAudioTrackId: opts.audioTrack,
+				cliAudioTrackModule,
 			});
 
 			if (verbose && resolved.source !== "segments") {

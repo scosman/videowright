@@ -21,6 +21,8 @@ describe("skill file structure", () => {
 
 		const files = readdirSync(refsDir).sort();
 		expect(files).toEqual([
+			"audio",
+			"audio.md",
 			"authoring_segment.md",
 			"create_or_edit_video.md",
 			"dev_server.md",
@@ -32,13 +34,30 @@ describe("skill file structure", () => {
 			"styles.md",
 			"testing.md",
 			"types.md",
+		]);
+	});
+
+	it("references/audio/ has the expected sub-references", () => {
+		const audioDir = resolve(SKILL_ROOT, "references/audio");
+		expect(existsSync(audioDir)).toBe(true);
+
+		const files = readdirSync(audioDir).sort();
+		expect(files).toEqual([
+			"audio_plan.md",
+			"build.md",
+			"cue_template.md",
+			"ffmpeg_cookbook.md",
+			"music",
+			"sfx",
+			"styles.md",
+			"sync.md",
 			"voiceover",
 			"voiceover.md",
 		]);
 	});
 
-	it("references/voiceover/ has the expected sub-references", () => {
-		const voDir = resolve(SKILL_ROOT, "references/voiceover");
+	it("references/audio/voiceover/ has the expected sub-references", () => {
+		const voDir = resolve(SKILL_ROOT, "references/audio/voiceover");
 		expect(existsSync(voDir)).toBe(true);
 
 		const files = readdirSync(voDir).sort();
@@ -53,6 +72,28 @@ describe("skill file structure", () => {
 
 		const providerFiles = readdirSync(resolve(voDir, "providers")).sort();
 		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md"]);
+	});
+
+	it("references/audio/sfx/ has the expected sub-references", () => {
+		const sfxDir = resolve(SKILL_ROOT, "references/audio/sfx");
+		expect(existsSync(sfxDir)).toBe(true);
+
+		const files = readdirSync(sfxDir).sort();
+		expect(files).toEqual(["providers", "sfx.md"]);
+
+		const providerFiles = readdirSync(resolve(sfxDir, "providers")).sort();
+		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md", "openverse.md"]);
+	});
+
+	it("references/audio/music/ has the expected sub-references", () => {
+		const musicDir = resolve(SKILL_ROOT, "references/audio/music");
+		expect(existsSync(musicDir)).toBe(true);
+
+		const files = readdirSync(musicDir).sort();
+		expect(files).toEqual(["music.md", "providers"]);
+
+		const providerFiles = readdirSync(resolve(musicDir, "providers")).sort();
+		expect(providerFiles).toEqual(["elevenlabs.md", "manual.md", "openverse.md"]);
 	});
 
 	it("hello_world has timeline as a plain reference file", () => {
@@ -83,11 +124,13 @@ describe("skill file structure", () => {
 	});
 
 	it("hello_world has voiceover script as a plain reference file", () => {
-		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/voiceover/script.md"))).toBe(true);
-		// No .tmpl version should exist
-		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/voiceover/script.md.tmpl"))).toBe(
-			false,
+		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/voiceover_script/script.md"))).toBe(
+			true,
 		);
+		// No .tmpl version should exist
+		expect(
+			existsSync(resolve(SKILL_ROOT, "assets/hello_world/voiceover_script/script.md.tmpl")),
+		).toBe(false);
 	});
 
 	it("timeline.ts imports style tokens via top-of-file CSS import", () => {
@@ -167,9 +210,9 @@ describe("skill file structure", () => {
 		expect(content).not.toContain("{{");
 	});
 
-	it("voiceover/script.md is a concrete reference with no template placeholders", () => {
+	it("voiceover_script/script.md is a concrete reference with no template placeholders", () => {
 		const content = readFileSync(
-			resolve(SKILL_ROOT, "assets/hello_world/voiceover/script.md"),
+			resolve(SKILL_ROOT, "assets/hello_world/voiceover_script/script.md"),
 			"utf-8",
 		);
 		expect(content).toContain("hello-intro");
@@ -215,6 +258,18 @@ describe("skill file structure", () => {
 		expect(content).toContain("hello-intro");
 		expect(content).toContain("hello-outro");
 		expect(content).toContain("transition");
+	});
+
+	it("hello_world ships silent with no default_audio_track", () => {
+		const timelineContent = readFileSync(
+			resolve(SKILL_ROOT, "assets/hello_world/timeline.ts"),
+			"utf-8",
+		);
+		expect(timelineContent).not.toContain("default_audio_track");
+		expect(timelineContent).not.toMatch(/audio\/tracks\//);
+
+		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/audio/audio_plan.md"))).toBe(true);
+		expect(existsSync(resolve(SKILL_ROOT, "assets/hello_world/audio/tracks"))).toBe(false);
 	});
 
 	const STYLE_PACKS = [

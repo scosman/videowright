@@ -10,8 +10,8 @@
 - Notes: Uses Editorial Mono as a clean, content-first default. Swap to any other built-in pack or create your own.
 
 ## Audio intent
-- Mode: voiceover
-- Notes: VO demonstrates the voiceover field and script workflow. Audio plays in the dev server; muxed into MP4 via render.
+- Mode: silent
+- Notes: The template ships silent so first render is video-only. The `voiceover_script/script.md` and per-segment `voiceover` fields are pre-populated to demonstrate the script workflow; add audio by sourcing a VO and building a track under `audio/tracks/v1/`.
 
 ## Segment outline
 1. hello-intro -- Title card with animated entrance
@@ -19,7 +19,7 @@
 3. hello-outro -- Closing card with call to action
 
 ## Script (if applicable)
-see voiceover/script.md
+see voiceover_script/script.md
 
 ---
 

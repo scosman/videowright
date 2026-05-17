@@ -1,13 +1,13 @@
 import "../../styles/editorial-mono/tokens.css";
 import type { Timeline } from "videowright";
-import defaultVoiceover from "./voiceovers/v2/voiceover.js";
+import defaultAudioTrack from "./audio/tracks/v1/track.js";
 
 const timeline: Timeline = {
 	meta: {
 		title: "Videowright Explainer — Editorial Mono",
 		style: "editorial-mono",
 	},
-	default_voiceover: defaultVoiceover,
+	default_audio_track: defaultAudioTrack,
 	segments: [
 		{ id: "em-cold-open" },
 		{ id: "em-title-card" },

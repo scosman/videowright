@@ -13,20 +13,18 @@ Before handing off to the build phase, you need all of the following. Ask only f
 | **Video name** | Yes | Folder name under `videos/`. Suggest a date prefix (e.g., `2026_05_launch`). Default: `demo_video` for the first video; derive from topic for subsequent ones. The first video is usually created during setup — if `videos/demo_video/` already exists, derive from the topic instead to avoid a collision. |
 | **Purpose** | Yes | What the video is for, who the audience is, what they should take away. |
 | **Style** | Yes | Confirm the current `defaultStyle` is right. If not, dispatch to [setup_new_style.md](setup_new_style.md) with `setAsDefault: false`, `copySample: false`. Use the resulting slug for this video's `meta.style`. |
-| **Audio intent** | Yes | One of: **voiceover**, **music**, or **silent**. Always ask — even when the input is rich. Silent is a real choice that changes pacing (longer beat holds, more visual motion). |
+| **Audio intent** | Yes | Ask about each audio type: **voiceover** (yes/no), **sound effects** (yes/no), **background music** (yes/no), or **silent** (none of the above). Always ask — even when the input is rich. Silent is a real choice that changes pacing (longer beat holds, more visual motion). |
 | **Hard guidelines** | If any | Must-haves: specific charts, logos, screenshots, length cap, things to avoid. |
 | **Script** | If voiceover | Full VO copy if the user has it. If not, you will draft one during the build phase based on the other inputs. |
 | **Segment outline** | Optional | If the user has a structure in mind, capture it. Otherwise, the build phase generates one from the script + purpose. |
 
 ### Audio intent notes
 
-When the user picks **voiceover**, note that Videowright supports integrated voiceover audio:
+When the user picks **voiceover** (or any audio), note that Videowright supports integrated audio tracks:
 
 - Audio plays in the dev server via an HTML `<audio>` element synced to the player.
 - `render` muxes audio into the output MP4 via ffmpeg.
-- The voiceover flow (AI-generated or manual) is handled after the video is scaffolded. See [voiceover.md](voiceover.md).
-
-When the user picks **music**, note that background music is not currently supported. The video will be silent in dev and export. Music can be added in post-production.
+- The audio flow (voiceover, SFX, music) is handled after the video is scaffolded. See [audio.md](audio.md).
 
 ## One-shot vs. iterate
 
@@ -36,7 +34,7 @@ Read the user's invocation carefully before asking anything.
 - A multi-paragraph script or detailed description, AND
 - Enough style/purpose signals to fill in the plan
 
-Even when one-shotting, **always confirm audio intent explicitly** before drafting. Audio intent is never inferred — silent is a real choice that changes pacing. If the user's input includes a clear audio statement (e.g., "this has a voiceover" or "silent video"), that counts as confirmation. Otherwise, ask: "One quick question before I draft the plan — should this video have voiceover, music, or be silent?"
+Even when one-shotting, **always confirm audio intent explicitly** before drafting. Audio intent is never inferred — silent is a real choice that changes pacing. If the user's input includes a clear audio statement (e.g., "this has a voiceover" or "silent video"), that counts as confirmation. Otherwise, ask: "One quick question before I draft the plan — will this video have a voiceover, sound effects, or background music?"
 
 Once audio is confirmed, draft the full PLAN.md in one pass and present it: "Here's the plan I built from your input — anything to change?" Do not ask other intermediate questions.
 
@@ -47,7 +45,7 @@ In this case, ask **only the missing questions**, grouped into a single round. D
 > Before I build the plan, a few things I need:
 > 1. What's this video for and who's the audience?
 > 2. Should we use the current default style, or do you want something different?
-> 3. Audio: voiceover, music, or silent?
+> 3. Audio: voiceover? sound effects? background music? (or silent)
 
 ### Propose, don't interrogate
 
@@ -70,7 +68,9 @@ Write PLAN.md into `videos/<name>/PLAN.md`. Use this structure:
 - Notes: <any per-video style deviations or notes>
 
 ## Audio intent
-- Mode: voiceover | music | silent
+- Voiceover: yes | no
+- Sound effects: yes | no
+- Background music: yes | no
 - Notes: <pacing implications, music vibe, VO tone, etc.>
 
 ## Segment outline
@@ -79,7 +79,7 @@ Write PLAN.md into `videos/<name>/PLAN.md`. Use this structure:
 ...
 
 ## Script (if applicable)
-<full VO script, or "see voiceover/script.md">
+<full VO script, or "see voiceover_script/script.md">
 
 ---
 
@@ -114,4 +114,4 @@ Write PLAN.md into `videos/<name>/PLAN.md`. Use this structure:
 | User provides a complete script but no segment outline | Generate the segment outline from the script during PLAN.md drafting. Each natural section of the script maps to a segment. |
 | User provides a segment outline but no script | Capture the outline. The build phase will draft VO from the outline if audio intent is voiceover. |
 | Video name conflicts with an existing folder | Ask the user to pick a different name, or confirm they want to overwrite. |
-| User skips the audio question | Do not skip it yourself. Audio intent affects pacing. Ask directly: "One more thing — should this video have voiceover, music, or be silent?" |
+| User skips the audio question | Do not skip it yourself. Audio intent affects pacing. Ask directly: "One more thing — will this video have a voiceover, sound effects, or background music?" |

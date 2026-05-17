@@ -12,7 +12,7 @@
 		"@types/three": "^0.184.1",
 		"lottie-web": "^5.13.0",
 		"three": "^0.184.0",
-		"videowright": "file:../video_forge/packages/lib"
+		"videowright": "file:../../packages/lib"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.15",

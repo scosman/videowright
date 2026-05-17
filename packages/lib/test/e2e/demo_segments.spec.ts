@@ -1,9 +1,9 @@
 /**
  * End-to-end Playwright test for the demo example.
  *
- * Boots the actual Vite dev server, navigates through all 7 segments
- * via keyboard (ArrowRight), and asserts each segment's content is
- * visible and on-screen.
+ * Boots the actual Vite dev server, navigates to the demo_video,
+ * and steps through all segments via keyboard (ArrowRight), asserting
+ * each segment's slot content is rendered and on-screen.
  */
 
 import { dirname, resolve } from "node:path";
@@ -13,36 +13,40 @@ import { type DevResult, runDev } from "../../src/cli/dev.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const DEMO_ROOT = resolve(__dirname, "../../../../examples/demo_example");
+const DEMO_ROOT = resolve(__dirname, "../../../../examples/videowright_demo");
+
+// The root URL now shows a homepage with video cards. The player only mounts
+// at /<video-slug>/, so all tests target the demo_video slug directly.
+const VIDEO_PATH = "demo_video/";
+
+// Ordered segment IDs in demo_video's timeline.
+const SEGMENT_IDS = [
+	"cold-open",
+	"title-card",
+	"web-tech-gallery",
+	"interactive-dev",
+	"pixel-perfect-export",
+	"voiceover-sync",
+	"any-coding-agent",
+	"install-cta",
+] as const;
 
 let server: DevResult;
 
-/**
- * Helper: wait until the URL hash contains a given segment id.
- */
 async function waitForSegment(page: Page, segmentId: string, timeoutMs = 10_000): Promise<void> {
 	await page.waitForFunction((id) => window.location.hash.includes(`/${id}/`), segmentId, {
 		timeout: timeoutMs,
 	});
 }
 
-/**
- * Helper: wait for the page to be fully loaded and stable.
- * Handles Vite's dependency optimization reload gracefully.
- */
 async function waitForStableLoad(page: Page): Promise<void> {
 	await page.waitForSelector(".vw-host", { timeout: 15_000 });
-	// Wait for the hash to be set (player has started)
 	await page.waitForFunction(() => window.location.hash.length > 0, undefined, {
 		timeout: 15_000,
 	});
-	// Additional settle time for animations
 	await page.waitForTimeout(1500);
 }
 
-/**
- * Helper: assert an element is visible and within the viewport.
- */
 async function assertVisibleOnScreen(page: Page, selector: string, label: string): Promise<void> {
 	const locator = page.locator(selector).first();
 	await expect(locator, `${label}: element "${selector}" should exist`).toBeAttached({
@@ -55,7 +59,6 @@ async function assertVisibleOnScreen(page: Page, selector: string, label: string
 		const viewport = page.viewportSize();
 		expect(viewport).toBeTruthy();
 		if (viewport) {
-			// Element should overlap with the viewport
 			const overlapsX = box.x + box.width > 0 && box.x < viewport.width;
 			const overlapsY = box.y + box.height > 0 && box.y < viewport.height;
 			expect(
@@ -66,12 +69,29 @@ async function assertVisibleOnScreen(page: Page, selector: string, label: string
 	}
 }
 
-/**
- * Helper: press ArrowRight and wait a bit for transition.
- */
 async function pressNext(page: Page, waitMs = 600): Promise<void> {
 	await page.keyboard.press("ArrowRight");
 	await page.waitForTimeout(waitMs);
+}
+
+/**
+ * Step ArrowRight until the URL hash advances to `nextSegmentId`, or fail
+ * after `maxPresses`. Each segment has a different number of beats; rather
+ * than hard-code per-segment beat counts (which churn as demo content
+ * evolves), we just keep pressing until we land on the next segment.
+ */
+async function advanceToSegment(page: Page, nextSegmentId: string, maxPresses = 20): Promise<void> {
+	for (let i = 0; i < maxPresses; i++) {
+		const onTarget = await page.evaluate(
+			(id) => window.location.hash.includes(`/${id}/`),
+			nextSegmentId,
+		);
+		if (onTarget) return;
+		await pressNext(page, 400);
+	}
+	throw new Error(
+		`Failed to advance to segment "${nextSegmentId}" within ${maxPresses} ArrowRight presses`,
+	);
 }
 
 test.beforeAll(async () => {
@@ -81,26 +101,23 @@ test.beforeAll(async () => {
 	});
 
 	// Pre-warm with a real browser to trigger Vite's dependency optimization.
-	// Vite discovers deps (three, lottie-web, echarts) when the browser requests
-	// JS modules, then triggers a full page reload. We need this to complete
-	// before the actual tests run, so they don't hit the reload mid-test.
+	// Vite discovers deps when the browser requests JS modules, then triggers
+	// a full page reload. We need this to complete before the actual tests run.
 	const browser = await chromium.launch();
 	const warmupPage = await browser.newPage();
-	await warmupPage.goto(server.url, { waitUntil: "networkidle" });
+	await warmupPage.goto(`${server.url}${VIDEO_PATH}`, { waitUntil: "networkidle" });
 
-	// Navigate through all segments to trigger all lazy imports.
-	// Wait for the initial segment to load first.
 	try {
 		await warmupPage.waitForSelector(".vw-host", { timeout: 15_000 });
 		await warmupPage.waitForTimeout(2000);
 
-		// Step through all 7 segments to trigger dep loading
-		for (let i = 0; i < 10; i++) {
+		// Step through all segments to trigger lazy imports.
+		for (let i = 0; i < 30; i++) {
 			await warmupPage.keyboard.press("ArrowRight");
-			await warmupPage.waitForTimeout(800);
+			await warmupPage.waitForTimeout(400);
 		}
 	} catch {
-		// Warmup failures are non-fatal -- the page reload may cause errors
+		// Warmup failures are non-fatal -- the page reload may cause errors.
 	}
 
 	await warmupPage.waitForTimeout(2000);
@@ -113,9 +130,8 @@ test.afterAll(async () => {
 	}
 });
 
-test.describe("Demo: step through all 7 segments", () => {
+test.describe(`Demo: step through all ${SEGMENT_IDS.length} segments`, () => {
 	test("all segments render visible content via keyboard navigation", async ({ page }) => {
-		// Collect console errors (but don't fail on warnings)
 		const consoleErrors: string[] = [];
 		page.on("console", (msg) => {
 			if (msg.type() === "error") {
@@ -123,104 +139,37 @@ test.describe("Demo: step through all 7 segments", () => {
 			}
 		});
 
-		// Navigate to the demo. Dependencies should already be optimized from warmup.
-		await page.goto(server.url, { waitUntil: "networkidle" });
+		await page.goto(`${server.url}${VIDEO_PATH}`, { waitUntil: "networkidle" });
 		await waitForStableLoad(page);
 
-		// ============================================================
-		// Segment 1: intro
-		// ============================================================
-		await waitForSegment(page, "intro");
-		// The intro has an <animated-title> custom element
-		await assertVisibleOnScreen(page, "animated-title", "intro");
-		// The slot containing it should be visible
-		await assertVisibleOnScreen(page, ".vw-slot[data-slot]", "intro slot");
+		for (let i = 0; i < SEGMENT_IDS.length; i++) {
+			const segmentId = SEGMENT_IDS[i];
 
-		// ============================================================
-		// Segment 2: feature-svg
-		// ============================================================
-		await pressNext(page, 1000);
-		await waitForSegment(page, "feature-svg");
-		// SVG node graph should be present
-		await assertVisibleOnScreen(page, ".node-graph", "feature-svg");
-		// Check that SVG has line elements
-		const svgLineCount = await page.locator(".node-graph .edge").count();
-		expect(svgLineCount, "feature-svg: should have edge lines").toBeGreaterThanOrEqual(4);
+			if (i === 0) {
+				await waitForSegment(page, segmentId);
+			} else {
+				await advanceToSegment(page, segmentId);
+			}
 
-		// ============================================================
-		// Segment 3: feature-three
-		// ============================================================
-		await pressNext(page, 1500);
-		await waitForSegment(page, "feature-three");
-		// Three.js renders a canvas element inside play(), which is async.
-		// Wait for the canvas to appear.
-		await assertVisibleOnScreen(page, ".three-container", "feature-three");
-		await page.waitForSelector(".three-container canvas", { timeout: 5_000 });
-		const canvasCount = await page.locator(".three-container canvas").count();
-		expect(canvasCount, "feature-three: should have a canvas").toBeGreaterThanOrEqual(1);
-		// feature-three has 2 beats -- advance through them
-		await pressNext(page, 500);
-		await pressNext(page, 500);
+			// Each segment mounts content into the currently visible slot's
+			// .vw-slot-content. During transitions, one slot is hidden + empty
+			// and the other is visible + populated, so poll until any visible
+			// slot has rendered children.
+			await assertVisibleOnScreen(page, ".vw-slot[data-slot]", `${segmentId} slot`);
+			await page.waitForFunction(
+				() => {
+					const slots = Array.from(document.querySelectorAll(".vw-slot")) as HTMLElement[];
+					return slots.some((slot) => {
+						if (slot.style.visibility === "hidden") return false;
+						const content = slot.querySelector(".vw-slot-content");
+						return !!content && content.childElementCount > 0;
+					});
+				},
+				undefined,
+				{ timeout: 5_000 },
+			);
+		}
 
-		// ============================================================
-		// Segment 4: feature-lottie
-		// ============================================================
-		await pressNext(page, 1500);
-		await waitForSegment(page, "feature-lottie");
-		// Lottie container should exist and render in play()
-		await assertVisibleOnScreen(page, ".lottie-container", "feature-lottie");
-		// lottie-web renders an SVG element inside the container
-		await page.waitForSelector(".lottie-container svg", { timeout: 5_000 });
-		const lottieSvg = await page.locator(".lottie-container svg").count();
-		expect(lottieSvg, "feature-lottie: should have an SVG from lottie-web").toBe(1);
-
-		// ============================================================
-		// Segment 5: feature-echarts
-		// ============================================================
-		await pressNext(page, 1500);
-		await waitForSegment(page, "feature-echarts");
-		// ECharts renders into .chart-container in play()
-		await assertVisibleOnScreen(page, ".chart-container", "feature-echarts");
-		await page.waitForSelector(".chart-container canvas", { timeout: 5_000 });
-		const chartCanvas = await page.locator(".chart-container canvas").count();
-		expect(
-			chartCanvas,
-			"feature-echarts: should have a canvas from echarts",
-		).toBeGreaterThanOrEqual(1);
-		// feature-echarts has 1 beat -- advance through it
-		await pressNext(page, 500);
-
-		// ============================================================
-		// Segment 6: feature-cards
-		// ============================================================
-		await pressNext(page, 1000);
-		await waitForSegment(page, "feature-cards");
-		// Should have 3 feature-card elements
-		const cardCount = await page.locator("feature-card").count();
-		expect(cardCount, "feature-cards: should have 3 cards").toBe(3);
-		await assertVisibleOnScreen(page, "feature-card", "feature-cards");
-		// feature-cards has 3 beats -- advance through them
-		await pressNext(page, 500);
-		await pressNext(page, 500);
-		await pressNext(page, 500);
-
-		// ============================================================
-		// Segment 7: outro
-		// ============================================================
-		await pressNext(page, 1000);
-		await waitForSegment(page, "outro");
-		// Outro has logo, code block
-		await assertVisibleOnScreen(page, ".code-block", "outro");
-		// The code block should contain the install command
-		const codeText = await page.locator(".code-block").textContent();
-		expect(codeText, "outro: code block should have install command").toContain(
-			"npm install videowright",
-		);
-
-		// ============================================================
-		// Verify no unexpected console errors
-		// ============================================================
-		// Filter out known non-critical errors (favicon 404, DevTools, etc.)
 		const unexpectedErrors = consoleErrors.filter(
 			(e) =>
 				!e.includes("404") &&
@@ -232,11 +181,9 @@ test.describe("Demo: step through all 7 segments", () => {
 	});
 
 	test("segments are on-screen (bounding box inside viewport)", async ({ page }) => {
-		await page.goto(server.url, { waitUntil: "networkidle" });
+		await page.goto(`${server.url}${VIDEO_PATH}`, { waitUntil: "networkidle" });
 		await waitForStableLoad(page);
 
-		// Check that the visible slot has position:absolute and inset:0
-		// (verifying the slot fix is working)
 		const slotStyle = await page.evaluate(() => {
 			const slot = document.querySelector(".vw-slot") as HTMLElement;
 			if (!slot) return null;
@@ -257,7 +204,6 @@ test.describe("Demo: step through all 7 segments", () => {
 			expect(slotStyle.left, "slot left should be 0").toBe("0px");
 		}
 
-		// Check that the content div inside the slot exists and is visible
 		const contentBox = await page.evaluate(() => {
 			const content = document.querySelector(".vw-slot-content") as HTMLElement;
 			if (!content) return null;
@@ -273,22 +219,29 @@ test.describe("Demo: step through all 7 segments", () => {
 	});
 
 	test("can navigate backward with ArrowLeft", async ({ page }) => {
-		await page.goto(server.url, { waitUntil: "networkidle" });
+		await page.goto(`${server.url}${VIDEO_PATH}`, { waitUntil: "networkidle" });
 		await waitForStableLoad(page);
 
-		// Start at intro
-		await waitForSegment(page, "intro");
+		const [firstSegment, secondSegment] = SEGMENT_IDS;
 
-		// Go to feature-svg
-		await pressNext(page, 1000);
-		await waitForSegment(page, "feature-svg");
+		await waitForSegment(page, firstSegment);
 
-		// Go back to intro
-		await page.keyboard.press("ArrowLeft");
-		await page.waitForTimeout(1000);
-		await waitForSegment(page, "intro");
+		// Advance forward into the second segment.
+		await advanceToSegment(page, secondSegment);
 
-		// Verify intro content is visible again
-		await assertVisibleOnScreen(page, "animated-title", "intro (after nav back)");
+		// Go back. ArrowLeft retreats one beat at a time, so we may need
+		// multiple presses to reach the previous segment.
+		for (let i = 0; i < 20; i++) {
+			const onFirst = await page.evaluate(
+				(id) => window.location.hash.includes(`/${id}/`),
+				firstSegment,
+			);
+			if (onFirst) break;
+			await page.keyboard.press("ArrowLeft");
+			await page.waitForTimeout(400);
+		}
+		await waitForSegment(page, firstSegment);
+
+		await assertVisibleOnScreen(page, ".vw-slot[data-slot]", `${firstSegment} (after nav back)`);
 	});
 });

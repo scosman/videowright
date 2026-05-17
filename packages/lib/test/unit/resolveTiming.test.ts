@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TimingSegment } from "../../src/timeline/resolveTiming.js";
 import { resolveTiming } from "../../src/timeline/resolveTiming.js";
-import type { Timing, Voiceover } from "../../src/types.js";
+import type { AudioTrack, Timing } from "../../src/types.js";
 
 function makeSegment(id: string, advances: number[]): TimingSegment {
 	return { id, advances };
@@ -11,10 +11,10 @@ function makeTiming(perSegment: Record<string, number[]>): Timing {
 	return { perSegment };
 }
 
-function makeVoiceover(timing: Timing): Voiceover {
+function makeAudioTrack(timing: Timing): AudioTrack {
 	return {
-		audio_file: "audio.mp3",
-		provider: "elevenlabs",
+		audio_file: "track.mp3",
+		length_s: 10,
 		timing,
 	};
 }
@@ -27,89 +27,89 @@ describe("resolveTiming", () => {
 	it("falls_back_to_segment_advances_when_nothing_else_provided", () => {
 		const result = resolveTiming({ segments });
 		expect(result.source).toBe("segments");
-		expect(result.voiceover).toBeUndefined();
+		expect(result.audioTrack).toBeUndefined();
 		expect(result.perSegment).toEqual({
 			intro: [2, 4],
 			body: [3, 6, 9],
 		});
 	});
 
-	it("uses_default_timing_when_no_voiceover", () => {
+	it("uses_default_timing_when_no_audio_track", () => {
 		const defaultTiming = makeTiming({ intro: [1, 3] });
 		const result = resolveTiming({ segments, defaultTiming });
 		expect(result.source).toBe("default_timing");
-		expect(result.voiceover).toBeUndefined();
+		expect(result.audioTrack).toBeUndefined();
 		expect(result.perSegment.intro).toEqual([1, 3]);
 		// Body not in the Timing overlay => falls back to segment advances
 		expect(result.perSegment.body).toEqual([3, 6, 9]);
 	});
 
-	it("uses_default_voiceover_over_default_timing", () => {
+	it("uses_default_audio_track_over_default_timing", () => {
 		const defaultTiming = makeTiming({ intro: [10, 20] });
-		const voTiming = makeTiming({ intro: [5, 8] });
-		const defaultVoiceover = makeVoiceover(voTiming);
+		const trackTiming = makeTiming({ intro: [5, 8] });
+		const defaultAudioTrack = makeAudioTrack(trackTiming);
 
-		const result = resolveTiming({ segments, defaultTiming, defaultVoiceover });
-		expect(result.source).toBe("voiceover");
-		expect(result.voiceover).toBe(defaultVoiceover);
+		const result = resolveTiming({ segments, defaultTiming, defaultAudioTrack });
+		expect(result.source).toBe("audio_track");
+		expect(result.audioTrack).toBe(defaultAudioTrack);
 		expect(result.perSegment.intro).toEqual([5, 8]);
 		expect(result.perSegment.body).toEqual([3, 6, 9]);
 	});
 
-	it("uses_cli_voiceover_over_default_voiceover", () => {
-		const defaultVo = makeVoiceover(makeTiming({ intro: [10, 20] }));
-		const cliVo = makeVoiceover(makeTiming({ body: [1, 2, 3] }));
+	it("uses_cli_audio_track_over_default_audio_track", () => {
+		const defaultTrack = makeAudioTrack(makeTiming({ intro: [10, 20] }));
+		const cliTrack = makeAudioTrack(makeTiming({ body: [1, 2, 3] }));
 
 		const result = resolveTiming({
 			segments,
-			defaultVoiceover: defaultVo,
-			cliVoiceoverSlug: "custom",
-			cliVoiceoverModule: cliVo,
+			defaultAudioTrack: defaultTrack,
+			cliAudioTrackId: "v2",
+			cliAudioTrackModule: cliTrack,
 		});
-		expect(result.source).toBe("voiceover");
-		expect(result.voiceover).toBe(cliVo);
-		expect(result.perSegment.intro).toEqual([2, 4]); // not overridden by cliVo
+		expect(result.source).toBe("audio_track");
+		expect(result.audioTrack).toBe(cliTrack);
+		expect(result.perSegment.intro).toEqual([2, 4]); // not overridden by cliTrack
 		expect(result.perSegment.body).toEqual([1, 2, 3]);
 	});
 
-	it("none_suppresses_voiceovers_but_keeps_default_timing", () => {
+	it("none_suppresses_audio_tracks_but_keeps_default_timing", () => {
 		const defaultTiming = makeTiming({ intro: [7, 14] });
-		const defaultVo = makeVoiceover(makeTiming({ intro: [99, 99] }));
+		const defaultTrack = makeAudioTrack(makeTiming({ intro: [99, 99] }));
 
 		const result = resolveTiming({
 			segments,
 			defaultTiming,
-			defaultVoiceover: defaultVo,
-			cliVoiceoverSlug: "none",
+			defaultAudioTrack: defaultTrack,
+			cliAudioTrackId: "none",
 		});
 		expect(result.source).toBe("default_timing");
-		expect(result.voiceover).toBeUndefined();
+		expect(result.audioTrack).toBeUndefined();
 		expect(result.perSegment.intro).toEqual([7, 14]);
 	});
 
 	it("none_falls_back_to_segments_when_no_default_timing", () => {
-		const defaultVo = makeVoiceover(makeTiming({ intro: [99, 99] }));
+		const defaultTrack = makeAudioTrack(makeTiming({ intro: [99, 99] }));
 
 		const result = resolveTiming({
 			segments,
-			defaultVoiceover: defaultVo,
-			cliVoiceoverSlug: "none",
+			defaultAudioTrack: defaultTrack,
+			cliAudioTrackId: "none",
 		});
 		expect(result.source).toBe("segments");
-		expect(result.voiceover).toBeUndefined();
+		expect(result.audioTrack).toBeUndefined();
 		expect(result.perSegment.intro).toEqual([2, 4]);
 	});
 
 	it("partial_timing_overlay_only_affects_specified_segments", () => {
-		const voTiming = makeTiming({ body: [2, 4, 6] });
-		const cliVo = makeVoiceover(voTiming);
+		const trackTiming = makeTiming({ body: [2, 4, 6] });
+		const cliTrack = makeAudioTrack(trackTiming);
 
 		const result = resolveTiming({
 			segments,
-			cliVoiceoverSlug: "test",
-			cliVoiceoverModule: cliVo,
+			cliAudioTrackId: "v1",
+			cliAudioTrackModule: cliTrack,
 		});
-		// intro not in voTiming => falls back to segment advances
+		// intro not in trackTiming => falls back to segment advances
 		expect(result.perSegment.intro).toEqual([2, 4]);
 		expect(result.perSegment.body).toEqual([2, 4, 6]);
 	});
@@ -120,16 +120,16 @@ describe("resolveTiming", () => {
 		expect(result.perSegment).toEqual({});
 	});
 
-	it("cli_voiceover_module_without_slug_is_still_used", () => {
-		// cliVoiceoverModule present but no cliVoiceoverSlug -- the module is
-		// truthy and slug is not "none", so it takes precedence.
-		const cliVo = makeVoiceover(makeTiming({ intro: [99] }));
+	it("cli_audio_track_module_without_id_is_still_used", () => {
+		// cliAudioTrackModule present but no cliAudioTrackId -- the module is
+		// truthy and id is not "none", so it takes precedence.
+		const cliTrack = makeAudioTrack(makeTiming({ intro: [99] }));
 		const result = resolveTiming({
 			segments,
-			cliVoiceoverModule: cliVo,
+			cliAudioTrackModule: cliTrack,
 		});
-		expect(result.source).toBe("voiceover");
-		expect(result.voiceover).toBe(cliVo);
+		expect(result.source).toBe("audio_track");
+		expect(result.audioTrack).toBe(cliTrack);
 		expect(result.perSegment.intro).toEqual([99]);
 	});
 });

@@ -97,10 +97,10 @@ export type ResolvedTimelineMeta = TimelineMeta &
 export interface Timeline {
 	meta: TimelineMeta;
 	segments: TimelineEntry[];
-	/** Standalone timing overrides (used when no voiceover is active). */
+	/** Standalone timing overrides (used when no audio track is active). */
 	default_timing?: Timing;
-	/** Default voiceover for this video. */
-	default_voiceover?: Voiceover;
+	/** Default audio track for this video. */
+	default_audio_track?: AudioTrack;
 }
 
 // ---- Timing ----
@@ -121,23 +121,27 @@ export type Timing = {
 
 /**
  * A single voiceover for a video. Stored at
- * `videos/<video>/voiceovers/<slug>/voiceover.ts`.
+ * `videos/<video>/audio/originals/voiceovers/<slug>/voiceover.ts`.
  */
 export type Voiceover = {
 	/**
-	 * Audio file path. In a voiceover.ts file on disk, this is relative to the
-	 * voiceover.ts file's directory. After loading via `loadVoiceover()`, it is
-	 * rewritten to an absolute path. When used as `default_voiceover` in
-	 * timeline.ts, it should be relative to the video folder (the directory
-	 * containing timeline.ts).
+	 * Audio file path, relative to the voiceover.ts file's directory (e.g.,
+	 * `"./audio.mp3"`). After loading via `loadVoiceover()`, rewritten to an
+	 * absolute path.
+	 *
+	 * Note: this differs from `AudioTrack.audio_file` which is relative to
+	 * the video folder. The difference exists because voiceover modules are
+	 * loaded by `loadVoiceover()` which knows the voiceover.ts location,
+	 * while audio tracks are imported into timeline.ts and resolved from the
+	 * video folder by render.ts.
 	 */
 	audio_file: string;
 	/** Provider that produced the audio. */
 	provider: "elevenlabs" | "manual";
 	/**
 	 * Provider timing JSON path. Same resolution rules as `audio_file`:
-	 * relative to voiceover.ts on disk, absolute after `loadVoiceover()`,
-	 * relative to the video folder when used in `default_voiceover`.
+	 * relative to voiceover.ts directory on disk, absolute after
+	 * `loadVoiceover()`.
 	 */
 	provider_timing_file?: string;
 	/** Per-segment advance timing synced to this audio. */
@@ -150,6 +154,47 @@ export type Voiceover = {
 	 * (`tMvyQtpCVQ0DkixuYm6J`). Ignored when provider is "manual".
 	 */
 	eleven_labs_voice_id?: string;
+};
+
+// ---- Audio Track ----
+
+/**
+ * A rendered audio track for a video. Stored at
+ * `videos/<video>/audio/tracks/<id>/track.ts`.
+ *
+ * Combines voice-over, SFX, and music into a single rendered audio file.
+ * The timeline references the active track via `default_audio_track`.
+ */
+export type AudioTrack = {
+	/**
+	 * Path to the rendered audio file, relative to the video folder (the
+	 * directory containing timeline.ts). Both loadAudioTrack() and the
+	 * default_audio_track import path resolve this from the video folder.
+	 * loadAudioTrack() rewrites it to an absolute path on return.
+	 */
+	audio_file: string;
+
+	/** Length of the rendered audio in seconds. */
+	length_s: number;
+
+	/**
+	 * Per-segment advance timing synced to this audio track. Computed by the
+	 * sync-to-audio skill from the plan_snapshot + per-cue VO timing.json files.
+	 * Same shape and semantics as Voiceover.timing.
+	 */
+	timing: Timing;
+
+	/** Path to the audio plan that produced this track (relative to track.ts). */
+	audio_plan_path?: string;
+
+	/** Path to the point-in-time plan snapshot for this track (relative to track.ts). */
+	plan_snapshot_path?: string;
+
+	/** ISO timestamp when this track was rendered. */
+	created_at?: string;
+
+	/** Freeform notes about this track. */
+	notes?: string;
 };
 
 // ---- Transition ----

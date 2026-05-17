@@ -18,7 +18,7 @@ export interface ParsedArgs {
 		height?: number;
 		fps?: number;
 		output?: string;
-		voiceover?: string;
+		audioTrack?: string;
 	};
 }
 
@@ -29,7 +29,7 @@ const RENDER_ONLY_FLAGS = ["width", "height", "fps", "output"] as const;
 const RENDER_ONLY_COMMANDS = new Set<Command>(["render"]);
 
 /** Flags that apply to render. */
-const VOICEOVER_COMMANDS = new Set<Command>(["render"]);
+const AUDIO_TRACK_COMMANDS = new Set<Command>(["render"]);
 
 export class ArgvError extends Error {
 	override name = "ArgvError";
@@ -72,7 +72,7 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 			height: { type: "string" },
 			fps: { type: "string" },
 			output: { type: "string" },
-			voiceover: { type: "string" },
+			"audio-track": { type: "string" },
 		},
 		allowPositionals: true,
 		strict: true,
@@ -131,10 +131,10 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 		}
 	}
 
-	// Reject --voiceover on commands that don't support it
-	const voiceover = values.voiceover as string | undefined;
-	if (voiceover !== undefined && !VOICEOVER_COMMANDS.has(command)) {
-		throw new ArgvError(`--voiceover is only valid for the "render" command`);
+	// Reject --audio-track on commands that don't support it
+	const audioTrack = values["audio-track"] as string | undefined;
+	if (audioTrack !== undefined && !AUDIO_TRACK_COMMANDS.has(command)) {
+		throw new ArgvError(`--audio-track is only valid for the "render" command`);
 	}
 
 	return {
@@ -148,7 +148,7 @@ export function parseArgv(argv?: string[]): ParsedArgs {
 			height,
 			fps,
 			output: values.output as string | undefined,
-			voiceover,
+			audioTrack,
 		},
 	};
 }
