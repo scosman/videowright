@@ -19,11 +19,6 @@ vi.mock("virtual:vw-globals", () => ({
 }));
 vi.mock("virtual:vw-segments", () => ({ default: {} }));
 
-// Mock router.navigate
-vi.mock("../../src/cli/entry/router.js", () => ({
-	navigate: vi.fn(),
-}));
-
 // Mock dev_frame to avoid DOM measurement side effects
 vi.mock("../../src/cli/entry/dev_frame.js", () => ({
 	applyDevFrameSize: vi.fn(),

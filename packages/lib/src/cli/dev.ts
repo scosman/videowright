@@ -4,7 +4,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { findConfig } from "./discover.js";
 import { discoverAllVideos } from "./discover_project.js";
 import { UserError } from "./errors.js";
@@ -15,7 +15,7 @@ import {
 	globalsVirtualModulePlugin,
 	projectVirtualModulePlugin,
 	segmentDiscoveryPlugin,
-	spaFallbackPlugin,
+	videoRouteMiddlewarePlugin,
 } from "./vite_helpers.js";
 
 export interface DevOptions {
@@ -83,6 +83,12 @@ export async function runDev(opts: DevOptions): Promise<DevResult> {
 		consumerRoot: cwd,
 	};
 
+	// Mutable project info reference — the middleware reads the latest slugs
+	// each request so newly-added videos are immediately routable.
+	let currentProjectInfo = projectInfo;
+
+	const getKnownSlugs = () => currentProjectInfo.videos.map((v) => v.slug);
+
 	// We need a mutable reference to the server for the reload callback.
 	// The variable is assigned right after createServer returns, before any
 	// reload can fire.
@@ -97,12 +103,25 @@ export async function runDev(opts: DevOptions): Promise<DevResult> {
 			fullReloadPlugin(),
 			segmentDiscoveryPlugin(cwd),
 			globalsVirtualModulePlugin(globals),
-			spaFallbackPlugin(),
+			videoRouteMiddlewarePlugin(getKnownSlugs),
 			projectVirtualModulePlugin(projectInfo, {
 				consumerRoot: cwd,
-				onReload: () => discoverAllVideos(cwd, serverRef ?? undefined),
+				onReload: async () => {
+					const info = await discoverAllVideos(cwd, serverRef ?? undefined);
+					currentProjectInfo = info;
+					return info;
+				},
 			}),
 		],
+		build: {
+			rollupOptions: {
+				input: {
+					index: join(entryDir, "index.html"),
+					video: join(entryDir, "video.html"),
+					render: join(entryDir, "render.html"),
+				},
+			},
+		},
 		server: {
 			port: serverPort,
 			strictPort: false,

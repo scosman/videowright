@@ -5,11 +5,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderTopBar } from "../../src/cli/entry/components/top_bar.js";
 
-// Mock router.navigate to avoid actual history API calls in jsdom
-vi.mock("../../src/cli/entry/router.js", () => ({
-	navigate: vi.fn(),
-}));
-
 describe("renderTopBar", () => {
 	it("top_bar_renders_wordmark", () => {
 		const bar = renderTopBar({ projectName: "my-project" });
@@ -43,15 +38,11 @@ describe("renderTopBar", () => {
 		expect(title).toBeNull();
 	});
 
-	it("top_bar_wordmark_links_home", async () => {
-		const { navigate } = await import("../../src/cli/entry/router.js");
+	it("top_bar_wordmark_is_plain_anchor_to_root", () => {
 		const bar = renderTopBar({ projectName: "p" });
 		const wordmark = bar.querySelector(".vw-top-bar__wordmark") as HTMLAnchorElement;
+		expect(wordmark.tagName).toBe("A");
 		expect(wordmark.href).toContain("/");
-
-		const event = new MouseEvent("click", { bubbles: true, cancelable: true });
-		wordmark.dispatchEvent(event);
-		expect(navigate).toHaveBeenCalledWith("/");
 	});
 
 	it("top_bar_shows_download_button_when_enabled", () => {

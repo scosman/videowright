@@ -1,6 +1,6 @@
 /**
  * Video view: wraps the existing player + HUD + dev-frame for a single video.
- * Mounted at /[slug]/.
+ * Mounted at /video/<slug>.
  */
 
 import {
@@ -37,8 +37,7 @@ declare global {
 
 /**
  * Build and return the video view DOM for a given slug.
- * This replicates the boot sequence from the old entry_client.ts but
- * scoped to a specific video within the multi-video server.
+ * Boots the player for the specified video.
  */
 export function renderVideoView(projectInfo: ProjectInfo, slug: string): HTMLElement {
 	const video = projectInfo.videos.find((v) => v.slug === slug);
@@ -161,9 +160,6 @@ async function bootPlayer(
 	const finalTimeline = applyMetaDefaults(timeline, config);
 
 	applyDevFrameSize(finalTimeline.meta.resolution);
-	// installHudKeyListener is idempotent: it removes any existing keydown
-	// handler before registering a new one, so repeated calls (e.g. when
-	// navigating between videos) do not stack listeners.
 	installHudKeyListener();
 
 	// Validate

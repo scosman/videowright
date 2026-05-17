@@ -3,7 +3,6 @@
  * 56px tall, dark surface background, bottom border.
  */
 
-import { navigate } from "../router.js";
 import { iconDownload } from "./icons.js";
 
 export interface TopBarProps {
@@ -21,15 +20,11 @@ export function renderTopBar(props: TopBarProps): HTMLElement {
 	const left = document.createElement("div");
 	left.className = "vw-top-bar__left";
 
-	// Wordmark -- always links home
+	// Wordmark -- plain link home
 	const wordmark = document.createElement("a");
 	wordmark.className = "vw-top-bar__wordmark";
 	wordmark.href = "/";
 	wordmark.textContent = "videowright";
-	wordmark.addEventListener("click", (e) => {
-		e.preventDefault();
-		navigate("/");
-	});
 	left.appendChild(wordmark);
 
 	// Breadcrumb separator + title (video view)

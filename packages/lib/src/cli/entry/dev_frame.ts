@@ -6,10 +6,10 @@
  * The inner DOM renders at full native resolution so the preview matches
  * render output pixel-for-pixel.
  *
- * NOTE: This module is dev-entry-only. It is imported exclusively by
- * entry_client.ts and should NOT be imported in non-dev contexts (SSR,
- * production builds, etc.). It holds module-level mutable state for HUD
- * visibility and resize listeners that assumes a single browser instance.
+ * NOTE: This module is dev-entry-only. It is imported by the video page
+ * entry (entry_video.ts) and should NOT be imported in non-dev contexts
+ * (SSR, production builds, etc.). It holds module-level mutable state for
+ * HUD visibility and resize listeners that assumes a single browser instance.
  */
 
 /** Padding inside the video area (each side). Kept small so the video fills more space. */
