@@ -179,7 +179,67 @@ npx playwright install
 
 This downloads the browser binaries Playwright needs for e2e testing and video export.
 
-### 4f: Verify install
+### 4f: Check and install ffmpeg
+
+ffmpeg is required for video rendering (combining frames into the final video file). Check whether it is available on PATH:
+
+```bash
+# macOS / Linux
+which ffmpeg
+
+# Windows (if not using WSL)
+where ffmpeg
+```
+
+**If ffmpeg is found:** proceed to the next step without prompting.
+
+**If ffmpeg is not found:** detect the platform, then check for a supported package manager to attempt auto-install.
+
+**Platform detection:** on macOS/Linux, run `uname -s` — a result of `Darwin` means macOS, `Linux` means Linux. On Windows, skip this step (you already know). Then check for a package manager from the matching platform row(s) in the table below (first match wins):
+
+| Platform | Package manager detection | Install command |
+|---|---|---|
+| macOS | `which brew` | `brew install ffmpeg` |
+| Linux (Debian/Ubuntu) | `which apt` | `sudo apt update && sudo apt install -y ffmpeg` |
+| Linux (Fedora/RHEL) | `which dnf` | `sudo dnf install -y ffmpeg-free` |
+| Linux (Arch) | `which pacman` | `sudo pacman -S --noconfirm ffmpeg` |
+| Windows | `where choco` | `choco install ffmpeg -y` |
+| Windows | `where scoop` | `scoop install ffmpeg` |
+| Windows | `where winget` | `winget install --id Gyan.FFmpeg -e --accept-source-agreements` |
+
+Apply these rules in order:
+
+1. **Recognized package manager found:** ask the user exactly:
+
+   > ffmpeg is required for video rendering but was not found on your PATH. I can install it for you using `<install-command>`. Proceed?
+   > 1. Yes, install ffmpeg.
+   > 2. No, I'll install it manually.
+
+   - If **yes**: run the install command. Then re-verify that `ffmpeg` is on PATH (re-run `which`/`where`). If it still cannot be found, tell the user the install may have failed and show the same manual install message as the "no" case below.
+   - If **no**: tell the user exactly:
+
+     > OK — please install ffmpeg manually and make sure it is on your PATH, then say "done" to continue.
+     >
+     > - macOS: `brew install ffmpeg` (install Homebrew from https://brew.sh if needed)
+     > - Linux: use your distribution's package manager (e.g., `sudo apt install ffmpeg`)
+     > - Windows: download from https://ffmpeg.org/download.html, or use `choco install ffmpeg` / `winget install ffmpeg`
+
+     Wait for the user to confirm, then re-verify that `ffmpeg` is on PATH. If still not found, repeat the message. Do not proceed until ffmpeg is confirmed available.
+
+2. **No recognized package manager found:** tell the user exactly:
+
+   > ffmpeg is required for video rendering but was not found on your PATH, and I could not detect a supported package manager to install it automatically.
+   >
+   > Please install ffmpeg manually:
+   > - macOS: `brew install ffmpeg` (install Homebrew from https://brew.sh if needed)
+   > - Linux: use your distribution's package manager (e.g., `sudo apt install ffmpeg`)
+   > - Windows: download from https://ffmpeg.org/download.html, or use `choco install ffmpeg` / `winget install ffmpeg`
+   >
+   > After installing, make sure `ffmpeg` is on your PATH, then say "done" to continue.
+
+   Wait for the user to confirm, then re-verify that `ffmpeg` is on PATH. If still not found, repeat the message. Do not proceed until ffmpeg is confirmed available.
+
+### 4g: Verify install
 
 1. Confirm that `node_modules/videowright/` exists after installation. If it does not, surface the error to the user and stop.
 2. Read `package.json` and verify that `"type"` is set to `"module"`. If it is not, the dev server will fail with `Cannot use import statement outside a module`. Fix it before proceeding.
