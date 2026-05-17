@@ -703,16 +703,16 @@ describe.skipIf(!hasBrowser)("time shim: primitive-level DOM assertions", () => 
 		const { page, context } = await createShimmedPage('<div id="raf-marker">before</div>', false);
 
 		try {
-			// Schedule an rAF during passthrough mode
-			await page.evaluate(() => {
+			// Schedule the rAF and engage virtual time in a single evaluate so the
+			// browser cannot commit a frame between the two CDP roundtrips and fire
+			// the real rAF before engagement has a chance to convert it.
+			await page.evaluate(`
 				requestAnimationFrame(() => {
 					const el = document.getElementById("raf-marker");
 					if (el) el.textContent = "after";
 				});
-			});
-
-			// Engage virtual time -- the rAF callback should be queued
-			await page.evaluate("window.__VW_ENGAGE_VIRTUAL_TIME__()");
+				window.__VW_ENGAGE_VIRTUAL_TIME__();
+			`);
 
 			// Before advancing, rAF should not have fired yet
 			expect(await page.locator("#raf-marker").textContent()).toBe("before");
