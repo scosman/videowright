@@ -12,6 +12,7 @@ Videowright creates demo videos, explainer videos, and product walkthroughs from
 
 - **Video from prompt** -- generate an animated video, simply from a prompt
 - **AI voice-overs** -- generate narration from a script, then auto-sync video timing to the audio
+- **Sound Effects and Music** -- mix in sound effects and music
 - **Six built-in visual styles** -- or create your own from a brand guide or description
 - **Pixel-perfect MP4 export** -- deterministic frame-by-frame rendering, no dropped frames
 - **Hot-reloading dev server** -- iterate in chat, see changes instantly
@@ -66,6 +67,12 @@ The workflow:
 
 When you change the audio -- re-record a line, change pacing, swap voices -- the agent re-syncs video timing to match. Segments don't need code changes; only the timing data updates.
 
+## Audio Mixing, Sound Effects and Music
+
+Videowright can mix audio tracks, fading in music, timing sound effects, remixing voice-overs, and more.
+
+The agent can source sound effects and music. Both free downloads from Openverse, or AI generated sounds with ElevenLabs.
+
 ## Editing
 
 Just chat with videowright about edits you want to make, and it does the rest. It can be stylistic, content, order or pacing.
@@ -75,31 +82,30 @@ Just chat with videowright about edits you want to make, and it does the rest. I
 Two CLI modes, depending on where you are in the workflow:
 
 - **`npx videowright dev`** -- Dev server with a homepage listing all videos in the project. Click a video to open the player with hot reload. Hide the HUD for a clean screen-recording surface.
-- **`npx videowright render [slug]`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect output. Pass a video slug (directory name under `videos/`) or omit it to be prompted. In a single-video project, the video is rendered automatically.
+- **`npx videowright render [slug]`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect output.
 
 ## Multi-Video Projects
 
-A videowright project can contain many videos. Build up your style over time, maintaning consistency in your brand. Reuse segments across videos (intros, outros). Tell the agent "do it like we did in that video in May".
+A videowright project can contain many videos. Build up your style over time, maintaning consistency in your brand. Reuse segments across videos (intros, outros, transitions, CTAs).
 
 ## How Videowright Was Built
 
 Videowright is [vibe crafted](https://github.com/scosman/vibe-crafting) -- a form of agentic coding with structured specs, thorough tests, and a human driving core technical decisions. It's not perfect, but since it's designed to produce one-off videos (not run in production), that's fine.
 
-The test suite is robust: unit tests, integration tests, and end-to-end tests that include pixel-perfect rendering checks. These verify that animations driven by `requestAnimationFrame`, `setTimeout`, CSS keyframes, and the Web Animations API all produce identical frames across runs -- the same determinism guarantee that makes `videowright render` work.
+The test suite is robust: unit tests, integration tests, and end-to-end tests that include pixel-perfect rendering checks. These verify that animations driven by `requestAnimationFrame`, `setTimeout`, CSS keyframes, and the Web Animations API all produce identical frames across runs -- the determinism guarantee that makes `videowright render` work.
 
-If you encounter an error, describe it to your coding agent. A good agent can quickly diagnose and repair the issue. It's usually in the project files, but if you find one in the library please submit an issue or a patch.
+If you encounter an error, describe it to your coding agent. A good agent can quickly diagnose and repair most issues. It's usually in the project files, but if you find one in the library please submit an issue or a patch.
 
-## Will this just produce a bunch of 'AI Slop'?
+## Will this just produce a bunch of 'AI Slop' videos?
 
-Maybe! The difference between a good video and slop comes down to taste and iteration. Short one-off prompt on a template with an AI voice-over, yeah probably slop. Put a lot of work into a script, describe visuals in detail, build a style guide for your brand, refine over many iterations -- this can produce some pretty good videos. The core tech is capable of great animations at 4k-60fps.
+Maybe! The difference between a good video and slop comes down to taste and iteration. Short one-off prompt on a template with an AI voice-over, yeah probably slop. Put a lot of work into a script, describe visuals in detail, build a style guide for your brand, refine over many iterations -- this can produce some pretty good videos. The core tech is capable of great animations, but the human drives quality.
 
 ## Development
 
 Run all checks (lint, typecheck, tests) locally:
 
 ```bash
-./checks.sh             # all checks
-./checks.sh --no-test   # skip tests for quick iteration
+./checks.sh
 ```
 
 Install the pre-commit hook (once per clone). This will replace any existing pre-commit hook:
