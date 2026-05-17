@@ -1,7 +1,7 @@
 /**
  * Regression test: the render-mode Vite server must register
  * projectVirtualModulePlugin so that Vite's HTML crawl of index.html
- * (which imports virtual:videowright/project via entry_client.ts)
+ * (which imports virtual:videowright/project via entry_index.ts)
  * does not abort with an unresolved-import error.
  *
  * This test boots a real Vite dev server with the same plugin set that

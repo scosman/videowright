@@ -1,6 +1,6 @@
 /**
  * Render-mode entry client for `videowright render`.
- * Similar to entry_client.ts but boots the player in render mode
+ * Similar to entry_video.ts but boots the player in render mode
  * and exposes page-evaluate-callable globals for frame-by-frame control.
  */
 

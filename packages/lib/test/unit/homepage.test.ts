@@ -6,11 +6,6 @@ import { describe, expect, it, vi } from "vitest";
 import { renderHomepage } from "../../src/cli/entry/views/homepage.js";
 import type { ProjectInfo, VideoSummary } from "../../src/types.js";
 
-// Mock router.navigate to avoid actual history API calls
-vi.mock("../../src/cli/entry/router.js", () => ({
-	navigate: vi.fn(),
-}));
-
 // Mock download modal
 vi.mock("../../src/cli/entry/components/download_modal.js", () => ({
 	renderDownloadModal: vi.fn(() => vi.fn()),
@@ -79,15 +74,13 @@ describe("renderHomepage", () => {
 		expect(subtitle?.textContent).toBe("1 video in this project");
 	});
 
-	it("homepage_card_click_navigates", async () => {
-		const { navigate } = await import("../../src/cli/entry/router.js");
+	it("homepage_cards_are_anchors_to_video_pages", () => {
 		const videos = [makeVideo({ slug: "demo_video", title: "Demo" })];
 		const el = renderHomepage(makeProjectInfo(videos));
 
-		const card = el.querySelector(".vw-card") as HTMLElement;
-		card.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-
-		expect(navigate).toHaveBeenCalledWith("/demo_video/");
+		const card = el.querySelector(".vw-card") as HTMLAnchorElement;
+		expect(card.tagName).toBe("A");
+		expect(card.href).toContain("/video/demo_video");
 	});
 
 	it("homepage_renders_grid", () => {

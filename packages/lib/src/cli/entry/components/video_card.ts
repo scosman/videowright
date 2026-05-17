@@ -1,6 +1,6 @@
 /**
  * Video card for the homepage grid.
- * Clickable card with title, slug, style badge, and download icon.
+ * An anchor element that navigates to the video page on click.
  */
 
 import { iconDownload } from "./icons.js";
@@ -9,25 +9,14 @@ export interface VideoCardProps {
 	slug: string;
 	title: string;
 	style: string;
-	onOpen: () => void;
 	onDownload: () => void;
 }
 
 export function renderVideoCard(props: VideoCardProps): HTMLElement {
-	const card = document.createElement("article");
+	const card = document.createElement("a") as HTMLAnchorElement;
 	card.className = "vw-card";
-	card.tabIndex = 0;
-	card.setAttribute("role", "link");
+	card.href = `/video/${props.slug}`;
 	card.setAttribute("aria-label", `Open video: ${props.title}`);
-
-	// Click anywhere on the card opens the video
-	card.addEventListener("click", () => props.onOpen());
-	card.addEventListener("keydown", (e) => {
-		if (e.key === "Enter" || e.key === " ") {
-			e.preventDefault();
-			props.onOpen();
-		}
-	});
 
 	// Header row: title + download icon
 	const header = document.createElement("div");
@@ -45,6 +34,7 @@ export function renderVideoCard(props: VideoCardProps): HTMLElement {
 	dlBtn.innerHTML = iconDownload();
 	dlBtn.addEventListener("click", (e) => {
 		e.stopPropagation();
+		e.preventDefault();
 		props.onDownload();
 	});
 	header.appendChild(dlBtn);

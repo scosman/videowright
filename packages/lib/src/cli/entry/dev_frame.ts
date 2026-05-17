@@ -6,10 +6,9 @@
  * The inner DOM renders at full native resolution so the preview matches
  * render output pixel-for-pixel.
  *
- * NOTE: This module is dev-entry-only. It is imported exclusively by
- * entry_client.ts and should NOT be imported in non-dev contexts (SSR,
- * production builds, etc.). It holds module-level mutable state for HUD
- * visibility and resize listeners that assumes a single browser instance.
+ * NOTE: This module is dev-entry-only. It is imported by the video page
+ * entry (entry_video.ts) and should NOT be imported in non-dev contexts
+ * (SSR, production builds, etc.).
  */
 
 /** Padding inside the video area (each side). Kept small so the video fills more space. */
@@ -47,10 +46,6 @@ export function computeScale(
 /** Stored reference to the scale-update function, set by applyDevFrameSize.
  *  Also used by toggleDevHud to recompute scale when the HUD is toggled. */
 let updateScaleFn: (() => void) | null = null;
-
-/** Stored reference to the resize listener, so it can be removed before
- *  registering a new one (prevents listener leaks on repeated calls). */
-let resizeHandler: (() => void) | null = null;
 
 /**
  * Toggle the HUD strip visibility. When hidden, the video area grows to fill
@@ -109,14 +104,6 @@ export function toggleDevHud(): boolean {
 export function _resetHudVisible(): void {
 	hudVisible = true;
 	updateScaleFn = null;
-	if (resizeHandler) {
-		window.removeEventListener("resize", resizeHandler);
-		resizeHandler = null;
-	}
-	if (hudKeyHandler) {
-		document.removeEventListener("keydown", hudKeyHandler);
-		hudKeyHandler = null;
-	}
 }
 
 /**
@@ -165,36 +152,22 @@ export function applyDevFrameSize(resolution: [number, number]): void {
 		scaleContainer.style.height = `${height * scale}px`;
 	};
 
-	// Remove any existing resize listener to avoid leaking listeners
-	// if applyDevFrameSize is called more than once (e.g., HMR).
-	if (resizeHandler) {
-		window.removeEventListener("resize", resizeHandler);
-	}
-
 	updateScaleFn = updateScale;
-	resizeHandler = updateScale;
 	updateScale();
+	// Called once per page load in MPA mode; no listener cleanup needed since
+	// the page is torn down on navigation.
 	window.addEventListener("resize", updateScale);
 }
-
-/** Stored reference to the keydown handler, so it can be removed. */
-let hudKeyHandler: ((e: KeyboardEvent) => void) | null = null;
 
 /**
  * Install the "H" key listener for toggling HUD visibility.
  * Ignores key events when the target is an input, textarea, or
- * contenteditable element. Should be called once during dev boot.
+ * contenteditable element. Called once during dev boot (MPA page load).
  *
  * Returns a cleanup function that removes the listener.
- * Calling this again before cleanup replaces the previous listener.
  */
 export function installHudKeyListener(): () => void {
-	// Remove any existing listener to avoid double-registration
-	if (hudKeyHandler) {
-		document.removeEventListener("keydown", hudKeyHandler);
-	}
-
-	hudKeyHandler = (e: KeyboardEvent) => {
+	const handler = (e: KeyboardEvent) => {
 		if (e.key !== "h" && e.key !== "H") return;
 		// Ignore when typing in form fields or contenteditable
 		const target = e.target as HTMLElement | null;
@@ -206,12 +179,11 @@ export function installHudKeyListener(): () => void {
 		toggleDevHud();
 	};
 
-	document.addEventListener("keydown", hudKeyHandler);
+	// Called once per page load in MPA mode; no dedup guard needed since
+	// the page is torn down on navigation.
+	document.addEventListener("keydown", handler);
 
 	return () => {
-		if (hudKeyHandler) {
-			document.removeEventListener("keydown", hudKeyHandler);
-			hudKeyHandler = null;
-		}
+		document.removeEventListener("keydown", handler);
 	};
 }

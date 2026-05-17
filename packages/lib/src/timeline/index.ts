@@ -147,7 +147,7 @@ export type AdvancesValidationResult = { ok: true } | { ok: false; errors: strin
  * Validate that all segments referenced by a timeline have valid `advances` arrays.
  *
  * Accepts a `Record<string, number[]>` mapping segment id to its advances array.
- * This map is produced in the browser context (entry_client.ts / render_entry.ts)
+ * This map is produced in the browser context (entry_video.ts / render_entry.ts)
  * where segment modules are loaded via Vite and can import browser-only assets
  * (CSS, JSON, images) that Node's tsImport cannot handle.
  *

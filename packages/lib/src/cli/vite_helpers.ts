@@ -241,60 +241,86 @@ export function projectVirtualModulePlugin(
 	};
 }
 
-// ---- SPA history fallback plugin ----
+// ---- Video route middleware plugin ----
 
-/** Paths that should never be rewritten by the SPA fallback. */
+/** Paths that should never be intercepted by the routing middleware. */
 const VITE_INTERNAL_PREFIXES = ["/@vite/", "/@fs/", "/@id/", "/node_modules/", "/__vite"];
 
+/** Minimal 404 HTML served for unknown routes. */
+const NOT_FOUND_HTML =
+	"<!doctype html><html><head><title>Not found</title></head>" +
+	'<body><h1>Not found</h1><p><a href="/">Back to videos</a></p></body></html>';
+
 /**
- * Vite plugin that implements SPA history fallback for the dev server.
- * Rewrites GET requests for non-asset paths to `/` so that Vite serves
- * index.html, enabling client-side routing via the History API.
+ * Vite plugin that routes `/video/<slug>` requests to `video.html`.
+ * Replaces the old SPA fallback plugin. Serves a 404 for unknown routes.
+ *
+ * @param getKnownSlugs - getter returning the current list of valid video slugs
  */
-export function spaFallbackPlugin(): Plugin {
+export function videoRouteMiddlewarePlugin(getKnownSlugs: () => string[]): Plugin {
 	return {
-		name: "videowright-spa-fallback",
+		name: "videowright-video-route",
 		configureServer(server: ViteDevServer) {
-			// Return a function so the middleware runs AFTER Vite's built-in
-			// static serving and transform middleware. This ensures that actual
-			// files (JS, CSS, images) are served normally, and only unmatched
-			// paths fall through to the rewrite.
-			return () => {
-				const middleware: Connect.NextHandleFunction = (req, _res, next) => {
-					if (!req.url || req.method !== "GET") {
-						next();
-						return;
-					}
-
-					const url = req.url.split("?")[0];
-
-					// Skip render.html (Playwright render entry)
-					if (url === "/render.html") {
-						next();
-						return;
-					}
-
-					// Skip paths with file extensions (static assets)
-					if (extname(url)) {
-						next();
-						return;
-					}
-
-					// Skip Vite internal paths
-					for (const prefix of VITE_INTERNAL_PREFIXES) {
-						if (url.startsWith(prefix)) {
-							next();
-							return;
-						}
-					}
-
-					// Rewrite to root so Vite serves index.html
-					req.url = "/";
+			// Registered early (before Vite's static-serve middleware) so we can
+			// intercept `/video/<slug>` requests and rewrite them to video.html
+			// before Vite tries to resolve them as filesystem paths. Asset and
+			// internal paths are passed through via explicit checks below.
+			server.middlewares.use((req, res, next) => {
+				if (!req.url || req.method !== "GET") {
 					next();
-				};
+					return;
+				}
 
-				server.middlewares.use(middleware);
-			};
+				const url = req.url.split("?")[0];
+
+				// Exact root — let Vite serve index.html
+				if (url === "/" || url === "/index.html") {
+					next();
+					return;
+				}
+
+				// Known HTML entries — pass through
+				if (url === "/video.html" || url === "/render.html") {
+					next();
+					return;
+				}
+
+				// Vite internal paths — pass through
+				for (const prefix of VITE_INTERNAL_PREFIXES) {
+					if (url.startsWith(prefix)) {
+						next();
+						return;
+					}
+				}
+
+				// Paths with file extensions (assets) — pass through
+				if (extname(url)) {
+					next();
+					return;
+				}
+
+				// Video route: /video/<slug> or /video/<slug>/
+				const videoMatch = url.match(/^\/video\/([^/]+)\/?$/);
+				if (videoMatch) {
+					const slug = decodeURIComponent(videoMatch[1]);
+					if (getKnownSlugs().includes(slug)) {
+						// Rewrite to video.html so Vite serves it; browser URL stays the same
+						req.url = "/video.html";
+						next();
+						return;
+					}
+					// Unknown slug — 404
+					res.statusCode = 404;
+					res.setHeader("Content-Type", "text/html");
+					res.end(NOT_FOUND_HTML);
+					return;
+				}
+
+				// Anything else — 404
+				res.statusCode = 404;
+				res.setHeader("Content-Type", "text/html");
+				res.end(NOT_FOUND_HTML);
+			});
 		},
 	};
 }
