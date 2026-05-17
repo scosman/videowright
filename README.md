@@ -79,10 +79,11 @@ Just chat with videowright about edits you want to make, and it does the rest. I
 
 ## CLI
 
-Two CLI modes, depending on where you are in the workflow:
+Three CLI commands:
 
 - **`npx videowright dev`** -- Dev server with a homepage listing all videos in the project. Click a video to open the player with hot reload. Hide the HUD for a clean screen-recording surface.
 - **`npx videowright render [slug]`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect output.
+- **`npx videowright script [path]`** -- Assemble all segments' voiceover text into a single markdown document for review or handoff.
 
 ## Multi-Video Projects
 

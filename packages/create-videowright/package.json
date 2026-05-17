@@ -5,7 +5,7 @@
 	"description": "npm init videowright — detect your coding agent and hand off the Videowright install",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/scosman/videowright"
+		"url": "git+https://github.com/scosman/videowright.git"
 	},
 	"homepage": "https://github.com/scosman/videowright",
 	"bugs": {
@@ -17,6 +17,8 @@
 	},
 	"files": ["bin"],
 	"scripts": {
+		"prepack": "cp ../../README.md ./README.md",
+		"postpack": "rm -f ./README.md",
 		"test": "vitest run"
 	},
 	"devDependencies": {

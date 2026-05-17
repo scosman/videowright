@@ -35,13 +35,13 @@ function readVersion(): string {
 const HELP_TEXT = `Usage: videowright <command> [options]
 
 Commands:
-  dev             Start the dev server (homepage at http://localhost:5173/)
-  script [path]   Generate voiceover script
-  render [video]  Deterministic frame-by-frame export via JS time injection + ffmpeg
+  dev              Start the dev server with hot reload
+  render [video]   Deterministic frame-by-frame MP4 export via Playwright + ffmpeg
+  script [path]    Assemble voiceover script as Markdown
 
 Options:
   --port <n>            Dev server port (default: 5173)
-  --write               Write script to file instead of stdout
+  --write               Write script to file instead of stdout (script only)
   --width <n>           Video width in pixels (render only, default: 1920)
   --height <n>          Video height in pixels (render only, default: 1080)
   --fps <n>             Frames per second (render only, default: 60)

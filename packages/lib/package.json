@@ -6,7 +6,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/scosman/videowright"
+		"url": "git+https://github.com/scosman/videowright.git"
 	},
 	"homepage": "https://github.com/scosman/videowright",
 	"bugs": {
@@ -29,6 +29,8 @@
 	"files": ["dist", "skill", "src/cli/entry"],
 	"scripts": {
 		"build": "tsc -b",
+		"prepack": "cp ../../README.md ./README.md",
+		"postpack": "rm -f ./README.md",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:e2e": "npm run build && npx playwright test"
