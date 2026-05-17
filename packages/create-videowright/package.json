@@ -1,8 +1,16 @@
 {
 	"name": "create-videowright",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"type": "module",
 	"description": "npm init videowright — detect your coding agent and hand off the Videowright install",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/scosman/videowright"
+	},
+	"homepage": "https://github.com/scosman/videowright",
+	"bugs": {
+		"url": "https://github.com/scosman/videowright/issues"
+	},
 	"license": "MIT",
 	"bin": {
 		"create-videowright": "./bin/cli.js"
