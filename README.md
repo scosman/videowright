@@ -22,8 +22,10 @@ Videowright creates demo videos, explainer videos, and product walkthroughs from
 
 Paste this into your coding agent (Claude Code, Codex, or opencode):
 
-> Install Videowright using these instructions:
-> https://github.com/scosman/videowright/raw/refs/heads/main/packages/lib/skill/install/INSTALL.md
+```
+Install Videowright using these instructions:
+https://github.com/scosman/videowright/raw/refs/heads/main/packages/lib/skill/install/INSTALL.md
+```
 
 The agent reads the install prompt and walks you through setup.
 
