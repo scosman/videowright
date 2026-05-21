@@ -106,7 +106,7 @@ ln -sf ../../checks.sh .git/hooks/pre-commit
 
 ## Sponsor: Kiln AI
 
-This project was initially made for the Kiln AI launch video! You can read our write up on the process [on our blog](https://kiln.tech/blog/we_made_our_launch_video_in_claude_code).
+This project was initially made for the [Kiln AI](https://kiln.tech) [launch video](https://www.youtube.com/watch?v=Lt3S8joFO0I)! You can read our write up on the process [on our blog](https://kiln.tech/blog/we_made_our_launch_video_in_claude_code).
 
 [<img width="660" height="377" alt="kiln_launch_thumb" src="https://github.com/user-attachments/assets/a79bb277-52c6-45e9-9631-0713a1d8f16b" />](https://www.youtube.com/watch?v=Lt3S8joFO0I)
 
