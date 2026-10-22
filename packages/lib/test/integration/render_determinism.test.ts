@@ -8,15 +8,24 @@
  * This validates the full render pipeline: JS time shim injection via
  * addInitScript, virtual clock advancement, hold() firing via virtualized
  * setTimeout, and frame capture.
+ * Also verifies that scene file changes do not reload the page during export.
  *
  * Skips if ffmpeg or Playwright are not available.
  */
 
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+	appendFileSync,
+	existsSync,
+	mkdirSync,
+	realpathSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { runRender } from "../../src/cli/render.js";
 
 function systemHasFfmpeg(): boolean {
@@ -52,12 +61,13 @@ const tmpDir = join(
 	`vw-render-determinism-${Date.now()}-${Math.random().toString(36).slice(2)}`,
 );
 
-function setupFixtureProject(): void {
+function setupFixtureProject(duration = 1): void {
 	const segDir = join(tmpDir, "segments", "counter");
 	const videoDir = join(tmpDir, "videos", "test-video");
 
 	mkdirSync(segDir, { recursive: true });
 	mkdirSync(videoDir, { recursive: true });
+	writeFileSync(join(tmpDir, "package.json"), JSON.stringify({ private: true, type: "module" }));
 
 	writeFileSync(
 		join(tmpDir, "videowright.config.ts"),
@@ -74,9 +84,14 @@ function setupFixtureProject(): void {
 	// from the default export, so a plain object works.
 	writeFileSync(
 		join(segDir, "index.ts"),
-		`export default {
+		`// A reload can recover between frames and silently restart the scene.
+// sessionStorage survives navigation, so fail explicitly if that happens.
+if (sessionStorage.getItem("counter-loaded")) throw new Error("Render page reloaded");
+sessionStorage.setItem("counter-loaded", "true");
+
+export default {
 	id: "counter",
-	advances: [1.0],
+	advances: [${duration}],
 	mount(el: HTMLElement) {
 		el.style.cssText = "display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#222;";
 		el.innerHTML = "<h1 id='count' style='color:white;font-size:120px;'>0</h1>";
@@ -165,4 +180,78 @@ describe.skipIf(!HAS_DEPS)("render determinism via JS injection", () => {
 			// ffprobe may not be available; skip this check
 		}
 	}, 60000);
+
+	it.each(["edit", "add", "remove"])(
+		"preserves rendered frames when a segment file changes: %s",
+		async (change) => {
+			setupFixtureProject(3);
+			const extraSegmentDir = join(tmpDir, "segments", "extra");
+			const extraSegmentPath = join(extraSegmentDir, "index.ts");
+			mkdirSync(extraSegmentDir, { recursive: true });
+			if (change === "remove") {
+				writeFileSync(extraSegmentPath, 'export default { id: "extra" };');
+			}
+
+			// Synchronize real file changes with capture, after the browser has loaded
+			// the project. Leave the render pipeline and file watcher unmocked.
+			let changedDuringCapture = false;
+			const log = console.log;
+			const logSpy = vi.spyOn(console, "log").mockImplementation((...args) => {
+				log(...args);
+				if (args[0] !== "render mode ready, capturing frames...") return;
+				if (change === "edit") {
+					appendFileSync(
+						join(tmpDir, "segments", "counter", "index.ts"),
+						"\n// Edited during export\n",
+					);
+				} else if (change === "add") {
+					writeFileSync(extraSegmentPath, 'export default { id: "extra" };');
+				} else {
+					rmSync(extraSegmentPath);
+				}
+				changedDuringCapture = true;
+			});
+
+			try {
+				const outputPath = join(tmpDir, `output-${change}.mp4`);
+				const result = await runRender({
+					cwd: tmpDir,
+					positional: "videos/test-video/timeline.ts",
+					width: 320,
+					height: 240,
+					fps: 30,
+					output: outputPath,
+					audioTrack: "none",
+					verbose: true,
+				});
+
+				expect(changedDuringCapture).toBe(true);
+				expect(result.frames).toBe(90);
+				// Decode a corner of every frame. The scene stays #222 throughout.
+				// A reload also fails this check if the driver completes a blank MP4.
+				const pixels = execFileSync("ffmpeg", [
+					"-v",
+					"error",
+					"-i",
+					outputPath,
+					"-vf",
+					"crop=2:2:0:0",
+					"-f",
+					"rawvideo",
+					"-pix_fmt",
+					"rgb24",
+					"pipe:1",
+				]);
+				expect(pixels.length).toBe(90 * 2 * 2 * 3);
+				// Allow small color rounding from video encoding.
+				expect(Math.min(...pixels)).toBeGreaterThanOrEqual(31);
+				expect(Math.max(...pixels)).toBeLessThanOrEqual(37);
+			} finally {
+				logSpy.mockRestore();
+				rmSync(extraSegmentDir, { recursive: true, force: true });
+				setupFixtureProject();
+			}
+		},
+		60000,
+	);
 });
