@@ -1,5 +1,6 @@
 
-# Videowright 
+<img width="193" height="159" alt="Videowright Logo" src="https://github.com/user-attachments/assets/ec1a826f-3f44-465b-bc72-14660271db4f" />
+
 ### Create a video with a prompt
 
 Videowright creates demo videos, explainer videos, and product walkthroughs from your coding agent. Just describe what you want and it generates your video (including audio). Iterate in chat until it's perfect.
