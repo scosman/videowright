@@ -1,5 +1,5 @@
 ---
-status: draft
+status: complete
 ---
 
 # Architecture: Demo v2
@@ -43,8 +43,11 @@ examples/videowright_demo/
   videos/demo_v2/
     PLAN.md  timeline.ts  voiceover_script/script.md
     audio/audio_plan.md
-    audio/originals/voiceovers/placeholder/{audio.mp3,timing.json,voiceover.ts}
-    audio/originals/voiceovers/v1/{provider_script.md,generate.sh}   # + raw/retimed files when the take arrives
+    audio/originals/voiceovers/v1/
+      provider_script.md  generate.sh  HANDOFF.md        # written during speccing
+      raw.mp3  raw_stt.json                              # supplied by the user (portal)
+      audio.mp3  timing.json  voiceover.ts               # produced in Phase 3 (retime apply + sync)
+    audio/originals/voiceovers/placeholder/...           # ONLY if the v1 take is missing at Phase 3
     audio/originals/sfx/laptop_typing/{audio.mp3,sfx.ts}
     audio/tracks/v1/{track.ts,track.mp3,plan_snapshot.md}
 
@@ -122,10 +125,20 @@ Viewers see the same title card three times.
 
 ### Audio
 
-- **Placeholder** = demo v1's `voiceovers/v4/audio.mp3` + `timing.json`, copied. It is the source of `voiceovers/placeholder/voiceover.ts` (`provider: "elevenlabs"`, `model: "eleven_multilingual_v2"`, notes flag it as a placeholder).
-- **Typing SFX** is copied with its `sfx.ts`. `audio_plan.md` places it under the visual typing window, with the VO offset after it. Built with the flow in `audio/build.md` (ffmpeg, -14 LUFS) into `tracks/v1/`.
-- **New take:** `voiceovers/v1/generate.sh` follows `audio/voiceover/providers/elevenlabs.md` Flow 1 (eleven_v3, Asher `tMvyQtpCVQ0DkixuYm6J`, stability 0.5), then Scribe STT, then `retime check` and `retime apply`. Use the retime script at `packages/lib/skill/scripts/retime.mjs` (or the `node_modules/videowright/skill/...` path; both resolve).
-- `[[pause]]` lengths are set from the built animation's needs.
+- **VO take (v1):** the user supplies `raw.mp3` + `raw_stt.json` (ElevenLabs Scribe JSON export) in `voiceovers/v1/`. Then, from `examples/videowright_demo`:
+
+  ```bash
+  retime() { node ../../packages/lib/skill/scripts/retime.mjs "$@"; }
+  VO=videos/demo_v2/audio/originals/voiceovers/v1
+  retime check "$VO/provider_script.md" "$VO/raw_stt.json"      # exit 1 = bad take -> ask user to regenerate
+  retime apply "$VO/provider_script.md" "$VO/raw.mp3" "$VO/raw_stt.json" "$VO/audio.mp3" "$VO/timing.json"
+  ```
+
+  Then sync (`sync_algorithm.md`) and write `voiceovers/v1/voiceover.ts`.
+- **Pause re-tune (Phase 6):** edit the `[[pause Xs]]` values in `provider_script.md`, then re-run `apply`, re-sync, and rebuild the track. The `[[pause]]` *positions* are fixed by the take: a pause can only be retimed where a `[pause]` tag was sent. Lengths are free.
+- **Placeholder (only if the v1 take is missing at Phase 3):** demo v1's `voiceovers/v4/audio.mp3` + `timing.json`, copied to `voiceovers/placeholder/`, with a `voiceover.ts` that flags it as a placeholder (`eleven_multilingual_v2`).
+- **Typing SFX** is copied with its `sfx.ts`. `audio_plan.md` places it under the visual typing window, with the VO offset after it. Built with the flow in `audio/build.md` (ffmpeg, -14 LUFS) into `tracks/vN/`.
+- **API route:** `voiceovers/v1/generate.sh` (eleven_v3, Asher `tMvyQtpCVQ0DkixuYm6J`, stability 0.5, then Scribe STT, check, apply) exists for when an `ELEVENLABS_API_KEY` is available. It is not used in this environment.
 
 ## Review tooling (`specs/projects/demo_v2/tools/`)
 
@@ -153,4 +166,4 @@ Scripts:
 - **Biome style:** tabs, double quotes, semicolons.
 - **Imports:** segments and components import from `videowright` and relative paths only. The style pack's samples import only from `videowright`.
 - **Logging:** `videos/demo_v2/PLAN.md` gets a dated log entry per phase, recording design decisions and any departure from the spec's Direction, with the reason.
-- **Commits:** one per phase on `claude/brave-heisenberg-0ypj2b`, pushed after each phase.
+- **Commits:** one per phase on `claude/brave-heisenberg-0ypj2b`, pushed after each phase. **No pull request** (user decision).
