@@ -1,0 +1,714 @@
+{
+	"words": [
+		{
+			"word": "The",
+			"start": 0.359,
+			"end": 0.439
+		},
+		{
+			"word": "video",
+			"start": 0.479,
+			"end": 0.739
+		},
+		{
+			"word": "you're",
+			"start": 0.819,
+			"end": 0.959
+		},
+		{
+			"word": "watching",
+			"start": 0.999,
+			"end": 1.439
+		},
+		{
+			"word": "and",
+			"start": 1.679,
+			"end": 1.779
+		},
+		{
+			"word": "this",
+			"start": 1.839,
+			"end": 1.999
+		},
+		{
+			"word": "voice",
+			"start": 2.039,
+			"end": 2.379
+		},
+		{
+			"word": "were",
+			"start": 2.559,
+			"end": 2.679
+		},
+		{
+			"word": "generated",
+			"start": 2.739,
+			"end": 3.179
+		},
+		{
+			"word": "by",
+			"start": 3.219,
+			"end": 3.399
+		},
+		{
+			"word": "VideoWrite",
+			"start": 3.459,
+			"end": 4.039
+		},
+		{
+			"word": "in",
+			"start": 4.099,
+			"end": 4.219
+		},
+		{
+			"word": "Claude",
+			"start": 4.278,
+			"end": 4.559
+		},
+		{
+			"word": "Code",
+			"start": 4.659,
+			"end": 4.899
+		},
+		{
+			"word": "with",
+			"start": 5.199,
+			"end": 5.299
+		},
+		{
+			"word": "a",
+			"start": 5.339,
+			"end": 5.479
+		},
+		{
+			"word": "single",
+			"start": 5.559,
+			"end": 5.819
+		},
+		{
+			"word": "prompt.",
+			"start": 5.939,
+			"end": 6.279
+		},
+		{
+			"word": "VideoWrite",
+			"start": 7.348,
+			"end": 7.868
+		},
+		{
+			"word": "turns",
+			"start": 7.928,
+			"end": 8.127
+		},
+		{
+			"word": "a",
+			"start": 8.168,
+			"end": 8.228
+		},
+		{
+			"word": "coding",
+			"start": 8.308,
+			"end": 8.608
+		},
+		{
+			"word": "agent",
+			"start": 8.688,
+			"end": 9.048
+		},
+		{
+			"word": "into",
+			"start": 9.088,
+			"end": 9.288
+		},
+		{
+			"word": "a",
+			"start": 9.328,
+			"end": 9.428
+		},
+		{
+			"word": "video",
+			"start": 9.468,
+			"end": 9.728
+		},
+		{
+			"word": "team",
+			"start": 9.848,
+			"end": 10.068
+		},
+		{
+			"word": "using",
+			"start": 10.388,
+			"end": 10.748
+		},
+		{
+			"word": "any",
+			"start": 10.828,
+			"end": 11.028
+		},
+		{
+			"word": "web",
+			"start": 11.068,
+			"end": 11.228
+		},
+		{
+			"word": "technologies.",
+			"start": 11.268,
+			"end": 11.948
+		},
+		{
+			"word": "That",
+			"start": 13.254,
+			"end": 13.354
+		},
+		{
+			"word": "includes",
+			"start": 13.394,
+			"end": 13.894
+		},
+		{
+			"word": "animated",
+			"start": 13.974,
+			"end": 14.354
+		},
+		{
+			"word": "SVG,",
+			"start": 14.474,
+			"end": 15.014
+		},
+		{
+			"word": "any",
+			"start": 15.927,
+			"end": 16.067
+		},
+		{
+			"word": "library,",
+			"start": 16.147,
+			"end": 16.607
+		},
+		{
+			"word": "like",
+			"start": 16.867,
+			"end": 17.047
+		},
+		{
+			"word": "charting",
+			"start": 17.107,
+			"end": 17.387
+		},
+		{
+			"word": "libraries,",
+			"start": 17.447,
+			"end": 18.007
+		},
+		{
+			"word": "advanced",
+			"start": 18.674,
+			"end": 19.114
+		},
+		{
+			"word": "3D",
+			"start": 19.314,
+			"end": 19.594
+		},
+		{
+			"word": "and",
+			"start": 19.614,
+			"end": 19.714
+		},
+		{
+			"word": "motion,",
+			"start": 19.794,
+			"end": 20.174
+		},
+		{
+			"word": "like",
+			"start": 20.434,
+			"end": 20.634
+		},
+		{
+			"word": "Three.js",
+			"start": 20.674,
+			"end": 21.354
+		},
+		{
+			"word": "or",
+			"start": 21.494,
+			"end": 21.574
+		},
+		{
+			"word": "Lottie,",
+			"start": 21.654,
+			"end": 21.974
+		},
+		{
+			"word": "even",
+			"start": 22.745,
+			"end": 22.965
+		},
+		{
+			"word": "your",
+			"start": 23.005,
+			"end": 23.225
+		},
+		{
+			"word": "real",
+			"start": 23.265,
+			"end": 23.445
+		},
+		{
+			"word": "product",
+			"start": 23.565,
+			"end": 23.885
+		},
+		{
+			"word": "UI",
+			"start": 23.985,
+			"end": 24.365
+		},
+		{
+			"word": "rendered",
+			"start": 24.665,
+			"end": 24.985
+		},
+		{
+			"word": "from",
+			"start": 25.025,
+			"end": 25.145
+		},
+		{
+			"word": "your",
+			"start": 25.185,
+			"end": 25.305
+		},
+		{
+			"word": "app's",
+			"start": 25.385,
+			"end": 25.605
+		},
+		{
+			"word": "code",
+			"start": 25.645,
+			"end": 25.845
+		},
+		{
+			"word": "base.",
+			"start": 25.885,
+			"end": 26.165
+		},
+		{
+			"word": "If",
+			"start": 26.835,
+			"end": 26.915
+		},
+		{
+			"word": "your",
+			"start": 26.935,
+			"end": 27.075
+		},
+		{
+			"word": "stack",
+			"start": 27.155,
+			"end": 27.415
+		},
+		{
+			"word": "runs",
+			"start": 27.455,
+			"end": 27.615
+		},
+		{
+			"word": "in",
+			"start": 27.635,
+			"end": 27.695
+		},
+		{
+			"word": "a",
+			"start": 27.735,
+			"end": 27.775
+		},
+		{
+			"word": "browser,",
+			"start": 27.815,
+			"end": 28.175
+		},
+		{
+			"word": "VideoWrite",
+			"start": 28.615,
+			"end": 29.055
+		},
+		{
+			"word": "supports",
+			"start": 29.115,
+			"end": 29.495
+		},
+		{
+			"word": "it.",
+			"start": 29.535,
+			"end": 29.655
+		},
+		{
+			"word": "Request",
+			"start": 30.793,
+			"end": 31.173
+		},
+		{
+			"word": "changes",
+			"start": 31.213,
+			"end": 31.553
+		},
+		{
+			"word": "in",
+			"start": 31.593,
+			"end": 31.653
+		},
+		{
+			"word": "your",
+			"start": 31.692,
+			"end": 31.793
+		},
+		{
+			"word": "coding",
+			"start": 31.853,
+			"end": 32.113
+		},
+		{
+			"word": "agent",
+			"start": 32.173,
+			"end": 32.493
+		},
+		{
+			"word": "and",
+			"start": 32.693,
+			"end": 32.753
+		},
+		{
+			"word": "the",
+			"start": 32.793,
+			"end": 32.893
+		},
+		{
+			"word": "preview",
+			"start": 32.933,
+			"end": 33.293
+		},
+		{
+			"word": "hot",
+			"start": 33.473,
+			"end": 33.673
+		},
+		{
+			"word": "reloads.",
+			"start": 33.753,
+			"end": 34.233
+		},
+		{
+			"word": "One",
+			"start": 36.578,
+			"end": 36.698
+		},
+		{
+			"word": "command",
+			"start": 36.778,
+			"end": 37.158
+		},
+		{
+			"word": "exports",
+			"start": 37.378,
+			"end": 37.758
+		},
+		{
+			"word": "your",
+			"start": 37.798,
+			"end": 37.898
+		},
+		{
+			"word": "video.",
+			"start": 37.918,
+			"end": 38.258
+		},
+		{
+			"word": "It's",
+			"start": 38.988,
+			"end": 39.148
+		},
+		{
+			"word": "deterministic,",
+			"start": 39.188,
+			"end": 39.968
+		},
+		{
+			"word": "pixel-perfect",
+			"start": 40.228,
+			"end": 41.028
+		},
+		{
+			"word": "rendering,",
+			"start": 41.108,
+			"end": 41.488
+		},
+		{
+			"word": "not",
+			"start": 41.908,
+			"end": 42.088
+		},
+		{
+			"word": "a",
+			"start": 42.108,
+			"end": 42.168
+		},
+		{
+			"word": "screen",
+			"start": 42.208,
+			"end": 42.408
+		},
+		{
+			"word": "capture.",
+			"start": 42.508,
+			"end": 42.848
+		},
+		{
+			"word": "Your",
+			"start": 44.099,
+			"end": 44.219
+		},
+		{
+			"word": "script",
+			"start": 44.259,
+			"end": 44.579
+		},
+		{
+			"word": "generates",
+			"start": 44.739,
+			"end": 45.079
+		},
+		{
+			"word": "an",
+			"start": 45.119,
+			"end": 45.259
+		},
+		{
+			"word": "AI",
+			"start": 45.339,
+			"end": 45.559
+		},
+		{
+			"word": "narration.",
+			"start": 45.639,
+			"end": 46.159
+		},
+		{
+			"word": "The",
+			"start": 46.639,
+			"end": 46.739
+		},
+		{
+			"word": "pace",
+			"start": 46.819,
+			"end": 47.039
+		},
+		{
+			"word": "of",
+			"start": 47.079,
+			"end": 47.139
+		},
+		{
+			"word": "the",
+			"start": 47.179,
+			"end": 47.219
+		},
+		{
+			"word": "narration",
+			"start": 47.279,
+			"end": 47.739
+		},
+		{
+			"word": "drives",
+			"start": 47.899,
+			"end": 48.259
+		},
+		{
+			"word": "the",
+			"start": 48.299,
+			"end": 48.379
+		},
+		{
+			"word": "video",
+			"start": 48.419,
+			"end": 48.639
+		},
+		{
+			"word": "timing.",
+			"start": 48.739,
+			"end": 49.059
+		},
+		{
+			"word": "Edit",
+			"start": 49.539,
+			"end": 49.719
+		},
+		{
+			"word": "a",
+			"start": 49.779,
+			"end": 49.799
+		},
+		{
+			"word": "line",
+			"start": 49.859,
+			"end": 50.119
+		},
+		{
+			"word": "and",
+			"start": 50.379,
+			"end": 50.459
+		},
+		{
+			"word": "the",
+			"start": 50.479,
+			"end": 50.579
+		},
+		{
+			"word": "video",
+			"start": 50.619,
+			"end": 50.879
+		},
+		{
+			"word": "resyncs.",
+			"start": 51.019,
+			"end": 51.559
+		},
+		{
+			"word": "And",
+			"start": 53.021,
+			"end": 53.141
+		},
+		{
+			"word": "VideoWrite",
+			"start": 53.201,
+			"end": 53.701
+		},
+		{
+			"word": "works",
+			"start": 53.801,
+			"end": 54.001
+		},
+		{
+			"word": "in",
+			"start": 54.041,
+			"end": 54.301
+		},
+		{
+			"word": "every",
+			"start": 54.381,
+			"end": 54.641
+		},
+		{
+			"word": "major",
+			"start": 54.741,
+			"end": 54.981
+		},
+		{
+			"word": "coding",
+			"start": 55.101,
+			"end": 55.361
+		},
+		{
+			"word": "agent.",
+			"start": 55.421,
+			"end": 55.741
+		},
+		{
+			"word": "Install",
+			"start": 56.758,
+			"end": 57.078
+		},
+		{
+			"word": "VideoWrite",
+			"start": 57.158,
+			"end": 57.678
+		},
+		{
+			"word": "and",
+			"start": 57.798,
+			"end": 57.878
+		},
+		{
+			"word": "ask",
+			"start": 58.038,
+			"end": 58.218
+		},
+		{
+			"word": "your",
+			"start": 58.238,
+			"end": 58.358
+		},
+		{
+			"word": "agent",
+			"start": 58.418,
+			"end": 58.698
+		},
+		{
+			"word": "to",
+			"start": 58.738,
+			"end": 58.898
+		},
+		{
+			"word": "build",
+			"start": 58.938,
+			"end": 59.138
+		},
+		{
+			"word": "your",
+			"start": 59.178,
+			"end": 59.298
+		},
+		{
+			"word": "video.",
+			"start": 59.318,
+			"end": 59.638
+		},
+		{
+			"word": "You'll",
+			"start": 60.098,
+			"end": 60.218
+		},
+		{
+			"word": "have",
+			"start": 60.258,
+			"end": 60.358
+		},
+		{
+			"word": "a",
+			"start": 60.418,
+			"end": 60.458
+		},
+		{
+			"word": "video",
+			"start": 60.498,
+			"end": 60.818
+		},
+		{
+			"word": "before",
+			"start": 60.858,
+			"end": 61.198
+		},
+		{
+			"word": "your",
+			"start": 61.238,
+			"end": 61.358
+		},
+		{
+			"word": "coffee",
+			"start": 61.418,
+			"end": 61.718
+		},
+		{
+			"word": "is",
+			"start": 61.758,
+			"end": 61.878
+		},
+		{
+			"word": "cold.",
+			"start": 61.938,
+			"end": 62.258
+		}
+	]
+}

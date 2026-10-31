@@ -138,7 +138,8 @@ Viewers see the same title card three times.
 - **Pause re-tune (Phase 6):** edit the `[[pause Xs]]` values in `provider_script.md`, then re-run `apply`, re-sync, and rebuild the track. The `[[pause]]` *positions* are fixed by the take: a pause can only be retimed where a `[pause]` tag was sent. Lengths are free.
 - **Placeholder (only if the v1 take is missing at Phase 3):** demo v1's `voiceovers/v4/audio.mp3` + `timing.json`, copied to `voiceovers/placeholder/`, with a `voiceover.ts` that flags it as a placeholder (`eleven_multilingual_v2`).
 - **Typing SFX** is copied with its `sfx.ts`. `audio_plan.md` places it under the visual typing window, with the VO offset after it. Built with the flow in `audio/build.md` (ffmpeg, -14 LUFS) into `tracks/vN/`.
-- **API route:** `voiceovers/v1/generate.sh` (eleven_v3, Asher `tMvyQtpCVQ0DkixuYm6J`, stability 0.5, then Scribe STT, check, apply) exists for when an `ELEVENLABS_API_KEY` is available. It is not used in this environment.
+- **API route:** `voiceovers/v1/generate.sh` (eleven_v4 + Cosman-1 via `COSMAN_VOICE_ID`, then Scribe STT, check, apply) exists for when an `ELEVENLABS_API_KEY` is available. It is not used in this environment. The v4 API model id is unverified.
+- **Portal STT export:** if the user re-exports STT from the portal, convert it with `node specs/projects/demo_v2/tools/portal_to_canonical.mjs <export.json> <raw_stt.json>`.
 
 ## Review tooling (`specs/projects/demo_v2/tools/`)
 

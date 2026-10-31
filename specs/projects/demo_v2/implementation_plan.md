@@ -6,7 +6,7 @@ status: complete
 
 Every phase follows the clean-room rule, runs the render→look→iterate loop before code review, passes `./checks.sh`, and ends with a manager design review of the renders. No PR (user decision); commit and push per phase.
 
-**Pre-req (user, before Phase 3):** generate the ElevenLabs v3 take per `examples/videowright_demo/videos/demo_v2/audio/originals/voiceovers/v1/HANDOFF.md`, and commit `raw.mp3` + `raw_stt.json` to that folder.
+**Pre-req: done.** The ElevenLabs v4 / Cosman-1 take is saved in `examples/videowright_demo/videos/demo_v2/audio/originals/voiceovers/v1/` (raw take, STT, check PASS, retimed `audio.mp3` + `timing.json`). Phase 7 is not needed unless the take is replaced.
 
 ## Phases
 

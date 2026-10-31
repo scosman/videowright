@@ -1,7 +1,8 @@
 # Provider Script
 
-> Provider: ElevenLabs v3 (`eleven_v3`)
-> Voice: Asher (`tMvyQtpCVQ0DkixuYm6J`), stability 0.5 (Natural)
+> Provider: ElevenLabs v4 (portal)
+> Voice: Cosman-1 (instant voice clone). Portal settings: speed 1.00, stability 50, similarity boost 75.
+> Take: generated 2026-10-31 in the ElevenLabs portal (`raw.mp3`); STT from the portal's Speech-to-Text JSON export (`raw_stt_portal.json`, converted to canonical `raw_stt.json`).
 > Style: confident, warm tech explainer; conversational, natural pace. No audio tags — tone comes from the writing.
 > Pronunciation: "S V G", "3 D" and "U I" spelled with spaces so they are read letter by letter. "Videowright" sounds like "video write" (same as "video right").
 > Delivery tweaks vs. the canonical script (punctuation only): the comma in "You'll have a video, before your coffee is cold." is dropped — it was a workaround for the old v2 model.

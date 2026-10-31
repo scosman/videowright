@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# ElevenLabs v3 TTS + Scribe STT + retime for demo_v2. Run from the project root
+# ElevenLabs TTS + Scribe STT + retime for demo_v2. The actual take was made in the portal with
+# Eleven v4 + the Cosman-1 voice clone (see HANDOFF.md); this API script is a fallback and its
+# model_id / VOICE_ID must be set to the account's v4 model id and Cosman-1 voice id before use.
+# Run from the project root
 # (examples/videowright_demo). Needs ELEVENLABS_API_KEY in ./.env (paid plan), jq, ffmpeg.
 #
 # Portal alternative (no API key): see HANDOFF.md in this folder.
@@ -7,7 +10,7 @@ set -euo pipefail
 set -a; . ./.env; set +a
 
 VO_DIR="videos/demo_v2/audio/originals/voiceovers/v1"
-VOICE_ID="tMvyQtpCVQ0DkixuYm6J"  # Asher
+VOICE_ID="${COSMAN_VOICE_ID:?set COSMAN_VOICE_ID to the Cosman-1 voice id}"  # Cosman-1 (IVC)
 retime() { node node_modules/videowright/skill/scripts/retime.mjs "$@"; }
 
 TEXT="$(retime text "$VO_DIR/provider_script.md" --pause-tag "[pause]")"
@@ -20,7 +23,7 @@ HTTP_CODE=$(curl -sS -w "%{http_code}" -o "$VO_DIR/raw.mp3" \
   -H "Content-Type: application/json" \
   -d "$(jq -n --arg text "$TEXT" '{
     text: $text,
-    model_id: "eleven_v3",
+    model_id: "eleven_v4",
     voice_settings: { stability: 0.5 }
   }')")
 if [ "$HTTP_CODE" != "200" ]; then
