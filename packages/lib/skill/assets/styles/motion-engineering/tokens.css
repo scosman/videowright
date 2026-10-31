@@ -1,40 +1,491 @@
-/* Motion Engineering — design tokens
- * Aerospace HUD / blueprint. Charcoal canvas, cyan-white type, amber accent.
+/*
+ * Motion Engineering — design tokens and stage primitives.
+ *
+ * Aerospace HUD on a blueprint grid. Charcoal canvas, cyan-white type, amber signal,
+ * cyan measurement. Sizes are px at 1920x1080. See STYLE.md for how to use these and
+ * brand.md for why they are what they are.
+ *
+ * Sections: 1 fonts · 2 tokens · 3 stage primitives · 4 type roles · 5 HUD and surfaces
+ *
+ * Textures (textures/*.png) are pre-baked without dithering: render frames are PNG screenshots,
+ * and noisy or dithered full-frame layers make every frame much slower to encode.
  */
+
+/* 1 ─ Fonts. Bundled, OFL (fonts/OFL.txt). font-display: block so a frame never shows a
+   fallback face; samples also await document.fonts.load() in mount(). */
+
+@font-face {
+	font-family: "Archivo";
+	src: url("./fonts/archivo-variable.woff2") format("woff2");
+	font-weight: 100 900;
+	font-stretch: 62% 125%;
+	font-style: normal;
+	font-display: block;
+}
+
+@font-face {
+	font-family: "JetBrains Mono";
+	src: url("./fonts/jetbrains-mono-variable.woff2") format("woff2");
+	font-weight: 100 800;
+	font-style: normal;
+	font-display: block;
+}
+
+/* Glyphs neither face has (✓ ✗ ⏺ ⎿ ✻ ★ …). Second in every stack, never used alone. */
+@font-face {
+	font-family: "ME Symbols";
+	src: url("./fonts/me-symbols.woff2") format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: block;
+	unicode-range: U+2385-23FF, U+25A0-25FF, U+2605-2606, U+2713-2718, U+2722-2740, U+276E-276F,
+		U+2800-28FF;
+}
+
+/* 2 ─ Tokens */
+
 :root {
-	--color-bg: #0e141a;
-	--color-fg: #e8eef5;
-	--color-accent: #ff8800; /* HUD amber */
+	/* Canvas and surfaces: cool charcoal, lifted in small steps. */
+	--surface-0: #0a0e14;
+	--surface-1: #0f151d;
+	--surface-2: #151d27;
+	--surface-3: #1c2632;
+	--color-bg: var(--surface-0);
+	--color-surface: var(--surface-1);
 
-	--color-muted: #6f8294;
-	--color-border: #1e2a36;
-	--color-surface: #131c25;
+	/* Type colors: cyan-white, then two quieter steps. */
+	--color-fg: #e6f5fa;
+	--fg-2: #a6bccb;
+	--color-muted: #6f8798;
 
-	--font-display: "Space Grotesk", "Helvetica Neue", system-ui, sans-serif;
-	--font-body: "Space Grotesk", "Helvetica Neue", system-ui, sans-serif;
-	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+	/* Signal (amber) and measurement (cyan). One accent at a time. */
+	--amber: #ffb547;
+	--amber-dim: rgba(255, 181, 71, 0.32);
+	--color-accent: var(--amber);
+	--cyan: #5bd8f5;
+	--cyan-dim: rgba(91, 216, 245, 0.32);
+	--ok: #5ee3a1;
+	--warn: #ff6b57;
 
-	--space-sm: 12px;
-	--space-md: 24px;
-	--space-lg: 48px;
-	--space-xl: 96px;
+	/* Lines. */
+	--grid-line: rgba(91, 216, 245, 0.05);
+	--grid-major-line: rgba(91, 216, 245, 0.1);
+	--color-border: rgba(150, 215, 240, 0.16);
+	--hairline: rgba(150, 215, 240, 0.3);
+	--hairline-strong: rgba(150, 215, 240, 0.55);
+	--line-hair: 1px;
+	--line-thin: 2px;
+	--line-bold: 4px;
+	--rule-weight: var(--line-thin);
 
-	--duration-fast: 180ms;
-	--duration-normal: 360ms;
-	--duration-slow: 720ms;
+	/* Light: glows for signal elements, elevation for surfaces. */
+	--glow-amber: 0 0 1px rgba(255, 181, 71, 0.9), 0 0 14px rgba(255, 181, 71, 0.42), 0 0 42px
+		rgba(255, 181, 71, 0.16);
+	--glow-cyan: 0 0 1px rgba(91, 216, 245, 0.85), 0 0 14px rgba(91, 216, 245, 0.36), 0 0 42px
+		rgba(91, 216, 245, 0.12);
+	--glow-amber-filter: drop-shadow(0 0 10px rgba(255, 181, 71, 0.5));
+	--glow-cyan-filter: drop-shadow(0 0 10px rgba(91, 216, 245, 0.45));
+	--elev-1: 0 1px 0 rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.35);
+	--elev-2: 0 2px 0 rgba(0, 0, 0, 0.45), 0 26px 70px rgba(0, 0, 0, 0.5);
+	--elev-3: 0 2px 0 rgba(0, 0, 0, 0.5), 0 44px 120px rgba(0, 0, 0, 0.62);
+	--edge-light: inset 0 1px 0 rgba(230, 245, 250, 0.09);
 
-	--radius-sm: 0px;
-	--radius-md: 2px;
-	--stagger: 50ms;
-	--ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-	--ease-in: cubic-bezier(0.4, 0, 1, 1);
-	--rule-weight: 1px;
-	--scene-hold: 4s;
+	/* Typography. Archivo's width axis carries the system: expanded display, normal body,
+	   wide tracked caps for labels. Floors: display 120, headings 72, body 36, mono 28,
+	   labels 22. Nothing smaller, ever. */
+	--font-display: "Archivo", "ME Symbols", sans-serif;
+	--font-body: "Archivo", "ME Symbols", sans-serif;
+	--font-mono: "JetBrains Mono", "ME Symbols", monospace;
+	--type-numeral: 420px;
+	--type-hero: 256px;
+	--type-display: 200px;
+	--type-display-sm: 150px;
+	--type-h1: 96px;
+	--type-h2: 72px;
+	--type-readout-lg: 56px;
+	--type-body-lg: 48px;
+	--type-body: 36px;
+	--type-mono: 28px;
+	--type-label: 22px;
+	--stretch-display: 112%;
+	--stretch-body: 100%;
+	--stretch-label: 125%;
+	--track-display: -0.02em;
+	--track-body: 0;
+	--track-label: 0.16em;
+	--track-mono: 0.02em;
+	--lh-display: 0.94;
+	--lh-body: 1.28;
+	--lh-mono: 1.45;
 
-	--safe-x: 96px;
-	--safe-y: 80px;
+	/* Space. The grid is the measuring instrument: 40px cells, 160px majors, one major line
+	   through the frame centre on both axes. */
+	--space-sm: 16px;
+	--space-md: 32px;
+	--space-lg: 64px;
+	--space-xl: 120px;
+	--grid-cell: 40px;
+	--grid-major: 160px;
+	--safe-x: 160px;
+	--safe-y: 140px;
+	--hud-x: 80px;
+	--hud-y: 60px;
+	--radius-sm: 2px;
+	--radius-md: 6px;
+	--radius-lg: 12px;
 
-	--cyan: #4fd1e0;
-	--warn: #ffb800;
-	--grid-line: rgba(232, 238, 245, 0.06);
+	/* Motion. Expo-out settles, eased draws, no springs. */
+	--ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-draw: cubic-bezier(0.65, 0, 0.35, 1);
+	--ease-sweep: cubic-bezier(0.45, 0, 0.55, 1);
+	--ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+	--ease-out: var(--ease-settle);
+	--ease-in: var(--ease-exit);
+	--dur-tick: 50ms;
+	--dur-fast: 220ms;
+	--dur-normal: 520ms;
+	--dur-slow: 900ms;
+	--dur-draw: 760ms;
+	--dur-sweep: 640ms;
+	--dur-exit: 420ms;
+	--dur-ambient: 16000ms;
+	--duration-fast: var(--dur-fast);
+	--duration-normal: var(--dur-normal);
+	--duration-slow: var(--dur-slow);
+	--stagger: 80ms;
+	--stagger-tight: 40ms;
+	--scene-hold: 2400ms;
+
+	/* Layers. */
+	--z-grid: 0;
+	--z-key: 5;
+	--z-light: 8;
+	--z-content: 10;
+	--z-annotation: 20;
+	--z-grain: 40;
+	--z-hud: 50;
+	--z-transition: 100;
+
+	/* Static textures (no animation, so render-safe). */
+	--grain: url("./textures/grain.png");
+	--vignette: url("./textures/vignette.png");
+	--key-light: url("./textures/key.png");
+	--grid-marks: url("./textures/grid-marks.png");
+	--grid-marks-lit: url("./textures/grid-marks-lit.png");
+}
+
+/* 3 ─ Stage primitives. Layer order: grid → key light → vignette → world (content,
+   annotation) → grain → hud. The vignette sits under the content so it shades the plane and
+   never the type. The camera moves .me-world fully and .me-grid at 60% (parallax); the key
+   light, vignette, grain and HUD stay fixed. */
+
+.me-stage {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	background: var(--color-bg);
+	color: var(--color-fg);
+	font-family: var(--font-body);
+	font-stretch: var(--stretch-body);
+	-webkit-font-smoothing: antialiased;
+}
+
+.me-world {
+	position: absolute;
+	inset: 0;
+	z-index: var(--z-content);
+	transform-origin: 50% 50%;
+}
+
+/* Overscanned by one major cell so camera drift never shows an edge. Lines sit on tile
+   starts; the y offsets (60px, 20px) put a major and a minor line through y = 540. */
+.me-grid {
+	position: absolute;
+	inset: calc(var(--grid-major) * -1);
+	z-index: var(--z-grid);
+	transform-origin: 50% 50%;
+	background-image: var(--grid-marks),
+		linear-gradient(to right, var(--grid-major-line) 1px, transparent 1px),
+		linear-gradient(to bottom, var(--grid-major-line) 1px, transparent 1px),
+		linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+		linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+	background-size: var(--grid-major) var(--grid-major), var(--grid-major) var(--grid-major),
+		var(--grid-major) var(--grid-major), var(--grid-cell) var(--grid-cell), var(--grid-cell)
+		var(--grid-cell);
+	background-position: 0 60px, 0 60px, 0 60px, 0 20px, 0 20px;
+	mask-image: radial-gradient(ellipse 72% 68% at 50% 48%, #000 35%, rgba(0, 0, 0, 0.28) 100%);
+}
+
+/* Inside .me-grid. A brighter copy of the lines seen through a band that crosses the plane:
+   the grid "scans". Animate mask-position (see STYLE.md, Living frame). */
+.me-scan {
+	position: absolute;
+	inset: 0;
+	background-image: linear-gradient(
+			to right,
+			color-mix(in srgb, var(--cyan) 16%, transparent) 1px,
+			transparent 1px
+		),
+		linear-gradient(
+			to bottom,
+			color-mix(in srgb, var(--cyan) 16%, transparent) 1px,
+			transparent 1px
+		);
+	background-size: var(--grid-cell) var(--grid-cell);
+	background-position: 0 20px;
+	mask-image: linear-gradient(to bottom, transparent, #000 70%, transparent);
+	mask-size: 100% 320px;
+	mask-repeat: no-repeat;
+	mask-position: 0 -320px;
+}
+
+/* Inside .me-grid. The registration crosses brighten around a point when a lock lands:
+   set --flare-x/--flare-y (grid-element px, i.e. stage px + 160) and animate opacity. */
+.me-flare {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	background-image: var(--grid-marks-lit);
+	background-size: var(--grid-major) var(--grid-major);
+	background-position: 0 60px;
+	mask-image: radial-gradient(
+		circle 320px at var(--flare-x, 50%) var(--flare-y, 50%),
+		#000 30%,
+		transparent 100%
+	);
+}
+
+/* The key light: a soft cyan pool on the plane behind the focal point. Set --key-x/--key-y
+   (stage px) per scene. */
+.me-key {
+	position: absolute;
+	inset: 0;
+	z-index: var(--z-key);
+	pointer-events: none;
+	background: var(--key-light) no-repeat;
+	background-size: 1400px 1000px;
+	background-position: calc(var(--key-x, 960px) - 700px) calc(var(--key-y, 500px) - 500px);
+}
+
+.me-content {
+	position: absolute;
+	inset: 0;
+	z-index: var(--z-content);
+}
+
+.me-svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+	z-index: var(--z-annotation);
+	pointer-events: none;
+}
+
+.me-light {
+	position: absolute;
+	inset: 0;
+	z-index: var(--z-light);
+	pointer-events: none;
+	background: var(--vignette) no-repeat;
+	background-size: 100% 100%;
+}
+
+/* White speckle in 3px blocks, normal blending: lifts the dark canvas 0–6 levels and barely
+   touches light type, like a screen blend without the blend. */
+.me-grain {
+	position: absolute;
+	inset: 0;
+	z-index: var(--z-grain);
+	pointer-events: none;
+	background-image: var(--grain);
+	background-size: 256px 256px;
+	image-rendering: pixelated;
+}
+
+.me-hud {
+	position: absolute;
+	inset: 0;
+	z-index: var(--z-hud);
+	pointer-events: none;
+}
+
+/* Corner brackets on the HUD safe frame. */
+.me-frame {
+	position: absolute;
+	inset: var(--hud-y) var(--hud-x);
+	--arm: 28px;
+	--c: var(--hairline);
+	background:
+		linear-gradient(var(--c), var(--c)) top left / var(--arm) var(--line-thin),
+		linear-gradient(var(--c), var(--c)) top left / var(--line-thin) var(--arm),
+		linear-gradient(var(--c), var(--c)) top right / var(--arm) var(--line-thin),
+		linear-gradient(var(--c), var(--c)) top right / var(--line-thin) var(--arm),
+		linear-gradient(var(--c), var(--c)) bottom left / var(--arm) var(--line-thin),
+		linear-gradient(var(--c), var(--c)) bottom left / var(--line-thin) var(--arm),
+		linear-gradient(var(--c), var(--c)) bottom right / var(--arm) var(--line-thin),
+		linear-gradient(var(--c), var(--c)) bottom right / var(--line-thin) var(--arm);
+	background-repeat: no-repeat;
+}
+
+/* HUD readout slots, inside the frame band, clear of the content safe area. */
+.me-hud-slot {
+	position: absolute;
+	display: flex;
+	gap: 28px;
+	align-items: center;
+}
+.me-hud-slot[data-at="tl"] {
+	left: calc(var(--hud-x) + 44px);
+	top: calc(var(--hud-y) + 2px);
+}
+.me-hud-slot[data-at="tr"] {
+	right: calc(var(--hud-x) + 44px);
+	top: calc(var(--hud-y) + 2px);
+}
+.me-hud-slot[data-at="bl"] {
+	left: calc(var(--hud-x) + 44px);
+	bottom: calc(var(--hud-y) + 2px);
+}
+.me-hud-slot[data-at="br"] {
+	right: calc(var(--hud-x) + 44px);
+	bottom: calc(var(--hud-y) + 2px);
+}
+
+/* 4 ─ Type roles */
+
+.me-numeral,
+.me-hero,
+.me-display,
+.me-display-sm,
+.me-h1,
+.me-h2 {
+	font-family: var(--font-display);
+	font-weight: 600;
+	font-stretch: var(--stretch-display);
+	letter-spacing: var(--track-display);
+	line-height: var(--lh-display);
+	font-feature-settings: "case" 1;
+}
+.me-numeral {
+	font-size: var(--type-numeral);
+	font-weight: 650;
+	font-variant-numeric: tabular-nums lining-nums;
+}
+.me-hero {
+	font-size: var(--type-hero);
+	font-weight: 650;
+}
+.me-display {
+	font-size: var(--type-display);
+}
+.me-display-sm {
+	font-size: var(--type-display-sm);
+}
+.me-h1 {
+	font-size: var(--type-h1);
+	line-height: 1;
+}
+.me-h2 {
+	font-size: var(--type-h2);
+	font-weight: 560;
+	line-height: 1.04;
+}
+
+.me-body-lg,
+.me-body {
+	font-family: var(--font-body);
+	font-stretch: var(--stretch-body);
+	font-weight: 420;
+	line-height: var(--lh-body);
+	color: var(--fg-2);
+}
+.me-body-lg {
+	font-size: var(--type-body-lg);
+}
+.me-body {
+	font-size: var(--type-body);
+}
+
+.me-label {
+	font-family: var(--font-display);
+	font-size: var(--type-label);
+	font-weight: 640;
+	font-stretch: var(--stretch-label);
+	letter-spacing: var(--track-label);
+	text-transform: uppercase;
+	line-height: 1;
+	color: var(--color-muted);
+}
+
+.me-readout,
+.me-mono {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums slashed-zero;
+	letter-spacing: var(--track-mono);
+}
+.me-readout {
+	font-size: var(--type-label);
+	font-weight: 520;
+	line-height: 1;
+	text-transform: uppercase;
+	color: var(--cyan);
+}
+.me-mono {
+	font-size: var(--type-mono);
+	font-weight: 440;
+	line-height: var(--lh-mono);
+}
+.me-readout-lg {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums slashed-zero;
+	font-size: var(--type-readout-lg);
+	font-weight: 520;
+	line-height: 1;
+	letter-spacing: var(--track-mono);
+	color: var(--cyan);
+}
+
+.me-num {
+	font-variant-numeric: tabular-nums lining-nums;
+}
+/* Amber type. Display type never glows: glow is for strokes, bars and marks only. */
+.me-signal {
+	color: var(--amber);
+}
+.me-measure {
+	color: var(--cyan);
+}
+
+/* Masked line: the mask is the line box, the child moves. Padding keeps descenders. */
+.me-line {
+	display: block;
+	overflow: hidden;
+	padding-bottom: 0.12em;
+	margin-bottom: -0.12em;
+}
+.me-line > * {
+	display: inline-block;
+	will-change: transform;
+}
+
+/* 5 ─ HUD marks and surfaces */
+
+.me-panel {
+	background: linear-gradient(180deg, rgba(230, 245, 250, 0.045), rgba(230, 245, 250, 0.01) 45%),
+		var(--surface-1);
+	border: var(--line-hair) solid var(--color-border);
+	border-radius: var(--radius-md);
+	box-shadow: var(--edge-light), var(--elev-2);
+}
+
+.me-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 16px;
+	border: var(--line-hair) solid var(--color-border);
+	border-radius: var(--radius-sm);
+	background: rgba(10, 14, 20, 0.72);
 }

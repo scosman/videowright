@@ -10,7 +10,7 @@ Every phase follows the clean-room rule, runs the render→look→iterate loop b
 
 ## Phases
 
-- [ ] **Phase 1: Style foundation.**
+- [x] **Phase 1: Style foundation.**
   - Write the review tooling (`tools/`).
   - Snapshot the legacy style and pin `demo_video` to it.
   - New design system: bundled fonts, `tokens.css`, `STYLE.md` (including transitions vocabulary and recipes), `brand.md`.
