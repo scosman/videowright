@@ -21,7 +21,7 @@ Every phase follows the clean-room rule, runs the render→look→iterate loop b
   - Rewrite `reference/scenes.html` and `animations.jsx`.
   - Update the picker blurb in `setup_new_style.md` and the README note.
   - Final sync. Send the user a 10-sample contact sheet (FYI, not a gate).
-- [ ] **Phase 3: demo_v2 foundation + the hook.**
+- [x] **Phase 3: demo_v2 foundation + the hook.**
   - `videos/demo_v2/` (PLAN.md, script.md, timeline).
   - `components/v2/` kit (fonts, stage, hud, motion, logo, title-lockup, terminal) and `transitions/` registered in config.
   - Audio: ingest the v1 take (`retime check` / `apply` → sync → `voiceover.ts`), or the placeholder if it is missing. Add the typing SFX, `audio_plan.md`, and the track.

@@ -1,0 +1,318 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { beforeAll, describe, expect, it } from "vitest";
+import { loadModule } from "../../src/cli/ts_loader.js";
+
+// The demo_v2 kit (examples/videowright_demo/components/v2): the pure parts (camera, typing
+// schedule), and source rules every v2 file must keep (legibility floor, render safety,
+// imports, the logo asset).
+
+const DEMO = resolve(__dirname, "../../../../examples/videowright_demo");
+const KIT = join(DEMO, "components/v2");
+
+interface Camera {
+	x: number;
+	y: number;
+	z: number;
+}
+interface CameraKey extends Camera {
+	t: number;
+	ease?: (p: number) => number;
+}
+interface Motion {
+	createTicker(clock: () => number, signal: AbortSignal): Ticker;
+	cameraAt(keys: CameraKey[], t: number): Camera;
+	cameraTransform(cam: Camera): string;
+	IDENTITY: Camera;
+}
+type Tick = (t: number) => boolean;
+interface Ticker {
+	now(): number;
+	add(tick: Tick): void;
+}
+interface Hud {
+	decode(
+		ticker: Ticker,
+		el: { textContent: string | null },
+		text: string,
+		start: number,
+		opts?: { perChar?: number; signal?: AbortSignal },
+	): void;
+}
+interface Typing {
+	LAPTOP_TYPING_ONSETS: readonly number[];
+	COLD_OPEN: {
+		prompt: readonly string[];
+		cues: Record<string, { at: number; from: number; to: number }>;
+		pasteAt: number;
+		enterAt: number;
+	};
+	spreadOver(chars: number, onsets: readonly number[]): number[];
+	cueOnsets(cues: Array<{ at: number; from: number; to: number }>): number[];
+	coldOpenCharTimes(): number[];
+}
+
+let motion: Motion;
+let typing: Typing;
+let hud: Hud;
+
+beforeAll(async () => {
+	motion = (await loadModule(join(KIT, "motion.ts"))) as unknown as Motion;
+	typing = (await loadModule(join(KIT, "typing.ts"))) as unknown as Typing;
+	hud = (await loadModule(join(KIT, "hud.ts"))) as unknown as Hud;
+});
+
+/** A ticker driven by hand: step(t) runs every tick at time t, like one rAF frame. */
+function manualTicker() {
+	let now = 0;
+	let ticks: Tick[] = [];
+	return {
+		now: () => now,
+		add(tick: Tick) {
+			if (tick(now)) ticks.push(tick);
+		},
+		step(t: number) {
+			now = t;
+			ticks = ticks.filter((tick) => tick(t));
+		},
+		run(from: number, to: number) {
+			for (let t = from; t <= to; t += 16) this.step(t);
+		},
+	};
+}
+
+describe("camera", () => {
+	const keys: CameraKey[] = [
+		{ t: 1000, x: 500, y: 300, z: 2 },
+		{ t: 2000, x: 960, y: 540, z: 1, ease: (p) => p },
+	];
+
+	it("holds the first and last keys and eases between them", () => {
+		expect(motion.cameraAt(keys, 0)).toEqual({ x: 500, y: 300, z: 2 });
+		expect(motion.cameraAt(keys, 5000)).toEqual({ x: 960, y: 540, z: 1 });
+		const mid = motion.cameraAt(keys, 1500);
+		expect(mid.x).toBeCloseTo(730);
+		expect(mid.y).toBeCloseTo(420);
+		// Zoom interpolates in log space: halfway from 2x to 1x is sqrt(2).
+		expect(mid.z).toBeCloseTo(Math.SQRT2);
+		// The default ease is an in-out: slow off the first key.
+		const soft = motion.cameraAt([keys[0], { ...keys[1], ease: undefined }], 1100);
+		expect(soft.x - 500).toBeLessThan((960 - 500) * 0.1);
+	});
+
+	it("is the identity at the frame centre, zoom 1", () => {
+		expect(motion.cameraTransform(motion.IDENTITY)).toBe(
+			"translate(0.00px, 0.00px) scale(1.00000)",
+		);
+		// A 2x camera on (500, 300) puts that point at the frame centre.
+		expect(motion.cameraTransform({ x: 500, y: 300, z: 2 })).toBe(
+			"translate(-40.00px, -60.00px) scale(2.00000)",
+		);
+	});
+});
+
+describe("HUD decode", () => {
+	it("leaves its readout alone until it starts", () => {
+		const ticker = manualTicker();
+		const el = { textContent: "UP NEXT" };
+		hud.decode(ticker, el, "LOCK X 0320", 500);
+		ticker.run(0, 480);
+		expect(el.textContent).toBe("UP NEXT");
+		ticker.run(500, 1200);
+		expect(el.textContent).toBe("LOCK X 0320");
+	});
+
+	it("keeps an earlier-scheduled decode until a later one starts (the title card's probe)", () => {
+		const ticker = manualTicker();
+		const el = { textContent: "" };
+		hud.decode(ticker, el, "LOCK X 0320 Y 0526", 640);
+		ticker.run(0, 470);
+		// Scheduled at the wordmark cue, due well after LOCK has resolved.
+		hud.decode(ticker, el, "TARGET LOCKED", 1790);
+		ticker.run(486, 1700);
+		expect(el.textContent).toBe("LOCK X 0320 Y 0526");
+		ticker.run(1716, 2600);
+		expect(el.textContent).toBe("TARGET LOCKED");
+	});
+
+	it("hands its readout to a newer decode that starts while it is running", () => {
+		const ticker = manualTicker();
+		const el = { textContent: "" };
+		hud.decode(ticker, el, "A VERY LONG FIRST READOUT", 0);
+		ticker.run(0, 96);
+		hud.decode(ticker, el, "SECOND", ticker.now());
+		ticker.run(112, 1500);
+		expect(el.textContent).toBe("SECOND");
+	});
+
+	it("lets the decode scheduled last win, even when an older one starts later", () => {
+		// The title card opened at a later beat (dev deep link): every probe is scheduled at once.
+		const ticker = manualTicker();
+		const el = { textContent: "" };
+		hud.decode(ticker, el, "LOCK X 0320 Y 0526", 640);
+		hud.decode(ticker, el, "TARGET LOCKED", 1320);
+		hud.decode(ticker, el, "UP NEXT · 03 WEB TECH", 0);
+		ticker.run(0, 3000);
+		expect(el.textContent).toBe("UP NEXT · 03 WEB TECH");
+	});
+
+	it("stops once its segment's signal aborts", () => {
+		const ticker = manualTicker();
+		const el = { textContent: "KEEP" };
+		const segment = new AbortController();
+		hud.decode(ticker, el, "STALE", 300, { signal: segment.signal });
+		segment.abort();
+		ticker.run(0, 1000);
+		expect(el.textContent).toBe("KEEP");
+	});
+});
+
+describe("ticker", () => {
+	it("keeps a tick added while a frame is running", () => {
+		const frames: Array<() => void> = [];
+		const raf = globalThis.requestAnimationFrame;
+		globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => {
+			frames.push(() => cb(0));
+			return frames.length;
+		};
+		try {
+			let now = 0;
+			const ticker = motion.createTicker(() => now, new AbortController().signal);
+			const seen: number[] = [];
+			ticker.add((t) => {
+				if (t === 16) {
+					ticker.add((u) => {
+						seen.push(u);
+						return true;
+					});
+				}
+				return t < 16;
+			});
+			for (const t of [16, 32, 48]) {
+				now = t;
+				frames.shift()?.();
+			}
+			// Added during the frame at 16 (run once by add), then on every later frame.
+			expect(seen).toEqual([16, 32, 48]);
+		} finally {
+			globalThis.requestAnimationFrame = raf;
+		}
+	});
+});
+
+describe("cold open typing", () => {
+	it("types one character per scheduled time, increasing, on the SFX's keystrokes", () => {
+		const times = typing.coldOpenCharTimes();
+		const prompt = typing.COLD_OPEN.prompt.join("");
+		expect(times).toHaveLength(prompt.length);
+		for (let i = 1; i < times.length; i++) expect(times[i]).toBeGreaterThan(times[i - 1]);
+		const keys = typing.cueOnsets([typing.COLD_OPEN.cues.typing, typing.COLD_OPEN.cues.typingTail]);
+		// The first and last characters land exactly on the first and last keys.
+		expect(times[0]).toBe(Math.round(keys[0] * 1000));
+		expect(times[times.length - 1]).toBe(Math.round(keys[keys.length - 1] * 1000));
+	});
+
+	it("splits the prompt at the comma, across the SFX's breath", () => {
+		const times = typing.coldOpenCharTimes();
+		const first = typing.COLD_OPEN.prompt[0];
+		expect(first.endsWith(",")).toBe(true);
+		const gaps = times.slice(1).map((t, i) => t - times[i]);
+		const longest = gaps.indexOf(Math.max(...gaps));
+		expect(longest).toBe(first.length - 1);
+		expect(gaps[longest]).toBeGreaterThan(200);
+	});
+
+	it("pastes and submits after the last key, before the VO's first word", () => {
+		const times = typing.coldOpenCharTimes();
+		const { pasteAt, enterAt } = typing.COLD_OPEN;
+		expect(pasteAt * 1000).toBeGreaterThan(times[times.length - 1]);
+		expect(enterAt).toBeGreaterThan(pasteAt);
+		// The paste and Enter cues each play exactly one key, sounding on the frame that shows it.
+		const { paste, enter } = typing.COLD_OPEN.cues;
+		expect(typing.cueOnsets([paste])).toHaveLength(1);
+		expect(typing.cueOnsets([paste])[0]).toBeCloseTo(pasteAt, 3);
+		expect(typing.cueOnsets([enter])).toHaveLength(1);
+		expect(typing.cueOnsets([enter])[0]).toBeCloseTo(enterAt, 3);
+	});
+
+	it("spreads characters over keystrokes by keystroke index", () => {
+		expect(typing.spreadOver(3, [0, 1])).toEqual([0, 500, 1000]);
+		expect(typing.spreadOver(2, [0, 0.1, 0.5])).toEqual([0, 500]);
+		expect(typing.spreadOver(1, [0.2, 0.4])).toEqual([200]);
+		expect(typing.spreadOver(0, [0.2])).toEqual([]);
+	});
+
+	it("knows the SFX's keystrokes in order and inside the file", () => {
+		const onsets = typing.LAPTOP_TYPING_ONSETS;
+		for (let i = 1; i < onsets.length; i++) expect(onsets[i]).toBeGreaterThan(onsets[i - 1]);
+		expect(onsets[onsets.length - 1]).toBeLessThan(3.03);
+	});
+});
+
+describe("v2 sources", () => {
+	const segments = readdirSync(join(DEMO, "segments"))
+		.filter((d) => d.startsWith("v2-"))
+		.map((d) => join(DEMO, "segments", d, "index.ts"));
+	const kit = readdirSync(KIT)
+		.filter((f) => f.endsWith(".ts") || f.endsWith(".css"))
+		.map((f) => join(KIT, f));
+	const files = [...kit, ...segments];
+	const read = (path: string) => readFileSync(path, "utf-8");
+
+	it("covers the kit and the segments", () => {
+		expect(segments.length).toBeGreaterThanOrEqual(2);
+		expect(kit.map((f) => f.split("/").pop())).toEqual(
+			expect.arrayContaining(["motion.ts", "hud.ts", "stage.ts", "terminal.ts", "v2.css"]),
+		);
+	});
+
+	it("respect the legibility floor (no font-size below 22px)", () => {
+		for (const file of files) {
+			for (const m of read(file).matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)) {
+				expect(Number(m[1]), `${file}: ${m[0]}`).toBeGreaterThanOrEqual(22);
+			}
+		}
+	});
+
+	it("use no Math.random and no SMIL", () => {
+		for (const file of files) {
+			const source = read(file);
+			expect(source, file).not.toMatch(/Math\.random\s*\(/);
+			expect(source, file).not.toMatch(/<animate|<set\b/);
+		}
+	});
+
+	it("import only videowright and relative paths", () => {
+		for (const file of files.filter((f) => f.endsWith(".ts"))) {
+			for (const m of read(file).matchAll(/^import[^"]*"([^"]+)";/gm)) {
+				expect(m[1] === "videowright" || m[1].startsWith("."), `${file}: ${m[1]}`).toBe(true);
+			}
+		}
+	});
+
+	it("draw the logo from the bundled mark, which is the spec's mark", () => {
+		expect(read(join(KIT, "logo.ts"))).toContain('from "./assets/videowright-mark.svg?raw"');
+		const asset = read(join(KIT, "assets/videowright-mark.svg"));
+		const spec = read(resolve(DEMO, "../../specs/projects/demo_v2/assets/videowright-mark.svg"));
+		expect(asset).toBe(spec);
+		// MARK_BOUNDS is the strokes' extent plus their round caps.
+		const lines = [
+			...asset.matchAll(
+				/<line[^>]*x1="(\d+)" y1="(\d+)" x2="(\d+)" y2="(\d+)"[^>]*stroke-width="(\d+)"/g,
+			),
+		];
+		expect(lines).toHaveLength(3);
+		const r = Number(lines[0][5]) / 2;
+		const xs = lines.flatMap((l) => [Number(l[1]), Number(l[3])]);
+		const ys = lines.flatMap((l) => [Number(l[2]), Number(l[4])]);
+		const bounds = `{ x: ${Math.min(...xs) - r}, y: ${Math.min(...ys) - r}, w: ${Math.max(...xs) - Math.min(...xs) + 2 * r}, h: ${Math.max(...ys) - Math.min(...ys) + 2 * r} }`;
+		expect(read(join(KIT, "logo.ts"))).toContain(`MARK_BOUNDS = ${bounds}`);
+	});
+
+	it("bundle the wordmark face with its licence", () => {
+		const css = read(join(KIT, "v2.css"));
+		expect(css).toContain('url("./assets/fonts/outfit-semibold.woff2")');
+		expect(css).toContain("font-display: block");
+		expect(read(join(KIT, "assets/fonts/OFL.txt"))).toContain("SIL Open Font License");
+	});
+});

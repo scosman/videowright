@@ -1,0 +1,150 @@
+/*
+ * demo_v2 kit styles, on top of styles/motion-engineering/tokens.css. Sizes are px at
+ * 1920x1080 and respect the style's legibility floor (labels 22px, mono 28px, body 36px).
+ */
+
+/* The Videowright wordmark face. Bundled, OFL (assets/fonts/OFL.txt). */
+@font-face {
+	font-family: "Outfit";
+	src: url("./assets/fonts/outfit-semibold.woff2") format("woff2");
+	font-weight: 600;
+	font-style: normal;
+	font-display: block;
+}
+
+/* ── Logo ───────────────────────────────────────────────────────────────────────────── */
+
+.v2-wordmark {
+	font-family: "Outfit", sans-serif;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	line-height: 1;
+	white-space: nowrap;
+	/* Near-white on dark (the brand's dark-background wordmark), not the HUD's cyan-white. */
+	color: #f4f6fc;
+}
+
+.v2-mark {
+	position: absolute;
+	overflow: visible;
+}
+
+/* ── Terminal ───────────────────────────────────────────────────────────────────────── */
+/* A real screen, not an instrument: neutral greys with no cyan cast. Claude orange appears
+   only on Claude's own marks (.v2-claude). */
+
+.v2-term {
+	--term-bg: #0d0e10;
+	--term-fg: #dcdde0;
+	--term-bright: #f4f4f6;
+	--term-dim: #8d9198;
+	--term-faint: #5c6067;
+	--term-line: #4a4e55;
+	--claude: #d97757;
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	background: var(--term-bg);
+	color: var(--term-fg);
+	font-family: var(--font-mono);
+	font-size: 32px;
+	font-weight: 440;
+	line-height: 46px;
+	font-variant-ligatures: none;
+	-webkit-font-smoothing: antialiased;
+}
+
+.v2-term-world {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 1920px;
+	height: 1080px;
+	transform-origin: 0 0;
+}
+
+.v2-term-bar {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 1920px;
+	height: 56px;
+	background: #18191c;
+	border-bottom: 1px solid #26282c;
+}
+
+.v2-term-dot {
+	position: absolute;
+	top: 21px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #3a3d43;
+}
+
+.v2-term-title {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	line-height: 56px;
+	text-align: center;
+	font-size: 22px;
+	font-weight: 500;
+	color: #7d8188;
+}
+
+.v2-term-row {
+	position: absolute;
+	left: 0;
+	height: 46px;
+	white-space: pre;
+}
+
+.v2-term-input {
+	position: absolute;
+	left: 40px;
+	width: 1840px;
+	height: 92px;
+	box-sizing: border-box;
+	border: 2px solid var(--term-line);
+	border-radius: 14px;
+}
+
+.v2-caret {
+	display: inline-block;
+	width: 19px;
+	height: 40px;
+	vertical-align: -9px;
+	background: var(--term-fg);
+}
+
+.v2-chip {
+	display: inline-block;
+	line-height: 40px;
+	padding: 0 10px;
+	border-radius: 6px;
+	background: #2a2c31;
+	color: #c3c6cc;
+}
+
+.v2-code {
+	color: var(--term-bright);
+	background: #222428;
+	border-radius: 6px;
+	padding: 0 8px;
+}
+
+.v2-claude {
+	color: var(--claude);
+}
+.v2-dim {
+	color: var(--term-dim);
+}
+.v2-faint {
+	color: var(--term-faint);
+}
+.v2-bold {
+	color: var(--term-bright);
+	font-weight: 700;
+}
