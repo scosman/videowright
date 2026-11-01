@@ -15,9 +15,15 @@ const track: AudioTrack = {
 			// [2] 5.45 release, after "technologies." (ends 12.55). [3] 6.37 exit, 0.15s before
 			// "That" (13.85).
 			"v2-title-card": [0.47, 4.19, 5.45, 6.37],
-			// The gallery and live dev: the voiceover's timing (cues annotated in voiceover.ts).
+			// From the gallery on: the voiceover's timing (cues annotated in voiceover.ts).
 			"v2-web-tech-gallery": [2.677, 5.424, 7.424, 8.404, 9.495, 11.415, 13.585, 15.365, 17.543],
 			"v2-interactive-dev": [1.9, 2.96, 5.785],
+			"v2-pixel-perfect-export": [1.22, 2.41, 3.65, 5.33, 7.521],
+			"v2-voiceover-sync": [2.54, 5.44, 6.92, 8.922],
+			"v2-any-coding-agent": [1.36, 3.737],
+			// The end: 5.0s after "cold." (track 62.858), so the video runs to 67.858s and the
+			// render pads the track's last 4.46s with silence.
+			"v2-install-cta": [3.34, 10.65],
 		},
 	},
 	audio_plan_path: "../../audio_plan.md",

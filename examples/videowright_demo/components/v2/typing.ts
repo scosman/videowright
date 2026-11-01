@@ -45,6 +45,42 @@ export function spreadOver(chars: number, onsets: readonly number[]): number[] {
 	});
 }
 
+/**
+ * Times (ms) for typing `text` between `start` and `end` (ms) on a seeded, human rhythm: each
+ * key's gap jitters, and the key after a space or punctuation waits longer. The first
+ * character lands on `start` and the last on `end` whatever the span, so a caller derives the
+ * span from its advance window and a re-timed take re-paces the typing. No Math.random: the
+ * same text and seed type the same in every render.
+ */
+export function typeSchedule(text: string, start: number, end: number, seed = 1): number[] {
+	const n = text.length;
+	if (n === 0) return [];
+	if (n === 1) return [start];
+	const gaps: number[] = [];
+	for (let i = 1; i < n; i++) {
+		const h = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+		const jitter = h - Math.floor(h);
+		const beat = /[\s,.:/]/.test(text[i - 1]) ? 1.7 : 1;
+		gaps.push((0.6 + 0.8 * jitter) * beat);
+	}
+	const total = gaps.reduce((a, b) => a + b, 0);
+	let acc = 0;
+	return [
+		start,
+		...gaps.map((g) => {
+			acc += g;
+			return start + ((end - start) * acc) / total;
+		}),
+	];
+}
+
+/** How many of the characters scheduled at `times` (ms) are typed by time `t` (ms). */
+export function charsAt(times: readonly number[], t: number): number {
+	let n = 0;
+	while (n < times.length && times[n] <= t) n++;
+	return n;
+}
+
 // ── The cold open's prompt ────────────────────────────────────────────────────────────
 // audio/audio_plan.md places these same cues (a test keeps the two in step). The cold open is
 // the first segment, so its clock is the track's clock (to within the render's ~20ms

@@ -48,6 +48,8 @@ interface Typing {
 		enterAt: number;
 	};
 	spreadOver(chars: number, onsets: readonly number[]): number[];
+	typeSchedule(text: string, start: number, end: number, seed?: number): number[];
+	charsAt(times: readonly number[], t: number): number;
 	cueOnsets(cues: Array<{ at: number; from: number; to: number }>): number[];
 	coldOpenCharTimes(): number[];
 }
@@ -288,6 +290,52 @@ describe("cold open typing", () => {
 		const onsets = typing.LAPTOP_TYPING_ONSETS;
 		for (let i = 1; i < onsets.length; i++) expect(onsets[i]).toBeGreaterThan(onsets[i - 1]);
 		expect(onsets[onsets.length - 1]).toBeLessThan(3.03);
+	});
+});
+
+describe("typing on a seeded rhythm", () => {
+	const text = "npx videowright render --output explainer.mp4";
+
+	it("types every character in order, first on start and last on end", () => {
+		const times = typing.typeSchedule(text, 100, 900, 5);
+		expect(times).toHaveLength(text.length);
+		expect(times[0]).toBe(100);
+		expect(times[times.length - 1]).toBeCloseTo(900, 9);
+		for (let i = 1; i < times.length; i++) expect(times[i]).toBeGreaterThan(times[i - 1]);
+	});
+
+	it("is the same on every call (seeded, no Math.random) and differs by seed", () => {
+		expect(typing.typeSchedule(text, 0, 1000, 5)).toEqual(typing.typeSchedule(text, 0, 1000, 5));
+		expect(typing.typeSchedule(text, 0, 1000, 5)).not.toEqual(
+			typing.typeSchedule(text, 0, 1000, 6),
+		);
+	});
+
+	it("re-paces with its window: a longer span stretches every gap in proportion", () => {
+		const short = typing.typeSchedule(text, 0, 800, 5);
+		const long = typing.typeSchedule(text, 0, 1600, 5);
+		long.forEach((t, i) => expect(t).toBeCloseTo(short[i] * 2, 9));
+	});
+
+	it("waits longer on the key after a space than its average key", () => {
+		const times = typing.typeSchedule(text, 0, 1000, 5);
+		const gaps = times.slice(1).map((t, i) => t - times[i]);
+		const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+		const afterSpaces = gaps.filter((_, i) => text[i] === " ");
+		expect(afterSpaces.reduce((a, b) => a + b, 0) / afterSpaces.length).toBeGreaterThan(mean);
+	});
+
+	it("handles empty and one-character text", () => {
+		expect(typing.typeSchedule("", 0, 100)).toEqual([]);
+		expect(typing.typeSchedule("x", 40, 100)).toEqual([40]);
+	});
+
+	it("counts the characters due by a time", () => {
+		const times = [0, 100, 200];
+		expect(typing.charsAt(times, -1)).toBe(0);
+		expect(typing.charsAt(times, 0)).toBe(1);
+		expect(typing.charsAt(times, 150)).toBe(2);
+		expect(typing.charsAt(times, 500)).toBe(3);
 	});
 });
 

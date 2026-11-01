@@ -29,7 +29,7 @@ Every phase follows the clean-room rule, runs the render→look→iterate loop b
 - [x] **Phase 4: Gallery + live dev.**
   - `v2-web-tech-gallery`: SVG, real ECharts, Three.js + Lottie, app UI with camera and cursor.
   - `v2-interactive-dev`: browser kit, hot-reload into the shared title lockup.
-- [ ] **Phase 5: Remaining beats.** `v2-pixel-perfect-export`, `v2-voiceover-sync`, `v2-any-coding-agent`, `v2-install-cta` (agent prompt box with `github.com/scosman/videowright`, 5s end hold). The full 8-segment timeline.
+- [x] **Phase 5: Remaining beats.** `v2-pixel-perfect-export`, `v2-voiceover-sync`, `v2-any-coding-agent`, `v2-install-cta` (agent prompt box with `github.com/scosman/videowright`, 5s end hold). The full 8-segment timeline.
 - [ ] **Phase 6: Whole-video polish + final render.**
   - Re-tune the `[[pause]]` lengths to the built animation (`retime apply` on the same take) → re-sync → rebuild the track.
   - Check every transition with frame strips, plus pacing, continuity, and the legibility audit.

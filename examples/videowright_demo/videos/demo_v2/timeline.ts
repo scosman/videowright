@@ -14,6 +14,14 @@ const timeline: Timeline = {
 		{ id: "v2-web-tech-gallery", transition: "me-push" },
 		// Into the dev loop: the sweep opens from the split screen's divider.
 		{ id: "v2-interactive-dev", transition: "me-split" },
+		// The instrument redraws: from the live preview to the shell that renders it.
+		{ id: "v2-pixel-perfect-export", transition: "me-sweep" },
+		// Into the video's internals: the camera pushes through the exported file to its script.
+		{ id: "v2-voiceover-sync", transition: "me-push" },
+		// The same story, a new readout: the agents it runs in.
+		{ id: "v2-any-coding-agent", transition: "me-sweep" },
+		// The close: the camera pushes in to the end card.
+		{ id: "v2-install-cta", transition: "me-push" },
 	],
 	default_audio_track: defaultAudioTrack,
 };

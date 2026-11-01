@@ -11,7 +11,7 @@ const voiceover: Voiceover = {
 	// segment's first word); the exceptions are the cold open's hard cut, which falls in the
 	// breath after "prompt.", and the title card's release, just after "technologies.".
 	// From the gallery on, advances have three decimals so each lead is exactly 0.150s.
-	// Only segments that exist are listed; later phases add theirs.
+	// The last segment's final advance ends the video: 5.0s after its last word, the end hold.
 	timing: {
 		perSegment: {
 			// [0] 5.05 "with a single prompt" -> Video is ready. [1] 6.73 the cut (breath after "prompt." 6.28).
@@ -28,6 +28,21 @@ const voiceover: Voiceover = {
 			// Starts 30.643. [0] 1.9 "and" (32.693) -> Enter. [1] 2.96 "reloads" (33.753) -> hot
 			// reload. [2] 5.785 exit, before "One" (36.578).
 			"v2-interactive-dev": [1.9, 2.96, 5.785],
+			// Starts 36.428. [0] 1.22 "your" (37.798) -> Enter, the render runs. [1] 2.41 "It's"
+			// (38.988) -> run 2 hashes identically. [2] 3.65 "pixel-perfect" (40.228) -> the player
+			// opens. [3] 5.33 "not" (41.908) -> the HUD locks onto the frame. [4] 7.521 exit,
+			// before "Your" (44.099).
+			"v2-pixel-perfect-export": [1.22, 2.41, 3.65, 5.33, 7.521],
+			// Starts 43.949. [0] 2.54 "The" (46.639) -> line 2. [1] 5.44 "Edit" (49.539) -> the
+			// cursor retypes line 3. [2] 6.92 "resyncs" (51.019) -> the block re-times. [3] 8.922
+			// exit, before "And" (53.021).
+			"v2-voiceover-sync": [2.54, 5.44, 6.92, 8.922],
+			// Starts 52.871. [0] 1.36 "every" (54.381) -> SUPPORTED, agent by agent. [1] 3.737
+			// exit, before "Install" (56.758).
+			"v2-any-coding-agent": [1.36, 3.737],
+			// Starts 56.608. [0] 3.34 "You'll" (60.098) -> the closing line, the lock on the URL.
+			// [1] 10.65 the end: "cold." ends 62.258, plus the 5.0s end hold.
+			"v2-install-cta": [3.34, 10.65],
 		},
 	},
 	notes:

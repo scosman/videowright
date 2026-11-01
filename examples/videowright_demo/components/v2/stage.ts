@@ -1,6 +1,6 @@
 import type { PlayerContext } from "videowright";
 import "./v2.css";
-import { type Ticker, createTicker, css, expoOut, ms, sineInOut } from "./motion.js";
+import { type Ticker, createTicker, css, draw, expoOut, ms, sineInOut, svg } from "./motion.js";
 
 // The Motion Engineering stage for demo_v2: grid → key light → vignette → world (content and
 // annotation SVG) → grain. Every v2 stage has the same grid at camera identity, so a cut or a
@@ -161,4 +161,45 @@ export function flare(
 			? [{ opacity: 1, easing: css("--ease-settle") }, { opacity: 0 }]
 			: [{ opacity: 0 }, { opacity: 1, offset: attack }, { opacity: 0 }];
 	stage.flare.animate(frames, { duration, delay, fill: "forwards" });
+}
+
+/**
+ * The style's panel entrance (the samples' panelIn): a hairline outline draws around the
+ * panel, the surface fills top-down behind it, and the outline hands over to the panel's own
+ * border. The outline is drawn in the stage's annotation layer, at the panel's layout box.
+ */
+export function panelIn(
+	stage: Stage,
+	panel: HTMLElement,
+	delay: number,
+	duration = ms("--dur-draw"),
+): SVGPathElement {
+	const { x, y, w, h } = boxOf(panel);
+	const r = Number.parseFloat(getComputedStyle(panel).borderTopLeftRadius) || 0;
+	const [l, t, rt, b] = [x + 0.5, y + 0.5, x + w - 0.5, y + h - 0.5];
+	const outline = svg(stage.svg, "path", {
+		d: `M${l + r} ${t}H${rt - r}A${r} ${r} 0 0 1 ${rt} ${t + r}V${b - r}A${r} ${r} 0 0 1 ${rt - r} ${b}H${l + r}A${r} ${r} 0 0 1 ${l} ${b - r}V${t + r}A${r} ${r} 0 0 1 ${l + r} ${t}Z`,
+		fill: "none",
+		stroke: "var(--hairline-strong)",
+		"stroke-width": 1.5,
+	});
+	draw(outline, delay, duration);
+	panel.animate(
+		[
+			{ clipPath: "inset(-160px -160px 100% -160px)", opacity: 0.3 },
+			{ clipPath: "inset(-160px)", opacity: 1 },
+		],
+		{
+			duration: ms("--dur-slow"),
+			delay: delay + duration * 0.35,
+			easing: css("--ease-settle"),
+			fill: "both",
+		},
+	);
+	outline.animate([{ opacity: 1 }, { opacity: 0 }], {
+		duration: ms("--dur-normal"),
+		delay: delay + duration,
+		fill: "forwards",
+	});
+	return outline;
 }

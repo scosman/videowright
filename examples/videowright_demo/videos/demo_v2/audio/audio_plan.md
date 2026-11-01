@@ -84,6 +84,10 @@ ffmpeg -y \
 
 ## Log
 
+## 2026-11-01 -- Synced timing for the remaining beats (v1)
+**Segments:** v2-pixel-perfect-export, v2-voiceover-sync, v2-any-coding-agent, v2-install-cta (the full 8-segment timeline)
+**Total duration:** 63.40s (track); the timeline ends at 67.858s, 5.0s after the last VO word ("cold." ends at 62.858s track), and the render pads the track's tail with silence. Every cued advance sits 0.150s before its word; the track is unchanged (no rebuild).
+
 ## 2026-11-01 -- Rebuilt v1 with a -1.5 dBTP ceiling, re-synced the title card
 **Change:** loudnorm TP -1 -> -1.5 (the AAC encode in the MP4 measured -0.9 dBTP); the title card gains an advance on "web" and its exit moves to 0.15s before "That" (6.27 -> 6.37).
 **Why:** design review (true peak) and code review (the 0.15s anchor rule). Not yet adopted by the user, so v1 was rebuilt in place. The final master (Phase 6) should use two-pass linear loudnorm: single-pass rides the gain over the first seconds.
