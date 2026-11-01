@@ -20,6 +20,8 @@ styles/
 │   ├── STYLE.md            # description, rules, frontmatter (title, slug, picker_description, font_sources)
 │   ├── tokens.css           # CSS custom properties on :root
 │   ├── brand.md             # human-readable token rationale
+│   ├── fonts/               # optional: bundled font files, loaded by @font-face in tokens.css
+│   ├── textures/            # optional: images tokens.css uses by relative URL
 │   ├── reference/
 │   │   ├── scenes.html      # rendered scene mockups, browsable in a web browser
 │   │   └── animations.jsx   # motion vocabulary mockups

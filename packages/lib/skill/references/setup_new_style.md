@@ -30,7 +30,7 @@ Present this message verbatim — do not rephrase or regenerate it:
 >    - **Editorial Mono** — Black ink on cream paper. One red accent. Reads like a magazine.
 >    - **Swiss Console** — Strict 12-column grid. Hairline rules. Tabular numerals. Micro-labels everywhere.
 >    - **Neon Terminal** — CRT terminal interface. Mono throughout. Phosphor-green on near-black, stepped motion.
->    - **Motion Engineering** — Aerospace HUD / blueprint. Charcoal canvas, cyan-white type, amber accent. Dimension lines and crosshairs.
+>    - **Motion Engineering** — Aerospace HUD on a blueprint grid. Charcoal canvas, cyan-white type, amber signal, cyan measurement. Elements measure themselves in.
 >    - **Iso Diagram** — Pencil-and-paper explainer aesthetic. Hand-drawn lines, pastel fills, isometric drawings.
 >    - **Risograph** — Two-color screen-print on warm paper. Pink + ink-blue, visible grain, stop-motion cadence.
 
@@ -56,9 +56,9 @@ The user provides a path to another Videowright project (the "source project").
 
 1. Read `<source-project>/styles/` and list available styles (by reading `STYLE.md` frontmatter in each subfolder).
 2. If multiple styles exist in the source project, ask the user which one to copy. If only one, confirm it.
-3. Read `<source-project>/styles/<slug>/STYLE.md` and `<source-project>/styles/<slug>/tokens.css`.
-4. Write them to `styles/<slug>/STYLE.md` and `styles/<slug>/tokens.css` in this project (the current working directory). The slug is preserved from the source.
-5. If `copySample` is true and `<source-project>/styles/<slug>/sample/` exists, copy it to `styles/<slug>/sample/` in this project. The final actions step copies each sample into `segments/`.
+3. Read `<source-project>/styles/<slug>/STYLE.md` and `<source-project>/styles/<slug>/tokens.css` to confirm the choice.
+4. Copy the entire `<source-project>/styles/<slug>/` folder to `styles/<slug>/` in this project (the current working directory), not just those two files. A style can bundle assets that `tokens.css` loads by relative URL, such as `fonts/` (`@font-face`) and `textures/` (background images), plus `brand.md`, `reference/` and `sample/`. Leaving them behind breaks the style: fonts fall back to system faces, and samples that await `document.fonts.load()` in `mount()` fail. The slug is preserved from the source.
+5. If `copySample` is true and `styles/<slug>/sample/` exists after the copy, the final actions step copies each sample into `segments/`. If `copySample` is false, the copied `sample/` folder stays in the style folder as reference only.
 6. Show the user a summary of what was copied and ask: "Look good or any changes?"
 7. Iterate until confirmed.
 
@@ -79,7 +79,7 @@ The user types a description: "Modern look using Inter, white background, #e0e23
 Choose one of the built-in packs shipped with Videowright. The pack list and descriptions are already shown in the question above — no need to read frontmatter at runtime.
 
 1. The user picks a pack from the list presented in the question. Confirm the choice.
-2. Copy the entire `node_modules/videowright/skill/assets/styles/<slug>/` folder into the consumer repo at `styles/<slug>/`. This includes `STYLE.md`, `tokens.css`, `brand.md`, `reference/scenes.html`, `reference/animations.jsx`, and `sample/*.ts`. The slug is locked to the pack's slug -- no rename.
+2. Copy the entire `node_modules/videowright/skill/assets/styles/<slug>/` folder into the consumer repo at `styles/<slug>/`. This includes `STYLE.md`, `tokens.css`, `brand.md`, `reference/scenes.html`, `reference/animations.jsx`, `sample/*.ts`, and any asset folders the pack bundles, such as `fonts/` (the `@font-face` files) and `textures/` (background images). `tokens.css` loads those by relative URL, so they must sit next to it. The slug is locked to the pack's slug -- no rename.
 3. If `copySample` is true, copy each `styles/<slug>/sample/<scene>.ts` into `segments/<slug>-sample-<scene>/index.ts` (one folder per sample; the dev server only discovers `segments/<id>/index.ts`, where the folder name equals the segment id). If any destination already exists, skip that file and report it to the user.
 
 After any mode, the user's copy in `styles/<slug>/` is the source of truth. The skill does not auto-update it from `skill/assets/` later.
@@ -153,6 +153,6 @@ font_sources:
 | User's source material has no typography info | Pick a sensible default (Inter for body/display, JetBrains Mono for mono). Flag the choice. |
 | User's source material has no color info | Pick neutrals (white bg, dark fg, blue accent). Flag the choice. |
 | No built-in packs exist yet (Mode 4) | Tell the user no built-in packs are available; suggest Mode 1 or Mode 3 instead. |
-| `font_sources` URLs are not Google Fonts | Accept any URL. Note that self-hosted fonts are not bundled -- the URL must be accessible at runtime. |
+| `font_sources` URLs are not Google Fonts | Accept any URL. `font_sources` is provenance only: nothing loads it. Fonts render when the files are bundled in `styles/<slug>/fonts/` and declared with `@font-face` in `tokens.css` using relative URLs (`url("./fonts/<file>.woff2")`), as the Motion Engineering pack does. Otherwise the style renders in the browser's fallback fonts. |
 | User provides a URL in Mode 1 | Fetch the page, extract CSS/design tokens from the markup, and proceed with style creation. If the URL is inaccessible, tell the user and suggest pasting the content directly. |
 | Source project path in Mode 2 does not contain a `styles/` folder | Tell the user the path does not appear to be a Videowright project. Ask them to check the path. |

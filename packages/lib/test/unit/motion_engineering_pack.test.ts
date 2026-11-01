@@ -9,8 +9,19 @@ const PACK = resolve(__dirname, "../../skill/assets/styles/motion-engineering");
 const DEMO = resolve(__dirname, "../../../../examples/videowright_demo");
 const DEMO_STYLE = resolve(DEMO, "styles/motion-engineering");
 
-// The samples rebuilt so far; the rest of the ten keep the pre-upgrade files until replaced.
-const UPGRADED_SAMPLES = ["title", "section", "kinetic", "bullet", "stat"];
+const SAMPLES = [
+	"title",
+	"section",
+	"kinetic",
+	"bullet",
+	"stat",
+	"feature",
+	"grid",
+	"ui-showcase",
+	"content",
+	"cta",
+];
+const KIT_END = "// ── Scene";
 
 // Every token name the pre-upgrade pack defined. Segments and styles may rely on any of them.
 const LEGACY_TOKENS = [
@@ -47,6 +58,8 @@ const LEGACY_TOKENS = [
 const read = (path: string) => readFileSync(path, "utf-8");
 const tokens = read(resolve(PACK, "tokens.css"));
 const sampleSource = (scene: string) => read(resolve(PACK, `sample/${scene}.ts`));
+const scenesHtml = read(resolve(PACK, "reference/scenes.html"));
+const animationsJsx = read(resolve(PACK, "reference/animations.jsx"));
 
 describe("motion-engineering pack", () => {
 	it("defines every legacy token name", () => {
@@ -86,12 +99,12 @@ describe("motion-engineering pack", () => {
 	});
 
 	it("no font size below the 22px legibility floor", () => {
-		const sources = [tokens, ...UPGRADED_SAMPLES.map(sampleSource)];
+		const sources = [tokens, ...SAMPLES.map(sampleSource), scenesHtml, animationsJsx];
 		// Every way a size can be set: CSS declarations and tokens, SVG attributes, inline
-		// style properties.
+		// style properties, React style objects.
 		const declared = sources.flatMap((source) => [
 			...source.matchAll(
-				/(?:font-size\s*[:=]\s*["']?|--type-[\w-]+:\s*|"font-size":\s*["']?|fontSize\s*=\s*["'`])([^;"'`},\n]+)/g,
+				/(?:font-size\s*[:=]\s*["']?|--type-[\w-]+:\s*|"font-size":\s*["']?|fontSize\s*[=:]\s*["'`])([^;"'`},\n]+)/g,
 			),
 		]);
 		expect(declared.length).toBeGreaterThan(10);
@@ -105,7 +118,100 @@ describe("motion-engineering pack", () => {
 		}
 	});
 
-	describe.each(UPGRADED_SAMPLES)("sample: %s", (scene) => {
+	it("every sample inlines the same kit", () => {
+		const kits = SAMPLES.map((scene) => {
+			const source = sampleSource(scene);
+			expect(source, `${scene} has no "${KIT_END}" marker`).toContain(KIT_END);
+			return source.slice(0, source.indexOf(KIT_END));
+		});
+		for (const [i, kit] of kits.entries()) {
+			expect(kit, `sample/${SAMPLES[i]}.ts kit drifted from sample/title.ts`).toBe(kits[0]);
+		}
+	});
+
+	it("every me-* class the samples and references use is defined in tokens.css", () => {
+		const defined = new Set([...tokens.matchAll(/\.(me-[a-z][a-z0-9-]*)/g)].map((m) => m[1]));
+		const sources = { "scenes.html": scenesHtml, "animations.jsx": animationsJsx };
+		for (const scene of SAMPLES) Object.assign(sources, { [scene]: sampleSource(scene) });
+		for (const [name, source] of Object.entries(sources)) {
+			const used = [...source.matchAll(/(?<![\w-])(me-[a-z][a-z0-9-]*)/g)].map((m) => m[1]);
+			expect(used.length, `${name} uses no me-* classes`).toBeGreaterThan(5);
+			for (const cls of new Set(used)) {
+				expect(defined, `${name} uses .${cls}, which tokens.css does not define`).toContain(cls);
+			}
+		}
+	});
+
+	// font-display: block hides a missing glyph only until the browser falls back to a system
+	// face, which then differs from machine to machine. Every character the pack can put on
+	// screen must be in a bundled font.
+	it("every non-ASCII character in the samples and references is in a bundled font", () => {
+		const allowlist = read(resolve(__dirname, "fixtures/motion_engineering_codepoints.txt"))
+			.split("\n")
+			.filter((line) => line.trim() && !line.startsWith("#"))
+			.map((line) =>
+				line
+					.trim()
+					.split("-")
+					.map((hex) => Number.parseInt(hex, 16)),
+			);
+		const drawable = (cp: number) => allowlist.some(([lo, hi = lo]) => cp >= lo && cp <= hi);
+		expect(drawable(0x2713), "the allowlist lost ✓").toBe(true);
+		const sources: Record<string, string> = {
+			"reference/scenes.html": scenesHtml,
+			"reference/animations.jsx": animationsJsx,
+		};
+		for (const scene of SAMPLES) sources[`sample/${scene}.ts`] = sampleSource(scene);
+		for (const [name, source] of Object.entries(sources)) {
+			const literal = [...source].map((ch) => ch.codePointAt(0) ?? 0).filter((cp) => cp > 0x7e);
+			const entities = [...source.matchAll(/&#(x[0-9a-f]+|\d+);/gi)].map((m) =>
+				m[1][0].toLowerCase() === "x" ? Number.parseInt(m[1].slice(1), 16) : Number(m[1]),
+			);
+			const missing = [...new Set([...literal, ...entities])]
+				.filter((cp) => !drawable(cp))
+				.map(
+					(cp) => `U+${cp.toString(16).toUpperCase().padStart(4, "0")} ${String.fromCodePoint(cp)}`,
+				);
+			expect(missing, `${name} uses characters no bundled font draws`).toEqual([]);
+		}
+	});
+
+	it("scenes.html links the pack's tokens.css and shows all ten scenes", () => {
+		expect(scenesHtml).toContain('<link rel="stylesheet" href="../tokens.css">');
+		expect(scenesHtml).not.toMatch(/<script/);
+		SAMPLES.forEach((scene, i) => {
+			const index = `S${String(i + 1).padStart(2, "0")} / 10`;
+			expect(scenesHtml, `scenes.html is missing the ${scene} frame`).toContain(index);
+		});
+	});
+
+	it("animations.jsx is a clock-driven reference of the motion vocabulary", () => {
+		for (const name of [
+			"useClock",
+			"RiseLines",
+			"Decode",
+			"TickNumber",
+			"DrawStroke",
+			"CrosshairLock",
+			"DimensionLine",
+			"LeaderCallout",
+			"Release",
+			"MotionVocabulary",
+		]) {
+			expect(animationsJsx).toMatch(new RegExp(`export function ${name}\\b`));
+		}
+		expect(animationsJsx).not.toMatch(/Math\.random\(/);
+	});
+
+	it("the setup picker line matches the pack's picker_description", () => {
+		const style = read(resolve(PACK, "STYLE.md"));
+		const picker = style.match(/^picker_description:\s*(.+)$/m)?.[1].trim();
+		const setup = read(resolve(__dirname, "../../skill/references/setup_new_style.md"));
+		expect(picker).toBeTruthy();
+		expect(setup).toContain(`- **Motion Engineering** — ${picker}`);
+	});
+
+	describe.each(SAMPLES)("sample: %s", (scene) => {
 		const source = sampleSource(scene);
 
 		it("awaits font readiness in mount", () => {
@@ -129,6 +235,7 @@ describe("demo project copy of motion-engineering", () => {
 		...readdirSync(resolve(PACK, "fonts")).map((f) => `fonts/${f}`),
 		...readdirSync(resolve(PACK, "textures")).map((f) => `textures/${f}`),
 		...readdirSync(resolve(PACK, "sample")).map((f) => `sample/${f}`),
+		...readdirSync(resolve(PACK, "reference")).map((f) => `reference/${f}`),
 	];
 
 	it.each(syncedFiles)("%s is byte-identical to the pack", (file) => {

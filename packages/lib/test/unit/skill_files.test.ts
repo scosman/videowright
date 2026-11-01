@@ -453,6 +453,34 @@ describe("skill file structure", () => {
 				/rewrite any relative import so it resolves from `segments\/<slug>-sample-<scene>\/index\.ts`/,
 			);
 		});
+
+		// A style's tokens.css can load fonts and textures by relative URL; copying only
+		// STYLE.md and tokens.css leaves them behind and every sample's mount() fails.
+		it("Mode 2 copies the whole style folder, including fonts/ and textures/", () => {
+			const content = textUnderHeading("### Mode 2");
+			expect(content).toContain(
+				"Copy the entire `<source-project>/styles/<slug>/` folder to `styles/<slug>/`",
+			);
+			expect(content).toContain("`fonts/`");
+			expect(content).toContain("`textures/`");
+		});
+
+		it("Mode 4 lists fonts/ and textures/ among the copied files", () => {
+			const content = textUnderHeading("### Mode 4");
+			expect(content).toContain(
+				"Copy the entire `node_modules/videowright/skill/assets/styles/<slug>/`",
+			);
+			expect(content).toContain("`fonts/`");
+			expect(content).toContain("`textures/`");
+		});
+
+		it("the font_sources edge case does not claim fonts are unbundled", () => {
+			const row = doc.split("\n").find((line) => line.startsWith("| `font_sources`"));
+			expect(row).toBeDefined();
+			expect(row).not.toMatch(/not bundled/);
+			expect(row).toContain("styles/<slug>/fonts/");
+			expect(row).toContain("@font-face");
+		});
 	});
 
 	describe.each(STYLE_PACKS)("style pack: %s", (packName) => {
@@ -518,9 +546,13 @@ describe("skill file structure", () => {
 			// relative import would no longer resolve after the copy.
 			it("imports only from videowright", () => {
 				const content = readFileSync(samplePath, "utf-8");
-				const specifiers = [...content.matchAll(/\b(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(
-					(m) => m[1],
-				);
+				// Match statements, not text: a sample may show code such as `from "apogee"` as
+				// on-screen content.
+				const specifiers = [
+					...content.matchAll(/^\s*(?:import|export)\b[^;]*?\bfrom\s*["']([^"']+)["']/gm),
+					...content.matchAll(/^\s*import\s*["']([^"']+)["']/gm),
+					...content.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g),
+				].map((m) => m[1]);
 				expect(specifiers.length).toBeGreaterThan(0);
 				for (const specifier of specifiers) {
 					expect(specifier, `sample/${scene}.ts may only import "videowright"`).toBe("videowright");

@@ -1,225 +1,713 @@
-import { defineSegment } from "videowright";
+import { type PlayerContext, defineSegment } from "videowright";
+// ── Motion Engineering kit ──────────────────────────────────────────────────────────────
+// Inlined so this file can be copied into any project and still import only "videowright".
+// The stage DOM uses the me-* classes from tokens.css. Everything time-based reads
+// ctx.clock() (one rAF loop) or runs on WAAPI, so renders are deterministic.
+
+type Tick = (t: number) => boolean;
+type Attrs = Record<string, string | number>;
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const GRID_OVERSCAN = 160;
+const css = (name: string) =>
+	getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const ms = (name: string) => Number.parseFloat(css(name)) || 0;
+const clamp01 = (p: number) => Math.min(Math.max(p, 0), 1);
+// Clock arithmetic carries float noise (a frame due at 2300ms can read 2299.9999999). Round
+// before quantizing, so stepped values (timecode, ticks, decodes) land on the same frame in
+// every render.
+const tidy = (t: number) => Math.round(t * 1000) / 1000;
+const expoOut = (p: number) => (p >= 1 ? 1 : 1 - 2 ** (-10 * clamp01(p)));
+const sineInOut = (p: number) => (1 - Math.cos(Math.PI * clamp01(p))) / 2;
+// JS twin of --ease-draw, for geometry driven from the rAF loop (bars, riding readouts).
+const drawEase = (p: number) => {
+	const q = clamp01(p);
+	return q < 0.5 ? 4 * q ** 3 : 1 - (-2 * q + 2) ** 3 / 2;
+};
+
+const FACES: Array<[font: string, text?: string]> = [
+	['600 64px "Archivo"'],
+	['500 64px "JetBrains Mono"'],
+	['400 64px "ME Symbols"', "✓"],
+];
+
+// Waits only when a face is still loading. Awaiting document.fonts.load() always resumes on a
+// later task; in a render that task can land inside a frame, so play() would start mid-frame
+// and frames would differ from run to run.
+function fontsReady(): Promise<unknown> | undefined {
+	if (FACES.every(([font, text]) => document.fonts.check(font, text))) return undefined;
+	return Promise.all(FACES.map(([font, text]) => document.fonts.load(font, text)));
+}
+
+function svg<K extends keyof SVGElementTagNameMap>(
+	parent: Element,
+	tag: K,
+	attrs: Attrs,
+): SVGElementTagNameMap[K] {
+	const node = document.createElementNS(SVG_NS, tag);
+	for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+	parent.appendChild(node);
+	return node;
+}
+
+interface StageOptions {
+	index: string;
+	scene: string;
+	/** Focal point for the key light, in stage px. */
+	key?: { x: number; y: number };
+	/** Offset into the 7s grid scan, so consecutive scenes don't scan in step. */
+	scanPhase?: number;
+}
+
+interface Stage {
+	grid: HTMLElement;
+	world: HTMLElement;
+	content: HTMLElement;
+	svg: SVGSVGElement;
+	scan: HTMLElement;
+	flare: HTMLElement;
+	scanPhase: number;
+	ref(name: string): HTMLElement;
+	/** Camera pivot in stage px (default: frame centre). */
+	setOrigin(x: number, y: number): void;
+}
+
+function buildStage(el: HTMLElement, opts: StageOptions): Stage {
+	const key = opts.key ?? { x: 960, y: 500 };
+	el.innerHTML = `
+		<div class="me-stage" style="--key-x: ${key.x}px; --key-y: ${key.y}px">
+			<div class="me-grid"><div class="me-scan"></div><div class="me-flare"></div></div>
+			<div class="me-key"></div>
+			<div class="me-light"></div>
+			<div class="me-world">
+				<div class="me-content"></div>
+				<svg class="me-svg" viewBox="0 0 1920 1080"></svg>
+			</div>
+			<div class="me-grain"></div>
+			<div class="me-hud">
+				<div class="me-frame"></div>
+				<div class="me-hud-slot" data-at="tl">
+					<span class="me-label">${opts.index}</span>
+					<span class="me-label" style="color: var(--fg-2)">${opts.scene}</span>
+				</div>
+				<div class="me-hud-slot" data-at="tr"><span class="me-readout" data-ref="clock"></span></div>
+				<div class="me-hud-slot" data-at="bl">
+					<span class="me-readout" data-ref="probe" style="color: var(--color-muted)"></span>
+				</div>
+				<div class="me-hud-slot" data-at="br">
+					<span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span>
+				</div>
+			</div>
+		</div>`;
+	const q = (s: string) => el.querySelector(s) as HTMLElement;
+	const grid = q(".me-grid");
+	const world = q(".me-world");
+	return {
+		grid,
+		world,
+		content: q(".me-content"),
+		svg: el.querySelector(".me-svg") as SVGSVGElement,
+		scan: q(".me-scan"),
+		flare: q(".me-flare"),
+		scanPhase: opts.scanPhase ?? 0,
+		ref: (name) => q(`[data-ref="${name}"]`),
+		setOrigin: (x, y) => {
+			world.style.transformOrigin = `${x}px ${y}px`;
+			grid.style.transformOrigin = `${x + GRID_OVERSCAN}px ${y + GRID_OVERSCAN}px`;
+		},
+	};
+}
+
+interface Ambient {
+	/** ctx.clock(), rounded (see tidy). Use it for every start time. */
+	now(): number;
+	add(tick: Tick): void;
+	nudge(by: number, duration: number): void;
+	rest(duration: number): void;
+}
+
+// The breathe layer: a slow camera push (the grid follows at 60% for parallax), the scene
+// timecode, the grid scan, and any tickers (decodes, counting numbers). rest() eases the
+// camera back to identity for the exit.
+function startAmbient(ctx: PlayerContext, stage: Stage): Ambient {
+	let ticks: Tick[] = [];
+	const nudges: Array<{ at: number; by: number; duration: number }> = [];
+	let restAt = Number.POSITIVE_INFINITY;
+	let restFor = 1;
+	const clock = stage.ref("clock");
+	const driftMs = ms("--dur-ambient") || 16000;
+	stage.scan.animate([{ maskPosition: "0 -320px" }, { maskPosition: "0 1720px" }], {
+		duration: 7000,
+		delay: -stage.scanPhase,
+		iterations: Number.POSITIVE_INFINITY,
+	});
+	const frame = () => {
+		if (ctx.signal.aborted) return;
+		const t = tidy(ctx.clock());
+		const settle = 1 - sineInOut((t - restAt) / restFor);
+		const pan = sineInOut(t / driftMs) * settle;
+		let zoom = 0.024 * sineInOut(t / driftMs);
+		for (const n of nudges) zoom += n.by * expoOut((t - n.at) / n.duration);
+		zoom *= settle;
+		const f = (v: number, d = 2) => v.toFixed(d);
+		stage.world.style.transform = `translate(${f(-10 * pan)}px, ${f(-4 * pan)}px) scale(${f(1 + zoom, 5)})`;
+		stage.grid.style.transform = `translate(${f(-6 * pan)}px, ${f(-2.4 * pan)}px) scale(${f(1 + 0.6 * zoom, 5)})`;
+		const cs = Math.floor(t / 10);
+		const mm = String(Math.floor(cs / 6000)).padStart(2, "0");
+		const ss = ((cs % 6000) / 100).toFixed(2).padStart(5, "0");
+		clock.textContent = `T+${mm}:${ss}`;
+		// Oldest first, so when two tickers write the same element the newest one wins.
+		ticks = ticks.filter((tick) => tick(t));
+		requestAnimationFrame(frame);
+	};
+	frame();
+	const now = () => tidy(ctx.clock());
+	return {
+		now,
+		add: (tick) => {
+			if (tick(now())) ticks.push(tick);
+		},
+		nudge: (by, duration) => nudges.push({ at: now(), by, duration }),
+		rest: (duration) => {
+			restAt = now();
+			restFor = duration;
+		},
+	};
+}
+
+// Mono "decode": characters resolve left to right through seeded noise. No Math.random.
+const NOISE = "#%&*+=<>/0123456789ABCDEFHKMNPRTUVXYZ";
+function decode(amb: Ambient, el: Element, text: string, start: number, perChar = 26): void {
+	const settle = 170;
+	el.textContent = "";
+	amb.add((t) => {
+		const local = tidy(t - start);
+		let out = "";
+		for (let i = 0; i < text.length && local >= i * perChar; i++) {
+			const ch = text[i];
+			const resolved = local >= i * perChar + settle || ch === " ";
+			out += resolved ? ch : NOISE[(i * 7 + Math.floor(local / 45) * 11) % NOISE.length];
+		}
+		el.textContent = out;
+		return local < (text.length - 1) * perChar + settle;
+	});
+}
+
+// Numbers tick: discrete steps on the --dur-tick grid, decelerating into the value.
+function tickTo(
+	amb: Ambient,
+	el: Element,
+	to: number,
+	start: number,
+	duration: number,
+	format: (v: number) => string,
+	from = 0,
+): void {
+	const step = ms("--dur-tick") || 50;
+	amb.add((t) => {
+		const p = Math.min((Math.floor(tidy(Math.max(0, t - start)) / step) * step) / duration, 1);
+		el.textContent = format(from + (to - from) * expoOut(p));
+		return p < 1;
+	});
+}
+
+// Eased stroke draw. reverse retracts the stroke back toward its start.
+function draw(path: SVGGeometryElement, delay: number, duration: number, reverse = false) {
+	path.setAttribute("pathLength", "1");
+	path.style.strokeDasharray = "1 1";
+	const frames = reverse
+		? [{ strokeDashoffset: 0 }, { strokeDashoffset: 1 }]
+		: [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }];
+	return path.animate(frames, {
+		duration,
+		delay,
+		easing: reverse ? css("--ease-exit") : css("--ease-draw"),
+		fill: "both",
+	});
+}
+
+// Masked line reveal: each element rises out of its .me-line mask.
+function riseIn(els: Element[], delay: number, duration = ms("--dur-slow")): void {
+	els.forEach((node, i) => {
+		(node as HTMLElement).animate([{ transform: "translateY(112%)" }, { transform: "none" }], {
+			duration,
+			delay: delay + i * ms("--stagger"),
+			easing: css("--ease-settle"),
+			fill: "both",
+		});
+	});
+}
+
+// A dotted leader that runs out from x0 to x1 at y, carrying a value to the right edge.
+function dottedLeader(stage: Stage, x0: number, x1: number, y: number, delay: number) {
+	const dots = document.createElement("div");
+	dots.style.cssText = `position:absolute; left:${x0}px; top:${y - 1}px; width:${x1 - x0}px; height:2px; background:repeating-linear-gradient(to right, color-mix(in srgb, var(--cyan) 60%, transparent) 0 4px, transparent 4px 12px)`;
+	stage.content.appendChild(dots);
+	dots.animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }], {
+		duration: ms("--dur-draw"),
+		delay,
+		easing: css("--ease-draw"),
+		fill: "both",
+	});
+	return dots;
+}
+
+// The grid answers a lock: registration crosses within ~320px of (x, y) brighten, then decay.
+function flare(stage: Stage, x: number, y: number, delay: number): void {
+	stage.flare.style.setProperty("--flare-x", `${x + GRID_OVERSCAN}px`);
+	stage.flare.style.setProperty("--flare-y", `${y + GRID_OVERSCAN}px`);
+	stage.flare.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0 }], {
+		duration: 700,
+		delay,
+		fill: "both",
+	});
+}
+
+// Crosshair lock: the reticle drops in oversized and rotated, settles on target, blinks
+// twice. Each shape is drawn twice, a canvas-colored knockout under the amber stroke, so the
+// reticle reads on top of amber bars.
+function lockOn(parent: Element, cx: number, cy: number, delay: number, r = 34): SVGGElement {
+	const g = svg(parent, "g", { fill: "none", style: "filter: var(--glow-amber-filter)" });
+	const o = r + 22;
+	const ticks = `M${cx - o} ${cy}h18M${cx + o - 18} ${cy}h18M${cx} ${cy - o}v18M${cx} ${cy + o - 18}v18`;
+	for (const [stroke, width] of [
+		["var(--color-bg)", 7],
+		["var(--amber)", 3],
+	] as const) {
+		svg(g, "circle", { cx, cy, r, stroke, "stroke-width": width });
+		svg(g, "path", { d: ticks, stroke, "stroke-width": width });
+	}
+	svg(g, "circle", { cx, cy, r: 4, fill: "var(--amber)" });
+	g.style.transformOrigin = `${cx}px ${cy}px`;
+	g.animate([{ transform: "scale(2.4) rotate(45deg)" }, { transform: "none" }], {
+		duration: 620,
+		delay,
+		easing: css("--ease-settle"),
+		fill: "both",
+	});
+	g.animate(
+		[
+			{ opacity: 0, easing: "linear" },
+			{ opacity: 1, offset: 0.3, easing: "steps(1, end)" },
+			{ opacity: 0.25, offset: 0.62, easing: "steps(1, end)" },
+			{ opacity: 1, offset: 0.7, easing: "steps(1, end)" },
+			{ opacity: 0.25, offset: 0.8, easing: "steps(1, end)" },
+			{ opacity: 1, offset: 0.88 },
+			{ opacity: 1 },
+		],
+		{ duration: 900, delay, fill: "both" },
+	);
+	return g;
+}
+
+// Release: the HUD lets go before the cut. Strokes retract, marks fade, the camera rests;
+// the content stays for the transition to carry out. Returns how long to hold.
+function release(amb: Ambient, strokes: SVGGeometryElement[], marks: Element[]): number {
+	const out = ms("--dur-exit");
+	for (const p of strokes) draw(p, 0, out * 0.8, true);
+	for (const m of marks) {
+		m.animate([{ opacity: 1 }, { opacity: 0 }], {
+			duration: out * 0.6,
+			easing: css("--ease-exit"),
+			fill: "forwards",
+		});
+	}
+	amb.rest(out * 1.4);
+	return out;
+}
+
+interface Box {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+}
+
+// An element's layout box in stage px, from the offset chain up to .me-content. Offsets
+// ignore the camera and the dev player's scaling.
+function boxOf(el: HTMLElement): Box {
+	let x = 0;
+	let y = 0;
+	let node: HTMLElement | null = el;
+	while (node && !node.classList.contains("me-content")) {
+		x += node.offsetLeft;
+		y += node.offsetTop;
+		const parent = node.offsetParent as HTMLElement | null;
+		if (parent && !parent.classList.contains("me-content")) {
+			x += parent.clientLeft;
+			y += parent.clientTop;
+		}
+		node = parent;
+	}
+	return { x, y, w: el.offsetWidth, h: el.offsetHeight };
+}
+
+// Registration corners: four amber L-brackets close in on a box from outside, settle, and
+// blink twice, like autofocus locking on. Release them as marks.
+function registerOn(parent: Element, box: Box, delay: number, pad = 14): SVGPathElement[] {
+	const { x, y, w, h } = box;
+	const amber = { stroke: "var(--amber)", "stroke-width": 3, fill: "none" };
+	const arm = 34;
+	return [
+		[x - pad, y - pad, 1, 1],
+		[x + w + pad, y - pad, -1, 1],
+		[x - pad, y + h + pad, 1, -1],
+		[x + w + pad, y + h + pad, -1, -1],
+	].map(([px, py, dx, dy]) => {
+		const c = svg(parent, "path", {
+			...amber,
+			d: `M${px} ${py + dy * arm}V${py}H${px + dx * arm}`,
+		});
+		c.animate([{ transform: `translate(${-dx * 72}px, ${-dy * 56}px)` }, { transform: "none" }], {
+			duration: 640,
+			delay,
+			easing: css("--ease-settle"),
+			fill: "both",
+		});
+		c.animate(
+			[
+				{ opacity: 0, easing: "linear" },
+				{ opacity: 1, offset: 0.25, easing: "steps(1, end)" },
+				{ opacity: 0.2, offset: 0.62, easing: "steps(1, end)" },
+				{ opacity: 1, offset: 0.7, easing: "steps(1, end)" },
+				{ opacity: 0.2, offset: 0.8, easing: "steps(1, end)" },
+				{ opacity: 1, offset: 0.88 },
+				{ opacity: 1 },
+			],
+			{ duration: 900, delay, fill: "both" },
+		);
+		return c;
+	});
+}
+
+// A panel measures itself in: its outline draws, the surface fills top-down behind it (the
+// clip bleeds past the box so the shadow survives), then the drawn outline hands over to the
+// panel's own hairline border. Returns the outline.
+function panelIn(stage: Stage, panel: HTMLElement, delay: number, duration = ms("--dur-draw")) {
+	const { x, y, w, h } = boxOf(panel);
+	const r = Number.parseFloat(getComputedStyle(panel).borderTopLeftRadius) || 0;
+	const [l, t, rt, b] = [x + 0.5, y + 0.5, x + w - 0.5, y + h - 0.5];
+	const outline = svg(stage.svg, "path", {
+		d: `M${l + r} ${t}H${rt - r}A${r} ${r} 0 0 1 ${rt} ${t + r}V${b - r}A${r} ${r} 0 0 1 ${rt - r} ${b}H${l + r}A${r} ${r} 0 0 1 ${l} ${b - r}V${t + r}A${r} ${r} 0 0 1 ${l + r} ${t}Z`,
+		fill: "none",
+		stroke: "var(--hairline-strong)",
+		"stroke-width": 1.5,
+	});
+	draw(outline, delay, duration);
+	panel.animate(
+		[
+			{ clipPath: "inset(-160px -160px 100% -160px)", opacity: 0.3 },
+			{ clipPath: "inset(-160px)", opacity: 1 },
+		],
+		{
+			duration: ms("--dur-slow"),
+			delay: delay + duration * 0.35,
+			easing: css("--ease-settle"),
+			fill: "both",
+		},
+	);
+	outline.animate([{ opacity: 1 }, { opacity: 0 }], {
+		duration: ms("--dur-normal"),
+		delay: delay + duration,
+		fill: "forwards",
+	});
+	return outline;
+}
+// ── Scene ───────────────────────────────────────────────────────────────────────────────
+// Content. A short code sample in a panel, revealed line by line, with its headline beside
+// it. On each cue one line becomes the subject: an amber gutter mark and band, its value
+// turns amber, a node locks at the line's end and a leader carries it across the panel edge
+// to a margin annotation. The previous line, leader and note recede to cyan.
+
+type Tone = "kw" | "fn" | "key" | "val" | "punc";
+const TONE: Record<Tone, string> = {
+	kw: "var(--color-muted)",
+	punc: "var(--color-muted)",
+	fn: "var(--color-fg)",
+	key: "var(--color-fg)",
+	val: "var(--fg-2)",
+};
+const CODE: Array<Array<[string, Tone]>> = [
+	[
+		["import", "kw"],
+		[" { ", "punc"],
+		["defineConfig", "fn"],
+		[" } ", "punc"],
+		["from", "kw"],
+		[" ", "punc"],
+		['"apogee"', "val"],
+		[";", "punc"],
+	],
+	[],
+	[
+		["export default", "kw"],
+		[" ", "punc"],
+		["defineConfig", "fn"],
+		["({", "punc"],
+	],
+	[
+		["  targets", "key"],
+		[": [", "punc"],
+		['"linux"', "val"],
+		[", ", "punc"],
+		['"macos"', "val"],
+		[", ", "punc"],
+		['"wasm"', "val"],
+		["],", "punc"],
+	],
+	[
+		["  cache", "key"],
+		[": ", "punc"],
+		['"remote"', "val"],
+		[",", "punc"],
+	],
+	[
+		["  test", "key"],
+		[": {", "punc"],
+	],
+	[
+		["    shards", "key"],
+		[": ", "punc"],
+		["8", "val"],
+		[",", "punc"],
+	],
+	[
+		["    retries", "key"],
+		[": ", "punc"],
+		["1", "val"],
+		[",", "punc"],
+	],
+	[["  },", "punc"]],
+	[
+		["  bundle", "key"],
+		[": {", "punc"],
+	],
+	[
+		["    deterministic", "key"],
+		[": ", "punc"],
+		["true", "val"],
+		[",", "punc"],
+	],
+	[
+		["    minify", "key"],
+		[": ", "punc"],
+		["true", "val"],
+		[",", "punc"],
+	],
+	[["  },", "punc"]],
+	[["});", "punc"]],
+];
+const NOTES = [
+	{ line: 4, label: "Remote cache", body: "Every machine shares one build.", y: 460 },
+	{ line: 6, label: "Sharded tests", body: "Eight runners, one result.", y: 620 },
+	{ line: 10, label: "Deterministic", body: "Rebuild anywhere, get the same bytes.", y: 780 },
+];
+const PANEL = { x: 160, y: 200, w: 800, h: 680 };
+const LINE_H = 40;
+const FIRST_LINE = 280;
+const NOTE_X = 1056;
+const lineMid = (i: number) => FIRST_LINE + i * LINE_H + LINE_H / 2;
 
 let host: HTMLElement | null = null;
-
-function cornerTicks() {
-	return `
-    <div style="position: absolute; left: -1px; top: -1px; width: 24px; height: 24px;">
-      <div style="position: absolute; left: 0; top: 0; width: 24px; height: 1.5px; background: var(--color-accent);"></div>
-      <div style="position: absolute; left: 0; top: 0; width: 1.5px; height: 24px; background: var(--color-accent);"></div>
-    </div>
-    <div style="position: absolute; right: -1px; top: -1px; width: 24px; height: 24px;">
-      <div style="position: absolute; right: 0; top: 0; width: 24px; height: 1.5px; background: var(--color-accent);"></div>
-      <div style="position: absolute; right: 0; top: 0; width: 1.5px; height: 24px; background: var(--color-accent);"></div>
-    </div>
-    <div style="position: absolute; left: -1px; bottom: -1px; width: 24px; height: 24px;">
-      <div style="position: absolute; left: 0; bottom: 0; width: 24px; height: 1.5px; background: var(--color-accent);"></div>
-      <div style="position: absolute; left: 0; bottom: 0; width: 1.5px; height: 24px; background: var(--color-accent);"></div>
-    </div>
-    <div style="position: absolute; right: -1px; bottom: -1px; width: 24px; height: 24px;">
-      <div style="position: absolute; right: 0; bottom: 0; width: 24px; height: 1.5px; background: var(--color-accent);"></div>
-      <div style="position: absolute; right: 0; bottom: 0; width: 1.5px; height: 24px; background: var(--color-accent);"></div>
-    </div>`;
-}
+let stage: Stage;
 
 export default defineSegment({
 	id: "motion-engineering-sample-content",
-	advances: [2.5, 5.0],
+	advances: [2.6, 4.6, 7.0, 9.4, 10.0],
 	voiceover:
-		"Content cards in Motion Engineering. A title with a crosshair marker, body in two columns, and an inline annotation with a leader line.",
+		"Your whole pipeline is one typed file. Builds cache remotely. Tests shard across eight runners. And every bundle is deterministic.",
 
-	mount(el) {
+	async mount(el) {
+		await fontsReady();
 		host = el;
-		el.innerHTML = `
-      <div style="
-        position: relative;
-        height: 100%;
-        background: var(--color-bg);
-        color: var(--color-fg);
-        font-family: var(--font-body);
-        overflow: hidden;
-      ">
-        <div style="
-          position: absolute; inset: 0; pointer-events: none;
-          background:
-            linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px,
-            linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px;
-        "></div>
-
-        <div data-ref="frame" style="
-          position: absolute;
-          inset: var(--safe-y) var(--safe-x);
-          border: 1px solid var(--color-border);
-          opacity: 0;
-        ">
-          ${cornerTicks()}
-
-          <div data-ref="tag" style="
-            position: absolute; left: 80px; top: 100px;
-            font-family: var(--font-mono);
-            font-size: 13px;
-            letter-spacing: 0.25em;
-            color: var(--color-accent);
-            opacity: 0;
-          ">&#9698; MEMO &middot; 2026.05 &middot; BEACON.TEAM</div>
-
-          <div data-ref="heading" style="
-            position: absolute; left: 80px; top: 160px;
-            font-family: var(--font-display);
-            font-weight: 500;
-            font-size: 84px;
-            margin-bottom: 56px;
-            opacity: 0;
-          ">What we believe.</div>
-
-          <svg data-ref="chMark" style="position: absolute; left: 52px; top: 180px; overflow: visible;" width="20" height="20">
-            <line x1="0" y1="10" x2="20" y2="10" stroke="var(--color-accent)" stroke-width="1.5" style="transform-origin: 10px 10px; transform: scaleX(0);" />
-            <line x1="10" y1="0" x2="10" y2="20" stroke="var(--color-accent)" stroke-width="1.5" style="transform-origin: 10px 10px; transform: scaleY(0);" />
-          </svg>
-
-          <div style="
-            position: absolute; left: 80px; right: 80px; top: 380px;
-            display: grid; grid-template-columns: 1fr 1fr; gap: 56px;
-          ">
-            <div data-ref="colA" style="opacity: 0;">
-              <div style="font-size: 30px; line-height: 1.45; margin-bottom: 24px;">
-                The next decade of AI infrastructure will be built around <span style="color: var(--color-accent);">long runs</span> &mdash; agents that work for hours, not seconds.
-              </div>
-              <div style="
-                font-family: var(--font-mono);
-                font-size: 12px;
-                letter-spacing: 0.25em;
-                padding-top: 16px;
-                border-top: 1px solid var(--color-border);
-                color: var(--color-muted);
-              ">&mdash;&mdash; THESIS A &mdash;&mdash;</div>
-            </div>
-            <div data-ref="colB" style="opacity: 0; position: relative;">
-              <div style="font-size: 26px; line-height: 1.5; color: var(--color-muted); margin-bottom: 24px;">
-                The bottleneck won't be the model. It will be everything around the model &mdash; memory, recovery, observability. The unglamorous parts. The parts we are building.
-              </div>
-              <div style="
-                font-family: var(--font-mono);
-                font-size: 12px;
-                letter-spacing: 0.25em;
-                padding-top: 16px;
-                border-top: 1px solid var(--color-border);
-                color: var(--color-muted);
-              ">&mdash;&mdash; THESIS B &mdash;&mdash;</div>
-            </div>
-          </div>
-        </div>
-
-        <svg data-ref="leaderLine" style="
-          position: absolute; left: 0; top: 0; width: 100%; height: 100%;
-          pointer-events: none; overflow: visible;
-        ">
-          <line x1="960" y1="580" x2="1100" y2="520" stroke="var(--color-accent)" stroke-width="1" style="opacity: 0;" data-ref="ll" />
-          <text x="1105" y="516" fill="var(--color-accent)" font-family="var(--font-mono)" font-size="11" letter-spacing="0.15em" style="opacity: 0;" data-ref="llLabel">&#9698; KEY INSIGHT</text>
-        </svg>
-
-        <div data-ref="coord" style="
-          position: absolute; left: var(--safe-x); right: var(--safe-x); bottom: 28px;
-          display: flex; gap: 32px;
-          font-family: var(--font-mono);
-          font-size: 12px;
-          color: var(--color-muted);
-          letter-spacing: 0.1em;
-          opacity: 0;
-        ">
-          <span>X 1240.00</span><span>Y 360.00</span><span>T 0.00s</span>
-          <span style="margin-left: auto;">UNIT: PX &middot; SCALE 1:1</span>
-        </div>
-      </div>
-    `;
+		stage = buildStage(el, {
+			index: "S09 / 10",
+			scene: "Content",
+			key: { x: 760, y: 560 },
+			scanPhase: 6100,
+		});
+		// Panel children sit 1px inside its border.
+		const top = (i: number) => FIRST_LINE - PANEL.y - 1 + i * LINE_H;
+		const highlighted = new Set(NOTES.map((n) => n.line));
+		const lines = CODE.map((tokens, i) => {
+			const code = tokens
+				.map(([text, tone]) => {
+					const ref = highlighted.has(i) && tone === "val" ? ` data-ref="val-${i}"` : "";
+					return `<span${ref} style="color:${TONE[tone]}">${text}</span>`;
+				})
+				.join("");
+			return `
+				<div class="me-mono" style="position:absolute; left:24px; top:${top(i)}px; width:56px; text-align:right; line-height:${LINE_H}px; color:var(--color-muted); opacity:0.7">
+					<span class="me-line"><span data-ref="num-${i}">${i + 1}</span></span>
+				</div>
+				<div class="me-mono" style="position:absolute; left:111px; top:${top(i)}px; line-height:${LINE_H}px">
+					<span class="me-line"><span data-ref="code-${i}" style="white-space:pre">${code || " "}</span></span>
+				</div>`;
+		}).join("");
+		const marks = NOTES.map(
+			(n) => `
+				<div data-ref="band-${n.line}" style="position:absolute; left:0; right:0; top:${top(n.line)}px; height:${LINE_H}px; background:color-mix(in srgb, var(--amber) 9%, transparent); clip-path:inset(0 100% 0 0)"></div>
+				<div data-ref="gutter-${n.line}" style="position:absolute; left:0; top:${top(n.line)}px; width:4px; height:${LINE_H}px; background:var(--amber); transform:scaleY(0)"></div>`,
+		).join("");
+		const notes = NOTES.map(
+			(n, k) => `
+				<div data-ref="note-${k}" style="position:absolute; left:${NOTE_X}px; top:${n.y - 11}px">
+					<div class="me-label me-signal"><span class="me-line"><span data-ref="note-label-${k}">${n.label}</span></span></div>
+					<div class="me-body" style="margin-top:10px; color:var(--color-fg)"><span class="me-line"><span data-ref="note-body-${k}">${n.body}</span></span></div>
+				</div>`,
+		).join("");
+		stage.content.innerHTML = `
+			<div class="me-panel" data-ref="panel" style="position:absolute; left:${PANEL.x}px; top:${PANEL.y}px; width:${PANEL.w}px; height:${PANEL.h}px">
+				<div style="position:absolute; left:0; right:0; top:0; height:64px; border-bottom:var(--line-hair) solid var(--color-border)"></div>
+				<div class="me-mono" data-ref="file" style="position:absolute; left:32px; top:12px; color:var(--fg-2)"></div>
+				<div class="me-readout" data-ref="lang" style="position:absolute; right:32px; top:22px; color:var(--color-muted)"></div>
+				${marks}
+				${lines}
+			</div>
+			<div class="me-h2" style="position:absolute; left:1036px; top:200px">
+				<span class="me-line"><span data-ref="h-0">One file.</span></span>
+				<span class="me-line"><span data-ref="h-1">Whole pipeline.</span></span>
+			</div>
+			${notes}`;
+		const hidden = [
+			"h-0",
+			"h-1",
+			...CODE.flatMap((_, i) => [`num-${i}`, `code-${i}`]),
+			...NOTES.flatMap((_, k) => [`note-label-${k}`, `note-body-${k}`]),
+		];
+		for (const ref of hidden) stage.ref(ref).style.transform = "translateY(112%)";
 	},
 
 	async play(ctx) {
-		const frame = host?.querySelector('[data-ref="frame"]') as HTMLElement;
-		const tag = host?.querySelector('[data-ref="tag"]') as HTMLElement;
-		const heading = host?.querySelector('[data-ref="heading"]') as HTMLElement;
-		const colA = host?.querySelector('[data-ref="colA"]') as HTMLElement;
-		const colB = host?.querySelector('[data-ref="colB"]') as HTMLElement;
-		const coord = host?.querySelector('[data-ref="coord"]') as HTMLElement;
+		if (!host) return;
+		const amb = startAmbient(ctx, stage);
+		const s = stage.svg;
 
-		const chMarkSvg = host?.querySelector('[data-ref="chMark"]') as SVGElement;
-		const chH = chMarkSvg?.querySelector("line:nth-child(1)") as SVGLineElement;
-		const chV = chMarkSvg?.querySelector("line:nth-child(2)") as SVGLineElement;
-
-		const ll = host?.querySelector('[data-ref="ll"]') as SVGLineElement;
-		const llLabel = host?.querySelector('[data-ref="llLabel"]') as SVGTextElement;
-
-		const ease = "cubic-bezier(0.2, 0.8, 0.2, 1)";
-		const opts = { fill: "forwards" as const, easing: ease };
-
-		frame.animate([{ opacity: 0 }, { opacity: 1 }], {
-			...opts,
-			duration: 360,
+		// draw: the panel; fill: the headline, then the code, line by line.
+		panelIn(stage, stage.ref("panel"), 0);
+		decode(amb, stage.ref("file"), "apogee.config.ts", amb.now() + 320);
+		decode(amb, stage.ref("lang"), "TYPESCRIPT", amb.now() + 420);
+		riseIn([stage.ref("h-0"), stage.ref("h-1")], 160);
+		CODE.forEach((_, i) => {
+			riseIn(
+				[stage.ref(`num-${i}`), stage.ref(`code-${i}`)],
+				420 + i * ms("--stagger-tight"),
+				ms("--dur-normal"),
+			);
 		});
+		decode(amb, stage.ref("probe"), `${CODE.length} LINES · 1 FILE`, amb.now() + 1100);
 
-		coord.animate([{ opacity: 0 }, { opacity: 1 }], {
-			...opts,
-			duration: 300,
-			delay: 100,
-		});
+		// annotate, once per cue: mark the line, lock its end, lead out to the margin note.
+		const strokes: SVGGeometryElement[] = [];
+		const pins: SVGCircleElement[] = [];
+		const annotate = (k: number) => {
+			const { line, y } = NOTES[k];
+			const mid = lineMid(line);
+			const settle = css("--ease-settle");
+			stage
+				.ref(`band-${line}`)
+				.animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }], {
+					duration: ms("--dur-normal"),
+					easing: settle,
+					fill: "both",
+				});
+			stage.ref(`gutter-${line}`).animate([{ transform: "scaleY(0)" }, { transform: "none" }], {
+				duration: ms("--dur-fast"),
+				easing: settle,
+				fill: "both",
+			});
+			stage.ref(`val-${line}`).animate([{ color: "var(--fg-2)" }, { color: "var(--amber)" }], {
+				duration: ms("--dur-fast"),
+				delay: 160,
+				fill: "both",
+			});
+			const code = stage.ref(`code-${line}`);
+			const x0 = boxOf(code).x + code.offsetWidth + 20;
+			const pin = svg(s, "circle", { cx: x0, cy: mid, r: 6, fill: "var(--amber)" });
+			pin.style.transformOrigin = `${x0}px ${mid}px`;
+			pin.animate(
+				[
+					{ transform: "scale(2.6)", opacity: 0 },
+					{ transform: "none", opacity: 1 },
+				],
+				{ duration: ms("--dur-normal"), delay: 260, easing: settle, fill: "both" },
+			);
+			flare(stage, x0, mid, 400);
+			const elbow = PANEL.x + PANEL.w + 40;
+			const leader = svg(s, "path", {
+				d: `M${x0 + 10} ${mid} H${elbow}${y === mid ? "" : ` V${y}`} H${NOTE_X - 16}`,
+				stroke: "var(--amber)",
+				"stroke-width": 2,
+				fill: "none",
+			});
+			draw(leader, 380, ms("--dur-normal"));
+			riseIn([stage.ref(`note-label-${k}`)], 760, ms("--dur-normal"));
+			riseIn([stage.ref(`note-body-${k}`)], 860);
+			decode(
+				amb,
+				stage.ref("probe"),
+				`LINE ${String(line + 1).padStart(2, "0")} · ${NOTES[k].label.toUpperCase()}`,
+				amb.now() + 300,
+			);
 
-		tag.animate(
-			[
-				{ opacity: 0, transform: "translateY(8px)" },
-				{ opacity: 1, transform: "translateY(0)" },
-			],
-			{ ...opts, duration: 300, delay: 200 },
-		);
+			// The previous note recedes: its marks turn cyan, its words step back.
+			if (k > 0) {
+				const prev = NOTES[k - 1].line;
+				const recede = { duration: ms("--dur-normal"), easing: settle, fill: "forwards" as const };
+				stage.ref(`note-${k - 1}`).animate([{ opacity: 1 }, { opacity: 0.5 }], recede);
+				stage
+					.ref(`band-${prev}`)
+					.animate(
+						[
+							{ background: "color-mix(in srgb, var(--amber) 9%, transparent)" },
+							{ background: "color-mix(in srgb, var(--cyan) 6%, transparent)" },
+						],
+						recede,
+					);
+				stage
+					.ref(`gutter-${prev}`)
+					.animate([{ background: "var(--amber)" }, { background: "var(--cyan)" }], recede);
+				stage
+					.ref(`val-${prev}`)
+					.animate([{ color: "var(--amber)" }, { color: "var(--cyan)" }], recede);
+				stage
+					.ref(`note-label-${k - 1}`)
+					.animate([{ color: "var(--amber)" }, { color: "var(--cyan)" }], recede);
+				strokes[k - 1].animate(
+					[
+						{ stroke: "var(--amber)", opacity: 1 },
+						{ stroke: "var(--cyan)", opacity: 0.6 },
+					],
+					recede,
+				);
+				pins[k - 1].animate(
+					[
+						{ fill: "var(--amber)", opacity: 1 },
+						{ fill: "var(--cyan)", opacity: 0.6 },
+					],
+					recede,
+				);
+			}
+			strokes.push(leader);
+			pins.push(pin);
+		};
 
-		heading.animate(
-			[
-				{ opacity: 0, transform: "translateY(12px)" },
-				{ opacity: 1, transform: "translateY(0)" },
-			],
-			{ ...opts, duration: 400, delay: 400 },
-		);
-
-		chH.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
-			...opts,
-			duration: 300,
-			delay: 500,
-		});
-
-		chV.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], {
-			...opts,
-			duration: 300,
-			delay: 550,
-		});
-
-		colA.animate(
-			[
-				{ opacity: 0, transform: "translateY(12px)" },
-				{ opacity: 1, transform: "translateY(0)" },
-			],
-			{ ...opts, duration: 360, delay: 700 },
-		);
-
-		colB.animate(
-			[
-				{ opacity: 0, transform: "translateY(12px)" },
-				{ opacity: 1, transform: "translateY(0)" },
-			],
-			{ ...opts, duration: 360, delay: 1000 },
-		);
-
-		ll.animate([{ opacity: 0 }, { opacity: 1 }], {
-			...opts,
-			duration: 300,
-			delay: 1300,
-		});
-
-		llLabel.animate([{ opacity: 0 }, { opacity: 1 }], {
-			...opts,
-			duration: 200,
-			delay: 1500,
-		});
+		for (let k = 0; k < NOTES.length; k++) {
+			await ctx.waitForNext();
+			annotate(k);
+		}
 
 		await ctx.waitForNext();
+		// Release cue: leaders retract and pins fade; the marked lines and notes stay.
+		const out = release(amb, strokes, pins.slice(-1));
+		for (const pin of pins.slice(0, -1)) {
+			pin.animate([{ opacity: 0.6 }, { opacity: 0 }], {
+				duration: out * 0.6,
+				easing: css("--ease-exit"),
+				fill: "forwards",
+			});
+		}
+		await ctx.hold(out);
 	},
 
 	unmount() {

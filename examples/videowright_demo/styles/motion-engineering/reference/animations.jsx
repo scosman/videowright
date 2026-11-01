@@ -1,754 +1,382 @@
-// animations.jsx
-// Reusable animation starter: Stage, Timeline, Sprite, easing helpers.
-// Usage (in an HTML file that loads React + Babel):
+// Motion Engineering: the motion vocabulary, in React.
 //
-//   <Stage width={1280} height={720} duration={10} background="#f6f4ef">
-//     <MyScene />
-//   </Stage>
+// A reference, not a dependency. Videowright segments are plain DOM (see ../sample/*.ts);
+// these components show the same moves for prototyping the style in React. Every duration
+// and easing reads tokens.css, and every moving value is a pure function of one clock, so a
+// frame depends only on time: seek it, scrub it, or render it. In a segment, drive `t` from
+// ctx.clock() instead of useClock().
 //
-// Inside <Stage>, any child can call useTime() to read the current
-// playhead (seconds). Or wrap content in <Sprite start={1} end={4}>...</Sprite>
-// to only render during that window -- children receive a `localTime` and
-// `progress` via the useSprite() hook.
-//
-// ─────────────────────────────────────────────────────────────────────────────
+// Exports: token / ms (token readers), decodeAt / tickAt (pure helpers), useClock, RiseLines,
+// Decode, TickNumber, DrawStroke, CrosshairLock, RegistrationCorners, DimensionLine,
+// LeaderCallout, Release, and MotionVocabulary (a board of all of them, on a 1920 x 1080
+// .me-stage).
 
-// ── Easing functions (hand-rolled, Popmotion-style) ─────────────────────────
-// All easings take t ∈ [0,1] and return eased t ∈ [0,1] (may overshoot for back/elastic).
-const Easing = {
-	linear: (t) => t,
+import { createContext, useContext, useEffect, useState } from "react";
 
-	// Quad
-	easeInQuad: (t) => t * t,
-	easeOutQuad: (t) => t * (2 - t),
-	easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
+// ── Tokens ──────────────────────────────────────────────────────────────────────────────
 
-	// Cubic
-	easeInCubic: (t) => t * t * t,
-	easeOutCubic: (t) => (t - 1) ** 3 + 1,
-	easeInOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1),
+export function token(name, fallback = "") {
+	if (typeof document === "undefined") return fallback;
+	return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
 
-	// Quart
-	easeInQuart: (t) => t * t * t * t,
-	easeOutQuart: (t) => 1 - (t - 1) ** 4,
-	easeInOutQuart: (t) => (t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (t - 1) ** 4),
+export function ms(name, fallback) {
+	return Number.parseFloat(token(name)) || fallback;
+}
 
-	// Expo
-	easeInExpo: (t) => (t === 0 ? 0 : 2 ** (10 * (t - 1))),
-	easeOutExpo: (t) => (t === 1 ? 1 : 1 - 2 ** (-10 * t)),
-	easeInOutExpo: (t) => {
-		if (t === 0) return 0;
-		if (t === 1) return 1;
-		if (t < 0.5) return 0.5 * 2 ** (20 * t - 10);
-		return 1 - 0.5 * 2 ** (-20 * t + 10);
-	},
-
-	// Sine
-	easeInSine: (t) => 1 - Math.cos((t * Math.PI) / 2),
-	easeOutSine: (t) => Math.sin((t * Math.PI) / 2),
-	easeInOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
-
-	// Back (overshoot)
-	easeOutBack: (t) => {
-		const c1 = 1.70158;
-		const c3 = c1 + 1;
-		return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
-	},
-	easeInBack: (t) => {
-		const c1 = 1.70158;
-		const c3 = c1 + 1;
-		return c3 * t * t * t - c1 * t * t;
-	},
-	easeInOutBack: (t) => {
-		const c1 = 1.70158;
-		const c2 = c1 * 1.525;
-		return t < 0.5
-			? ((2 * t) ** 2 * ((c2 + 1) * 2 * t - c2)) / 2
-			: ((2 * t - 2) ** 2 * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
-	},
-
-	// Elastic
-	easeOutElastic: (t) => {
-		const c4 = (2 * Math.PI) / 3;
-		if (t === 0) return 0;
-		if (t === 1) return 1;
-		return 2 ** (-10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
-	},
+// JS twins of the easing tokens, for values computed from the clock.
+const clamp01 = (p) => Math.min(Math.max(p, 0), 1);
+// --ease-settle: expo-out. Every arrival.
+const settle = (p) => (p >= 1 ? 1 : 1 - 2 ** (-10 * clamp01(p)));
+// --ease-draw: in-out. Strokes and growing bars.
+const drawEase = (p) => {
+	const q = clamp01(p);
+	return q < 0.5 ? 4 * q ** 3 : 1 - (-2 * q + 2) ** 3 / 2;
 };
+// --ease-exit: accelerating. Retractions.
+const exitEase = (p) => clamp01(p) ** 3;
 
-// ── Core interpolation helpers ──────────────────────────────────────────────
+// ── Clock ───────────────────────────────────────────────────────────────────────────────
 
-// Clamp a value to [min, max]
-const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-
-// interpolate([0, 0.5, 1], [0, 100, 50], ease?) -> fn(t)
-// Popmotion-style: linearly maps t across input keyframes to output values,
-// with optional easing per segment (single fn or array of fns).
-function interpolate(input, output, ease = Easing.linear) {
-	return (t) => {
-		if (t <= input[0]) return output[0];
-		if (t >= input[input.length - 1]) return output[output.length - 1];
-		for (let i = 0; i < input.length - 1; i++) {
-			if (t >= input[i] && t <= input[i + 1]) {
-				const span = input[i + 1] - input[i];
-				const local = span === 0 ? 0 : (t - input[i]) / span;
-				const easeFn = Array.isArray(ease) ? ease[i] || Easing.linear : ease;
-				const eased = easeFn(local);
-				return output[i] + (output[i + 1] - output[i]) * eased;
-			}
-		}
-		return output[output.length - 1];
-	};
+// Milliseconds since mount, advanced once per animation frame. Rounded so stepped values
+// (ticks, decodes, timecodes) land on the same frame every time.
+export function useClock(running = true) {
+	const [now, setNow] = useState(0);
+	useEffect(() => {
+		if (!running) return undefined;
+		const start = performance.now();
+		let frame = requestAnimationFrame(function loop() {
+			setNow(Math.round(performance.now() - start));
+			frame = requestAnimationFrame(loop);
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [running]);
+	return now;
 }
 
-// animate({from, to, start, end, ease})(t) — simpler single-segment tween.
-// Returns `from` before `start`, `to` after `end`.
-function animate({ from = 0, to = 1, start = 0, end = 1, ease = Easing.easeInOutCubic }) {
-	return (t) => {
-		if (t <= start) return from;
-		if (t >= end) return to;
-		const local = (t - start) / (end - start);
-		return from + (to - from) * ease(local);
-	};
+// ── Release ─────────────────────────────────────────────────────────────────────────────
+
+// On the scene's last cue the HUD lets go: strokes inside retract toward their start and
+// marks fade, while the content stays for the transition to carry out.
+const ReleaseProgress = createContext(0);
+
+export function Release({ t, at = Number.POSITIVE_INFINITY, children }) {
+	const progress = exitEase((t - at) / ms("--dur-exit", 420));
+	return <ReleaseProgress.Provider value={progress}>{children}</ReleaseProgress.Provider>;
 }
 
-// ── Timeline context ────────────────────────────────────────────────────────
+const useRelease = () => useContext(ReleaseProgress);
 
-const TimelineContext = React.createContext({ time: 0, duration: 10, playing: false });
+// ── Text ────────────────────────────────────────────────────────────────────────────────
 
-const useTime = () => React.useContext(TimelineContext).time;
-const useTimeline = () => React.useContext(TimelineContext);
-
-// ── Sprite ──────────────────────────────────────────────────────────────────
-// Renders children only when the playhead is inside [start, end]. Provides
-// a sub-context with `localTime` (seconds since start) and `progress` (0..1).
-//
-//   <Sprite start={2} end={5}>
-//     {({ localTime, progress }) => <Thing x={progress * 100} />}
-//   </Sprite>
-//
-// Or as a plain wrapper — children can call useSprite() themselves.
-
-const SpriteContext = React.createContext({ localTime: 0, progress: 0, duration: 0 });
-const useSprite = () => React.useContext(SpriteContext);
-
-function Sprite({ start = 0, end = Number.POSITIVE_INFINITY, children, keepMounted = false }) {
-	const { time } = useTimeline();
-	const visible = time >= start && time <= end;
-	if (!visible && !keepMounted) return null;
-
-	const duration = end - start;
-	const localTime = Math.max(0, time - start);
-	const progress =
-		duration > 0 && Number.isFinite(duration) ? clamp(localTime / duration, 0, 1) : 0;
-
-	const value = { localTime, progress, duration, visible };
-
+// Masked line reveal: each line rises out of its .me-line mask, --stagger apart.
+export function RiseLines({ lines, t, at = 0, className = "me-h1" }) {
+	const duration = ms("--dur-slow", 900);
+	const stagger = ms("--stagger", 80);
 	return (
-		<SpriteContext.Provider value={value}>
-			{typeof children === "function" ? children(value) : children}
-		</SpriteContext.Provider>
-	);
-}
-
-// ── Sample sprite components ────────────────────────────────────────────────
-
-// TextSprite: fades/slides text in on entry, holds, then fades out on exit.
-// Props: text, x, y, size, color, font, entryDur, exitDur, align
-function TextSprite({
-	text,
-	x = 0,
-	y = 0,
-	size = 48,
-	color = "#111",
-	font = "Inter, system-ui, sans-serif",
-	weight = 600,
-	entryDur = 0.45,
-	exitDur = 0.35,
-	entryEase = Easing.easeOutBack,
-	exitEase = Easing.easeInCubic,
-	align = "left",
-	letterSpacing = "-0.01em",
-}) {
-	const { localTime, duration } = useSprite();
-	const exitStart = Math.max(0, duration - exitDur);
-
-	let opacity = 1;
-	let ty = 0;
-
-	if (localTime < entryDur) {
-		const t = entryEase(clamp(localTime / entryDur, 0, 1));
-		opacity = t;
-		ty = (1 - t) * 16;
-	} else if (localTime > exitStart) {
-		const t = exitEase(clamp((localTime - exitStart) / exitDur, 0, 1));
-		opacity = 1 - t;
-		ty = -t * 8;
-	}
-
-	const translateX = align === "center" ? "-50%" : align === "right" ? "-100%" : "0";
-
-	return (
-		<div
-			style={{
-				position: "absolute",
-				left: x,
-				top: y,
-				transform: `translate(${translateX}, ${ty}px)`,
-				opacity,
-				fontFamily: font,
-				fontSize: size,
-				fontWeight: weight,
-				color,
-				letterSpacing,
-				whiteSpace: "pre",
-				lineHeight: 1.1,
-				willChange: "transform, opacity",
-			}}
-		>
-			{text}
+		<div className={className}>
+			{lines.map((line, i) => {
+				const rise = 112 * (1 - settle((t - at - i * stagger) / duration));
+				return (
+					<span className="me-line" key={line}>
+						<span style={{ transform: `translateY(${rise.toFixed(2)}%)` }}>{line}</span>
+					</span>
+				);
+			})}
 		</div>
 	);
 }
 
-// ImageSprite: scales + fades in; optional Ken Burns drift during hold.
-function ImageSprite({
-	src,
-	x = 0,
-	y = 0,
-	width = 400,
-	height = 300,
-	entryDur = 0.6,
-	exitDur = 0.4,
-	kenBurns = false,
-	kenBurnsScale = 1.08,
-	radius = 12,
-	fit = "cover",
-	placeholder = null, // {label: string} for striped placeholder
-}) {
-	const { localTime, duration } = useSprite();
-	const exitStart = Math.max(0, duration - exitDur);
-
-	let opacity = 1;
-	let scale = 1;
-
-	if (localTime < entryDur) {
-		const t = Easing.easeOutCubic(clamp(localTime / entryDur, 0, 1));
-		opacity = t;
-		scale = 0.96 + 0.04 * t;
-	} else if (localTime > exitStart) {
-		const t = Easing.easeInCubic(clamp((localTime - exitStart) / exitDur, 0, 1));
-		opacity = 1 - t;
-		scale = (kenBurns ? kenBurnsScale : 1) + 0.02 * t;
-	} else if (kenBurns) {
-		const holdSpan = exitStart - entryDur;
-		const holdT = holdSpan > 0 ? (localTime - entryDur) / holdSpan : 0;
-		scale = 1 + (kenBurnsScale - 1) * holdT;
+// Mono decode: characters resolve left to right through seeded noise (never Math.random).
+// For readouts and short labels, never sentences.
+const NOISE = "#%&*+=<>/0123456789ABCDEFHKMNPRTUVXYZ";
+export function decodeAt(text, local, perChar = 26) {
+	const resolveAfter = 170;
+	let out = "";
+	for (let i = 0; i < text.length && local >= i * perChar; i++) {
+		const ch = text[i];
+		const resolved = local >= i * perChar + resolveAfter || ch === " ";
+		out += resolved ? ch : NOISE[(i * 7 + Math.floor(local / 45) * 11) % NOISE.length];
 	}
+	return out;
+}
 
-	const content = placeholder ? (
-		<div
-			style={{
-				width: "100%",
-				height: "100%",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				background: "repeating-linear-gradient(135deg, #e9e6df 0 10px, #dcd8cf 10px 20px)",
-				color: "#6b6458",
-				fontFamily: "JetBrains Mono, ui-monospace, monospace",
-				fontSize: 13,
-				letterSpacing: "0.04em",
-				textTransform: "uppercase",
-			}}
-		>
-			{placeholder.label || "image"}
-		</div>
-	) : (
-		<img
-			src={src}
-			alt=""
-			style={{ width: "100%", height: "100%", objectFit: fit, display: "block" }}
-		/>
-	);
-
+export function Decode({ text, t, at = 0, className = "me-readout", style }) {
 	return (
-		<div
-			style={{
-				position: "absolute",
-				left: x,
-				top: y,
-				width,
-				height,
-				opacity,
-				transform: `scale(${scale})`,
-				transformOrigin: "center",
-				borderRadius: radius,
-				overflow: "hidden",
-				willChange: "transform, opacity",
-			}}
-		>
-			{content}
-		</div>
+		<span className={className} style={style}>
+			{decodeAt(text, t - at)}
+		</span>
 	);
 }
 
-// RectSprite: simple rectangle that animates position/size/color via props.
-// Useful demo primitive — takes a `render` fn for per-frame customization.
-function RectSprite({
-	x = 0,
-	y = 0,
-	width = 100,
-	height = 100,
-	color = "#111",
-	radius = 8,
-	entryDur = 0.4,
-	exitDur = 0.3,
-	render, // optional: (ctx) => style overrides
+// Numbers tick: discrete steps on the --dur-tick grid with an expo-out progress, so they
+// count fast and decelerate into the value. Tabular figures keep the width still.
+export function tickAt(t, at, duration, from, to) {
+	const step = ms("--dur-tick", 50);
+	const p = Math.min((Math.floor(Math.max(0, t - at) / step) * step) / duration, 1);
+	return from + (to - from) * settle(p);
+}
+
+export function TickNumber({ to, from = 0, t, at = 0, duration = 900, format, className }) {
+	const value = tickAt(t, at, duration, from, to);
+	return <span className={`me-num ${className ?? ""}`}>{format ? format(value) : value}</span>;
+}
+
+// ── Strokes and marks (render inside an <svg viewBox="0 0 1920 1080">) ─────────────────────
+
+// An eased stroke draw that retracts on release.
+export function DrawStroke({
+	d,
+	t,
+	at = 0,
+	duration = ms("--dur-draw", 760),
+	stroke = "var(--cyan)",
+	width = 2,
 }) {
-	const spriteCtx = useSprite();
-	const { localTime, duration } = spriteCtx;
-	const exitStart = Math.max(0, duration - exitDur);
-
-	let opacity = 1;
-	let scale = 1;
-
-	if (localTime < entryDur) {
-		const t = Easing.easeOutBack(clamp(localTime / entryDur, 0, 1));
-		opacity = clamp(localTime / entryDur, 0, 1);
-		scale = 0.4 + 0.6 * t;
-	} else if (localTime > exitStart) {
-		const t = Easing.easeInQuad(clamp((localTime - exitStart) / exitDur, 0, 1));
-		opacity = 1 - t;
-		scale = 1 - 0.15 * t;
-	}
-
-	const overrides = render ? render(spriteCtx) : {};
-
+	const released = useRelease();
+	const shown = drawEase((t - at) / duration) * (1 - released);
 	return (
-		<div
-			style={{
-				position: "absolute",
-				left: x,
-				top: y,
-				width,
-				height,
-				background: color,
-				borderRadius: radius,
-				opacity,
-				transform: `scale(${scale})`,
-				transformOrigin: "center",
-				willChange: "transform, opacity",
-				...overrides,
-			}}
+		<path
+			d={d}
+			pathLength={1}
+			fill="none"
+			stroke={stroke}
+			strokeWidth={width}
+			strokeDasharray="1 1"
+			strokeDashoffset={1 - shown}
 		/>
 	);
 }
 
-function Stage({
-	width = 1280,
-	height = 720,
-	duration = 10,
-	background = "#f6f4ef",
-	fps = 60,
-	loop = true,
-	autoplay = true,
-	persistKey = "animstage",
-	children,
-}) {
-	const [time, setTime] = React.useState(() => {
-		try {
-			const v = Number.parseFloat(localStorage.getItem(`${persistKey}:t`) || "0");
-			return Number.isFinite(v) ? clamp(v, 0, duration) : 0;
-		} catch {
-			return 0;
-		}
-	});
-	const [playing, setPlaying] = React.useState(autoplay);
-	const [hoverTime, setHoverTime] = React.useState(null);
-	const [scale, setScale] = React.useState(1);
+// The lock blink: on, dim, on, dim, on. Shared by corners and the crosshair.
+function blinkAt(local) {
+	const p = local / 900;
+	if (p < 0) return 0;
+	if (p < 0.3) return p / 0.3;
+	if (p < 0.62) return 1;
+	if (p < 0.7) return 0.25;
+	if (p < 0.8) return 1;
+	if (p < 0.88) return 0.25;
+	return 1;
+}
 
-	const stageRef = React.useRef(null);
-	const canvasRef = React.useRef(null);
-	const rafRef = React.useRef(null);
-	const lastTsRef = React.useRef(null);
-
-	// Persist playhead
-	React.useEffect(() => {
-		try {
-			localStorage.setItem(`${persistKey}:t`, String(time));
-		} catch {}
-	}, [time, persistKey]);
-
-	// Auto-scale to fit viewport
-	React.useEffect(() => {
-		if (!stageRef.current) return;
-		const el = stageRef.current;
-		const measure = () => {
-			const barH = 44; // playback bar height
-			const s = Math.min(el.clientWidth / width, (el.clientHeight - barH) / height);
-			setScale(Math.max(0.05, s));
-		};
-		measure();
-		const ro = new ResizeObserver(measure);
-		ro.observe(el);
-		window.addEventListener("resize", measure);
-		return () => {
-			ro.disconnect();
-			window.removeEventListener("resize", measure);
-		};
-	}, [width, height]);
-
-	// Animation loop
-	React.useEffect(() => {
-		if (!playing) {
-			lastTsRef.current = null;
-			return;
-		}
-		const step = (ts) => {
-			if (lastTsRef.current == null) lastTsRef.current = ts;
-			const dt = (ts - lastTsRef.current) / 1000;
-			lastTsRef.current = ts;
-			setTime((t) => {
-				let next = t + dt;
-				if (next >= duration) {
-					if (loop) next = next % duration;
-					else {
-						next = duration;
-						setPlaying(false);
-					}
-				}
-				return next;
-			});
-			rafRef.current = requestAnimationFrame(step);
-		};
-		rafRef.current = requestAnimationFrame(step);
-		return () => {
-			if (rafRef.current) cancelAnimationFrame(rafRef.current);
-			lastTsRef.current = null;
-		};
-	}, [playing, duration, loop]);
-
-	// Keyboard: space = play/pause, ← → = seek
-	React.useEffect(() => {
-		const onKey = (e) => {
-			if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
-			if (e.code === "Space") {
-				e.preventDefault();
-				setPlaying((p) => !p);
-			} else if (e.code === "ArrowLeft") {
-				setTime((t) => clamp(t - (e.shiftKey ? 1 : 0.1), 0, duration));
-			} else if (e.code === "ArrowRight") {
-				setTime((t) => clamp(t + (e.shiftKey ? 1 : 0.1), 0, duration));
-			} else if (e.key === "0" || e.code === "Home") {
-				setTime(0);
-			}
-		};
-		window.addEventListener("keydown", onKey);
-		return () => window.removeEventListener("keydown", onKey);
-	}, [duration]);
-
-	const displayTime = hoverTime != null ? hoverTime : time;
-
-	const ctxValue = React.useMemo(
-		() => ({ time: displayTime, duration, playing, setTime, setPlaying }),
-		[displayTime, duration, playing],
-	);
-
+// Crosshair lock: the reticle drops in at 2.4x and 45 degrees, settles on target, blinks
+// twice. A canvas-colored knockout under each stroke keeps it legible over amber. Use it on
+// a point (a bar tip, a data point), never over type.
+export function CrosshairLock({ cx, cy, r = 34, t, at = 0 }) {
+	const released = useRelease();
+	const p = settle((t - at) / 620);
+	const scale = 2.4 - 1.4 * p;
+	const turn = 45 * (1 - p);
+	const o = r + 22;
+	const ticks = `M${cx - o} ${cy}h18M${cx + o - 18} ${cy}h18M${cx} ${cy - o}v18M${cx} ${cy + o - 18}v18`;
 	return (
-		<div
-			ref={stageRef}
-			style={{
-				position: "absolute",
-				inset: 0,
-				display: "flex",
-				flexDirection: "column",
-				alignItems: "center",
-				background: "#0a0a0a",
-				fontFamily: "Inter, system-ui, sans-serif",
-			}}
+		<g
+			fill="none"
+			opacity={blinkAt(t - at) * (1 - released)}
+			transform={`rotate(${turn} ${cx} ${cy}) translate(${cx} ${cy}) scale(${scale}) translate(${-cx} ${-cy})`}
+			style={{ filter: "var(--glow-amber-filter)" }}
 		>
-			{/* Canvas area — vertically centered in remaining space */}
-			<div
-				style={{
-					flex: 1,
-					width: "100%",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					overflow: "hidden",
-					minHeight: 0,
-				}}
-			>
-				<div
-					ref={canvasRef}
-					style={{
-						width,
-						height,
-						background,
-						position: "relative",
-						transform: `scale(${scale})`,
-						transformOrigin: "center",
-						flexShrink: 0,
-						boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
-						overflow: "hidden",
-					}}
+			<circle cx={cx} cy={cy} r={r} stroke="var(--color-bg)" strokeWidth={7} />
+			<path d={ticks} stroke="var(--color-bg)" strokeWidth={7} />
+			<circle cx={cx} cy={cy} r={r} stroke="var(--amber)" strokeWidth={3} />
+			<path d={ticks} stroke="var(--amber)" strokeWidth={3} />
+			<circle cx={cx} cy={cy} r={4} fill="var(--amber)" />
+		</g>
+	);
+}
+
+// Registration corners: four amber L-brackets close in on a box from outside, then blink.
+export function RegistrationCorners({ x, y, w, h, t, at = 0, pad = 14, arm = 34 }) {
+	const released = useRelease();
+	const p = settle((t - at) / 640);
+	const corners = [
+		["tl", x - pad, y - pad, 1, 1],
+		["tr", x + w + pad, y - pad, -1, 1],
+		["bl", x - pad, y + h + pad, 1, -1],
+		["br", x + w + pad, y + h + pad, -1, -1],
+	];
+	return (
+		<g fill="none" stroke="var(--amber)" strokeWidth={3} opacity={blinkAt(t - at) * (1 - released)}>
+			{corners.map(([name, px, py, dx, dy]) => (
+				<path
+					key={name}
+					d={`M${px} ${py + dy * arm}V${py}H${px + dx * arm}`}
+					transform={`translate(${-dx * 72 * (1 - p)} ${-dy * 56 * (1 - p)})`}
+				/>
+			))}
+		</g>
+	);
+}
+
+// Dimension line: witness lines drop first, then the dimension draws out from its centre,
+// then a value in a background-filled chip ticks to the measurement.
+export function DimensionLine({ x0, x1, y, from, t, at = 0, value, format, chip = 220 }) {
+	const released = useRelease();
+	const cx = (x0 + x1) / 2;
+	const measureAt = at + 420;
+	const shown = t >= measureAt + 200 ? 1 - released : 0;
+	return (
+		<g>
+			<DrawStroke d={`M${x0} ${from}V${y + 14}`} t={t} at={at} duration={420} />
+			<DrawStroke d={`M${x1} ${from}V${y + 14}`} t={t} at={at} duration={420} />
+			<DrawStroke d={`M${cx} ${y}H${x0}`} t={t} at={measureAt} duration={640} />
+			<DrawStroke d={`M${cx} ${y}H${x1}`} t={t} at={measureAt} duration={640} />
+			<g opacity={shown}>
+				<rect x={cx - chip / 2} y={y - 22} width={chip} height={44} fill="var(--color-bg)" />
+				<text
+					x={cx}
+					y={y + 10}
+					textAnchor="middle"
+					fill="var(--cyan)"
+					className="me-readout"
+					style={{ fontSize: "var(--type-mono)", textTransform: "none" }}
 				>
-					<TimelineContext.Provider value={ctxValue}>{children}</TimelineContext.Provider>
+					{format(tickAt(t, measureAt + 200, 700, 0, value))}
+				</text>
+			</g>
+		</g>
+	);
+}
+
+// Leader callout: a node locks on, a leader draws out, the label and value decode at its end.
+// Amber when it marks the subject; cyan when it reports a measurement.
+export function LeaderCallout({ x, y, toX, label, value, t, at = 0, color = "var(--amber)" }) {
+	const released = useRelease();
+	const lock = settle((t - at) / ms("--dur-normal", 520));
+	const textAt = at + 420;
+	return (
+		<g>
+			<circle
+				cx={x}
+				cy={y}
+				r={5 + 8 * (1 - lock)}
+				fill={color}
+				opacity={(t >= at ? lock : 0) * (1 - released)}
+			/>
+			<DrawStroke d={`M${x + 8} ${y}H${toX}`} t={t} at={at + 120} duration={260} stroke={color} />
+			<text x={toX + 16} y={y - 8} className="me-label" fill="var(--fg-2)">
+				{decodeAt(label.toUpperCase(), t - textAt)}
+			</text>
+			<text x={toX + 16} y={y + 30} className="me-mono" fill={color}>
+				{decodeAt(value, t - textAt - 120)}
+			</text>
+		</g>
+	);
+}
+
+// ── Board ───────────────────────────────────────────────────────────────────────────────
+
+// Every move on one stage, looping: draw (0 s), fill (0.2 s), annotate (0.8 s), breathe
+// (always), release (5.2 s). Read it next to STYLE.md, "Motion system".
+export function MotionVocabulary() {
+	const clock = useClock();
+	const loop = 6400;
+	const t = clock % loop;
+	const timecode = `T+${String(Math.floor(clock / 60000)).padStart(2, "0")}:${((clock % 60000) / 1000).toFixed(2).padStart(5, "0")}`;
+	return (
+		<div style={{ position: "relative", width: 1920, height: 1080 }}>
+			<div className="me-stage" style={{ "--key-x": "700px", "--key-y": "520px" }}>
+				<div className="me-grid" />
+				<div className="me-key" />
+				<div className="me-light" />
+				<div className="me-world">
+					<div className="me-content">
+						<div style={{ position: "absolute", left: 160, top: 170 }}>
+							<Decode text="MOTION VOCABULARY" t={t} at={60} className="me-label" />
+						</div>
+						<div style={{ position: "absolute", left: 154, top: 206 }}>
+							<RiseLines lines={["Draw. Fill.", "Annotate. Breathe."]} t={t} at={200} />
+						</div>
+						<div
+							style={{
+								position: "absolute",
+								left: 160,
+								top: 460,
+								width: 9.2 * 40 * drawEase((t - 600) / 900),
+								height: 64,
+								background: "var(--amber)",
+								boxShadow: "var(--glow-amber)",
+							}}
+						/>
+						<div
+							className="me-panel"
+							style={{ position: "absolute", left: 1180, top: 200, width: 580, height: 200 }}
+						>
+							<div style={{ position: "absolute", left: 32, top: 32 }}>
+								<Decode text="CACHE HITS" t={t} at={600} className="me-label" />
+							</div>
+							<div style={{ position: "absolute", left: 28, top: 76 }}>
+								<TickNumber
+									to={94}
+									t={t}
+									at={700}
+									format={(v) => `${Math.round(v)}%`}
+									className="me-h1"
+								/>
+							</div>
+						</div>
+						<div style={{ position: "absolute", left: 160, top: 700 }}>
+							<TickNumber
+								to={4.2}
+								from={1}
+								t={t}
+								at={1800}
+								duration={1100}
+								format={(v) => `${v.toFixed(1)}×`}
+								className="me-hero"
+							/>
+						</div>
+					</div>
+					<svg className="me-svg" viewBox="0 0 1920 1080">
+						<title>Motion Engineering annotation moves</title>
+						<Release t={t} at={5200}>
+							<CrosshairLock cx={528} cy={492} r={30} t={t} at={1400} />
+							<DimensionLine
+								x0={160}
+								x1={1704}
+								y={600}
+								from={560}
+								t={t}
+								at={1000}
+								value={1544}
+								format={(v) => `${Math.round(v).toLocaleString("en-US")} PX`}
+							/>
+							<RegistrationCorners x={1180} y={200} w={580} h={200} t={t} at={2200} />
+							<LeaderCallout
+								x={1180}
+								y={860}
+								toX={1240}
+								label="Changed"
+								value="1 file"
+								t={t}
+								at={2600}
+								color="var(--cyan)"
+							/>
+						</Release>
+					</svg>
+				</div>
+				<div className="me-grain" />
+				<div className="me-hud">
+					<div className="me-frame" />
+					<div className="me-hud-slot" data-at="tl">
+						<span className="me-label">REF</span>
+						<span className="me-label" style={{ color: "var(--fg-2)" }}>
+							Motion
+						</span>
+					</div>
+					<div className="me-hud-slot" data-at="tr">
+						<span className="me-readout">{timecode}</span>
+					</div>
+					<div className="me-hud-slot" data-at="br">
+						<span className="me-readout" style={{ color: "var(--color-muted)" }}>
+							GRID 40 PX
+						</span>
+					</div>
 				</div>
 			</div>
-
-			{/* Playback bar — stacked below canvas, never overlapping */}
-			<PlaybackBar
-				time={displayTime}
-				actualTime={time}
-				duration={duration}
-				playing={playing}
-				onPlayPause={() => setPlaying((p) => !p)}
-				onReset={() => {
-					setTime(0);
-				}}
-				onSeek={(t) => setTime(t)}
-				onHover={(t) => setHoverTime(t)}
-			/>
 		</div>
 	);
 }
 
-// ── Playback bar ────────────────────────────────────────────────────────────
-// Play/pause, return-to-begin, scrub track, time display.
-// Uses fixed-width time fields so layout doesn't thrash.
-
-function PlaybackBar({ time, duration, playing, onPlayPause, onReset, onSeek, onHover }) {
-	const trackRef = React.useRef(null);
-	const [dragging, setDragging] = React.useState(false);
-
-	const timeFromEvent = React.useCallback(
-		(e) => {
-			const rect = trackRef.current.getBoundingClientRect();
-			const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-			return x * duration;
-		},
-		[duration],
-	);
-
-	const onTrackMove = (e) => {
-		if (!trackRef.current) return;
-		const t = timeFromEvent(e);
-		if (dragging) {
-			onSeek(t);
-		} else {
-			onHover(t);
-		}
-	};
-
-	const onTrackLeave = () => {
-		if (!dragging) onHover(null);
-	};
-
-	const onTrackDown = (e) => {
-		setDragging(true);
-		const t = timeFromEvent(e);
-		onSeek(t);
-		onHover(null);
-	};
-
-	React.useEffect(() => {
-		if (!dragging) return;
-		const onUp = () => setDragging(false);
-		const onMove = (e) => {
-			if (!trackRef.current) return;
-			const t = timeFromEvent(e);
-			onSeek(t);
-		};
-		window.addEventListener("mouseup", onUp);
-		window.addEventListener("mousemove", onMove);
-		return () => {
-			window.removeEventListener("mouseup", onUp);
-			window.removeEventListener("mousemove", onMove);
-		};
-	}, [dragging, timeFromEvent, onSeek]);
-
-	const pct = duration > 0 ? (time / duration) * 100 : 0;
-	const fmt = (t) => {
-		const total = Math.max(0, t);
-		const m = Math.floor(total / 60);
-		const s = Math.floor(total % 60);
-		const cs = Math.floor((total * 100) % 100);
-		return `${String(m).padStart(1, "0")}:${String(s).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
-	};
-
-	const mono = "JetBrains Mono, ui-monospace, SFMono-Regular, monospace";
-
-	return (
-		<div
-			style={{
-				display: "flex",
-				alignItems: "center",
-				gap: 12,
-				padding: "8px 16px",
-				background: "rgba(20,20,20,0.92)",
-				borderTop: "1px solid rgba(255,255,255,0.08)",
-				width: "100%",
-				maxWidth: 680,
-				alignSelf: "center",
-
-				borderRadius: 8,
-				color: "#f6f4ef",
-				fontFamily: "Inter, system-ui, sans-serif",
-				userSelect: "none",
-				flexShrink: 0,
-			}}
-		>
-			<IconButton onClick={onReset} title="Return to start (0)">
-				<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-					<path
-						d="M3 2v10M12 2L5 7l7 5V2z"
-						stroke="currentColor"
-						strokeWidth="1.5"
-						strokeLinejoin="round"
-						strokeLinecap="round"
-					/>
-				</svg>
-			</IconButton>
-			<IconButton onClick={onPlayPause} title="Play/pause (space)">
-				{playing ? (
-					<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-						<rect x="3" y="2" width="3" height="10" fill="currentColor" />
-						<rect x="8" y="2" width="3" height="10" fill="currentColor" />
-					</svg>
-				) : (
-					<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-						<path d="M3 2l9 5-9 5V2z" fill="currentColor" />
-					</svg>
-				)}
-			</IconButton>
-
-			{/* Current time: fixed width so it doesn't thrash */}
-			<div
-				style={{
-					fontFamily: mono,
-					fontSize: 12,
-					fontVariantNumeric: "tabular-nums",
-					width: 64,
-					textAlign: "right",
-					color: "#f6f4ef",
-				}}
-			>
-				{fmt(time)}
-			</div>
-
-			{/* Scrub track */}
-			<div
-				ref={trackRef}
-				onMouseMove={onTrackMove}
-				onMouseLeave={onTrackLeave}
-				onMouseDown={onTrackDown}
-				style={{
-					flex: 1,
-					height: 22,
-					position: "relative",
-					cursor: "pointer",
-					display: "flex",
-					alignItems: "center",
-				}}
-			>
-				<div
-					style={{
-						position: "absolute",
-						left: 0,
-						right: 0,
-						height: 4,
-						background: "rgba(255,255,255,0.12)",
-						borderRadius: 2,
-					}}
-				/>
-				<div
-					style={{
-						position: "absolute",
-						left: 0,
-						width: `${pct}%`,
-						height: 4,
-						background: "oklch(72% 0.12 250)",
-						borderRadius: 2,
-					}}
-				/>
-				<div
-					style={{
-						position: "absolute",
-						left: `${pct}%`,
-						top: "50%",
-						width: 12,
-						height: 12,
-						marginLeft: -6,
-						marginTop: -6,
-						background: "#fff",
-						borderRadius: 6,
-						boxShadow: "0 2px 4px rgba(0,0,0,0.4)",
-					}}
-				/>
-			</div>
-
-			{/* Duration: fixed width */}
-			<div
-				style={{
-					fontFamily: mono,
-					fontSize: 12,
-					fontVariantNumeric: "tabular-nums",
-					width: 64,
-					textAlign: "left",
-					color: "rgba(246,244,239,0.55)",
-				}}
-			>
-				{fmt(duration)}
-			</div>
-		</div>
-	);
-}
-
-function IconButton({ children, onClick, title }) {
-	const [hover, setHover] = React.useState(false);
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			title={title}
-			onMouseEnter={() => setHover(true)}
-			onMouseLeave={() => setHover(false)}
-			style={{
-				width: 28,
-				height: 28,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				background: hover ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
-				border: "1px solid rgba(255,255,255,0.1)",
-				borderRadius: 6,
-				color: "#f6f4ef",
-				cursor: "pointer",
-				padding: 0,
-				transition: "background 120ms",
-			}}
-		>
-			{children}
-		</button>
-	);
-}
-
-Object.assign(window, {
-	Easing,
-	interpolate,
-	animate,
-	clamp,
-	TimelineContext,
-	useTime,
-	useTimeline,
-	Sprite,
-	SpriteContext,
-	useSprite,
-	TextSprite,
-	ImageSprite,
-	RectSprite,
-	Stage,
-	PlaybackBar,
-});
+export default MotionVocabulary;

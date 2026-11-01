@@ -42,7 +42,7 @@ You describe the video you want. The agent writes video segments -- self-contain
 
 Define your visual style, and reuse it across videos. Pick one of six built-in styles, or create your own from a brand guide, reference URL, or short description.
 
-> Note: built-in styles were created with Opus 4.6. Newer models are better at design, so we suggest creating your own style.
+> Note: most built-in styles were created with Opus 4.6. Newer models are better at design, so we suggest creating your own style. Motion Engineering has been upgraded: it now bundles its fonts and ships a full design and motion system, signature transition recipes, and ten new sample scenes.
 
 <img width="953" height="549" alt="Built-in style packs" src="https://github.com/user-attachments/assets/3aaeecc2-7ca4-4c5a-8ed2-9adc4e226b2d" />
 

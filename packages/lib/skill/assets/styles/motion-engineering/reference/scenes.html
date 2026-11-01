@@ -1,513 +1,605 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Motion Engineering — Reference Scenes</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="../tokens.css" />
-<style>
-  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; font-family: var(--font-body); }
-  .me-canvas { position: absolute; inset: 0; background: var(--color-bg); color: var(--color-fg); overflow: hidden; }
-  .me-canvas::before {
-    content: ''; position: absolute; inset: 0; pointer-events: none;
-    background:
-      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px,
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px;
-  }
-  .me-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-  .me-h1 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em; line-height: 0.98; }
-  .me-amber { color: var(--color-accent); }
-  .me-cyan { color: var(--cyan); }
-  .me-muted { color: var(--color-muted); }
-  .me-tick { color: var(--color-muted); font-size: 11px; font-family: var(--font-mono); letter-spacing: 0.1em; }
-  /* Corner tick marks */
-  .me-corner { position: absolute; width: 24px; height: 24px; }
-  .me-corner::before, .me-corner::after { content: ''; position: absolute; background: var(--color-accent); }
-  .me-corner.tl::before { left: 0; top: 0; width: 24px; height: 1.5px; }
-  .me-corner.tl::after  { left: 0; top: 0; width: 1.5px; height: 24px; }
-  .me-corner.tr::before { right: 0; top: 0; width: 24px; height: 1.5px; }
-  .me-corner.tr::after  { right: 0; top: 0; width: 1.5px; height: 24px; }
-  .me-corner.bl::before { left: 0; bottom: 0; width: 24px; height: 1.5px; }
-  .me-corner.bl::after  { left: 0; bottom: 0; width: 1.5px; height: 24px; }
-  .me-corner.br::before { right: 0; bottom: 0; width: 24px; height: 1.5px; }
-  .me-corner.br::after  { right: 0; bottom: 0; width: 1.5px; height: 24px; }
-</style>
+	<meta charset="utf-8">
+	<title>Motion Engineering · reference scenes</title>
+	<!-- A static sheet of the style: palette, type scale, HUD vocabulary, and the settled,
+	     annotated frame of each of the ten samples. Open it in a browser; it uses only
+	     ../tokens.css (fonts and textures included). Motion lives in the samples
+	     (../sample/*.ts) and in animations.jsx. -->
+	<link rel="stylesheet" href="../tokens.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 64px;
+			background: var(--surface-0);
+			color: var(--color-fg);
+			font-family: var(--font-body);
+		}
+		h2.ref-heading {
+			margin: 96px 0 32px;
+		}
+		.ref-intro {
+			max-width: 1200px;
+		}
+		.ref-swatches {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 32px;
+		}
+		.ref-swatch {
+			display: grid;
+			gap: 10px;
+			width: 260px;
+		}
+		.ref-chip {
+			height: 96px;
+			border: var(--line-hair) solid var(--color-border);
+			border-radius: var(--radius-md);
+		}
+		.ref-type {
+			display: flex;
+			align-items: baseline;
+			gap: 40px;
+			padding: 16px 0;
+			border-top: var(--line-hair) solid var(--color-border);
+			overflow: hidden;
+		}
+		.ref-type-meta {
+			flex: 0 0 280px;
+			display: grid;
+			gap: 8px;
+		}
+		.ref-scenes {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 48px 32px;
+		}
+		.ref-scene {
+			margin: 0;
+		}
+		.ref-scene figcaption {
+			display: grid;
+			gap: 10px;
+			width: 864px;
+			margin-top: 16px;
+		}
+		.ref-caption {
+			font-size: var(--type-label);
+			color: var(--fg-2);
+			line-height: 1.4;
+		}
+		/* Each frame is a real 1920 x 1080 stage, scaled to 45% (two columns at 1920px). */
+		.ref-frame {
+			position: relative;
+			width: 864px;
+			height: 486px;
+			overflow: hidden;
+			border: var(--line-hair) solid var(--color-border);
+		}
+		.ref-1080 {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 1920px;
+			height: 1080px;
+			transform: scale(0.45);
+			transform-origin: 0 0;
+		}
+	</style>
 </head>
 <body>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<div id="root"></div>
-<script type="text/babel" src="animations.jsx"></script>
-<script type="text/babel">
-const SCENE = 4;
-const ease = Easing.easeOutCubic;
+	<header>
+		<div class="me-label" style="color: var(--fg-2)">Built-in style · motion-engineering</div>
+		<h1 class="me-display-sm" style="margin: 24px 0">Motion Engineering</h1>
+		<p class="me-body ref-intro">Aerospace HUD on a blueprint grid. Charcoal canvas, cyan-white type, amber signal, cyan measurement. Elements measure themselves in: lines draw, corners and crosshairs lock on, callouts arrive on leader lines, numbers tick. Then the frame keeps breathing. See STYLE.md for the rules and recipes, brand.md for the reasoning.</p>
+	</header>
 
-// Animated number — ticks toward target
-function Ticker({ from = 0, to, at = 0, dur = 0.9, suffix = '', pad = 0 }) {
-  const { localTime } = useSprite();
-  const p = clamp((localTime - at) / dur, 0, 1);
-  const v = from + (to - from) * ease(p);
-  const n = Math.round(v);
-  return <span>{String(n).padStart(pad, '0')}{suffix}</span>;
-}
+	<section>
+		<h2 class="me-h2 ref-heading">Palette</h2>
+		<div class="ref-swatches">
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--surface-0)"></div><div class="me-readout">--surface-0</div><div class="me-readout" style="color: var(--color-muted)">#0a0e14</div><div class="me-label">Canvas</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--surface-1)"></div><div class="me-readout">--surface-1</div><div class="me-readout" style="color: var(--color-muted)">#0f151d</div><div class="me-label">Panels</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--surface-2)"></div><div class="me-readout">--surface-2</div><div class="me-readout" style="color: var(--color-muted)">#151d27</div><div class="me-label">Raised</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--surface-3)"></div><div class="me-readout">--surface-3</div><div class="me-readout" style="color: var(--color-muted)">#1c2632</div><div class="me-label">Popovers</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--color-fg)"></div><div class="me-readout">--color-fg</div><div class="me-readout" style="color: var(--color-muted)">#e6f5fa</div><div class="me-label">Type</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--fg-2)"></div><div class="me-readout">--fg-2</div><div class="me-readout" style="color: var(--color-muted)">#a6bccb</div><div class="me-label">Secondary</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--color-muted)"></div><div class="me-readout">--color-muted</div><div class="me-readout" style="color: var(--color-muted)">#6f8798</div><div class="me-label">Tertiary</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--amber)"></div><div class="me-readout">--amber</div><div class="me-readout" style="color: var(--color-muted)">#ffb547</div><div class="me-label">Signal</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--cyan)"></div><div class="me-readout">--cyan</div><div class="me-readout" style="color: var(--color-muted)">#5bd8f5</div><div class="me-label">Measurement</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--ok)"></div><div class="me-readout">--ok</div><div class="me-readout" style="color: var(--color-muted)">#5ee3a1</div><div class="me-label">Pass</div></div>
+			<div class="ref-swatch"><div class="ref-chip" style="background: var(--warn)"></div><div class="me-readout">--warn</div><div class="me-readout" style="color: var(--color-muted)">#ff6b57</div><div class="me-label">Fail</div></div>
+		</div>
+	</section>
 
-// Stepped reveal
-function Reveal({ at = 0, dur = 0.35, children, style = {}, dir = 'up' }) {
-  const { localTime } = useSprite();
-  const p = clamp((localTime - at) / dur, 0, 1);
-  const e = ease(p);
-  const ty = dir === 'up' ? (1 - e) * 14 : 0;
-  return <div style={{ ...style, opacity: e, transform: `translateY(${ty}px)` }}>{children}</div>;
-}
+	<section>
+		<h2 class="me-h2 ref-heading">Type scale</h2>
+		<p class="me-body ref-intro">Archivo across three widths (display 112%, body 100%, labels 125%), JetBrains Mono for code and readouts. Floors at 1080p: display 120, headings 72, body 36, mono 28, labels 22. Nothing smaller.</p>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-hero</div><div class="me-readout" style="color: var(--color-muted)">--type-hero 256</div></div><div class="me-hero" style="white-space: nowrap">Apogee 2.0</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-display</div><div class="me-readout" style="color: var(--color-muted)">--type-display 200</div></div><div class="me-display" style="white-space: nowrap">Telemetry</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-display-sm</div><div class="me-readout" style="color: var(--color-muted)">--type-display-sm 150</div></div><div class="me-display-sm" style="white-space: nowrap">Under the hood</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-h1</div><div class="me-readout" style="color: var(--color-muted)">--type-h1 96</div></div><div class="me-h1" style="white-space: nowrap">Six targets. One config.</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-h2</div><div class="me-readout" style="color: var(--color-muted)">--type-h2 72</div></div><div class="me-h2" style="white-space: nowrap">Shared remote cache</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-readout-lg</div><div class="me-readout" style="color: var(--color-muted)">--type-readout-lg 56</div></div><div class="me-readout-lg" style="white-space: nowrap">npx apogee@2 init</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-body-lg</div><div class="me-readout" style="color: var(--color-muted)">--type-body-lg 48</div></div><div class="me-body-lg" style="white-space: nowrap">The build pipeline, engineered for zero drag.</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-body</div><div class="me-readout" style="color: var(--color-muted)">--type-body 36</div></div><div class="me-body" style="white-space: nowrap">Every input is hashed, so an edit rebuilds its own path.</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-mono</div><div class="me-readout" style="color: var(--color-muted)">--type-mono 28</div></div><div class="me-mono" style="white-space: nowrap">cache: "remote",  ✓ 3 rebuilt · 2.1 s</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-label</div><div class="me-readout" style="color: var(--color-muted)">--type-label 22</div></div><div class="me-label" style="white-space: nowrap">Cache hits · 30 d</div></div>
+			<div class="ref-type"><div class="ref-type-meta"><div class="me-readout">.me-readout</div><div class="me-readout" style="color: var(--color-muted)">--type-label 22</div></div><div class="me-readout" style="white-space: nowrap">T+00:04.48 · GRID 40 PX</div></div>
+	</section>
 
-// Line that draws from 0 → length
-function DrawLine({ at = 0, dur = 0.4, x1, y1, x2, y2, stroke = 'var(--color-accent)', sw = 1.5 }) {
-  const { localTime } = useSprite();
-  const p = clamp((localTime - at) / dur, 0, 1);
-  const e = ease(p);
-  const X = x1 + (x2 - x1) * e, Y = y1 + (y2 - y1) * e;
-  return <line x1={x1} y1={y1} x2={X} y2={Y} stroke={stroke} strokeWidth={sw} />;
-}
+	<section>
+		<h2 class="me-h2 ref-heading">HUD vocabulary</h2>
+		<p class="me-body ref-intro">Corner frame and slot readouts are chrome, present from frame 1. Everything else is annotation: it arrives after the content it measures (draw, fill, annotate, breathe) and lets go on the release cue.</p>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 960px; --key-y: 540px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-panel" style="position: absolute; left: 160px; top: 300px; width: 520px; height: 220px"></div>
+						<div class="me-label" style="position: absolute; left: 160px; top: 230px; color: var(--fg-2)">Registration corners</div>
+						<div class="me-label" style="position: absolute; left: 1000px; top: 230px; color: var(--fg-2)">Crosshair lock</div>
+						<div class="me-label" style="position: absolute; left: 1000px; top: 700px; color: var(--fg-2)">Ruler</div>
+						<div class="me-label" style="position: absolute; left: 160px; top: 700px; color: var(--fg-2)">Dimension line</div>
+						<div style="position: absolute; left: 536px; top: 786px"><div class="me-label" style="color: var(--fg-2)">Leader callout</div><div class="me-mono me-signal" style="margin-top: 6px">1 file changed</div></div>
+						<div style="position: absolute; left: 1000px; top: 800px; width: 760px; display: flex; align-items: center"><span class="me-label" style="color: var(--fg-2)">Dotted leader</span><span style="flex: 1; height: 2px; margin: 0 28px; background: repeating-linear-gradient(to right, color-mix(in srgb, var(--cyan) 60%, transparent) 0 4px, transparent 4px 12px)"></span><span class="me-mono me-measure">94% HIT RATE</span></div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><path d="M146 320V286H180M694 320V286H660M146 500V534H180M694 500V534H660" stroke="var(--amber)" stroke-width="3" fill="none"/><path d="M1000 410H1360" stroke="var(--hairline)" stroke-width="2"/><rect x="1000" y="378" width="360" height="64" fill="var(--amber)" style="filter: var(--glow-amber-filter)"/><g fill="none" style="filter: var(--glow-amber-filter)"><circle cx="1360" cy="410" r="30" stroke="var(--color-bg)" stroke-width="7"/><path d="M1308 410h18M1394 410h18M1360 358v18M1360 444v18" stroke="var(--color-bg)" stroke-width="7"/><circle cx="1360" cy="410" r="30" stroke="var(--amber)" stroke-width="3"/><path d="M1308 410h18M1394 410h18M1360 358v18M1360 444v18" stroke="var(--amber)" stroke-width="3"/><circle cx="1360" cy="410" r="4" fill="var(--amber)"/></g><g stroke="var(--cyan)" stroke-width="2" fill="none"><path d="M160 556V654M680 556V654M160 640H680"/></g><rect x="310.0" y="618" width="220" height="44" fill="var(--color-bg)"/><text x="420.0" y="650" text-anchor="middle" fill="var(--cyan)" class="me-readout" style="font-size: var(--type-mono); text-transform: none">520 PX</text><path d="M1000 640H1760M1000 640v8M1040 640v8M1080 640v8M1120 640v18M1160 640v8M1200 640v8M1240 640v8M1280 640v18M1320 640v8M1360 640v8M1400 640v8M1440 640v18M1480 640v8M1520 640v8M1560 640v8M1600 640v18M1640 640v8M1680 640v8M1720 640v8M1760 640v18" stroke="var(--cyan)" stroke-width="2" fill="none"/><circle cx="400" cy="820" r="9" fill="var(--color-bg)" stroke="var(--amber)" stroke-width="3"/><path d="M412 820H520" stroke="var(--amber)" stroke-width="2"/></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">HUD</span><span class="me-label" style="color: var(--fg-2)">Vocabulary</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:00.00</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">READOUTS: LOCK · SCALE · UP NEXT</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+		</figure>
+	</section>
 
-// Crosshair at (x,y) — sweeps in
-function Crosshair({ at = 0, x, y, size = 28, color = 'var(--color-accent)' }) {
-  const { localTime } = useSprite();
-  const p = clamp((localTime - at) / 0.4, 0, 1);
-  const e = ease(p);
-  const L = size * e;
-  return <svg style={{ position: 'absolute', left: x - size, top: y - size, width: size*2, height: size*2, overflow: 'visible' }}>
-    <line x1={size - L} y1={size} x2={size + L} y2={size} stroke={color} strokeWidth="1.5" />
-    <line x1={size} y1={size - L} x2={size} y2={size + L} stroke={color} strokeWidth="1.5" />
-    <circle cx={size} cy={size} r={3 * e} fill="none" stroke={color} strokeWidth="1.5" />
-  </svg>;
-}
-
-// Frame with corner ticks
-function Frame({ children, style = {}, at = 0 }) {
-  return <Reveal at={at} dur={0.35} style={{ position: 'absolute', inset: '80px 96px', border: '1px solid var(--color-border)', ...style }}>
-    <div className="me-corner tl" style={{ left: -1, top: -1 }} />
-    <div className="me-corner tr" style={{ right: -1, top: -1 }} />
-    <div className="me-corner bl" style={{ left: -1, bottom: -1 }} />
-    <div className="me-corner br" style={{ right: -1, bottom: -1 }} />
-    {children}
-  </Reveal>;
-}
-
-// Coordinate readout footer
-function CoordReadout() {
-  const t = useTime();
-  const x = (1240 + Math.sin(t) * 40).toFixed(2);
-  const y = (360  + Math.cos(t * 0.7) * 30).toFixed(2);
-  const tt = t.toFixed(2);
-  return <div className="me-mono" style={{ position: 'absolute', left: 96, right: 96, bottom: 28, display: 'flex', gap: 32, fontSize: 12, color: 'var(--color-muted)', letterSpacing: '0.1em' }}>
-    <span>X {x}</span><span>Y {y}</span><span>T {tt}s</span>
-    <span style={{ marginLeft: 'auto' }}>UNIT: PX · SCALE 1:1 · BEACON v0.4</span>
-  </div>;
-}
-
-function Counter() {
-  const t = useTime();
-  const i = Math.min(9, Math.floor(t / SCENE));
-  return <div className="me-mono" style={{ position: 'absolute', right: 96, top: 28, fontSize: 12, color: 'var(--color-muted)', letterSpacing: '0.1em' }}>
-    SCENE {String(i+1).padStart(2,'0')}/10
-  </div>;
-}
-function Header({ tag = 'SUBJECT' }) {
-  return <div className="me-mono" style={{ position: 'absolute', left: 96, top: 28, fontSize: 12, color: 'var(--color-accent)', letterSpacing: '0.2em' }}>
-    {`◢ ${tag}`}
-  </div>;
-}
-
-// ─── Scene 1 — Title ─────────────────────────────────────────────
-function S1() {
-  return <Sprite start={0} end={SCENE}>
-    <Header tag="DOCUMENT 01 · TITLE" />
-    <Frame at={0.1}>
-      <Crosshair at={0.4} x={960 - 96} y={400 - 80} />
-      <Reveal at={0.7} style={{ position: 'absolute', left: 80, top: 200 }}>
-        <div className="me-mono" style={{ color: 'var(--color-accent)', fontSize: 14, letterSpacing: '0.25em', marginBottom: 24 }}>◢ BEACON · LONG-RUNNING AGENTS · v0.4.0</div>
-      </Reveal>
-      <Reveal at={1.0} style={{ position: 'absolute', left: 80, top: 260 }}>
-        <div className="me-h1" style={{ fontSize: 240 }}>Beacon</div>
-      </Reveal>
-      <Reveal at={1.5} style={{ position: 'absolute', left: 80, top: 540 }}>
-        <div className="me-h1" style={{ fontSize: 56, fontWeight: 400, color: 'var(--color-muted)' }}>Memory · Reasoning · Recovery</div>
-      </Reveal>
-      {/* Dimension lines bracketing the title */}
-      <svg style={{ position: 'absolute', left: 80, top: 800, width: 1500, height: 60, overflow: 'visible' }}>
-        <DrawLine at={1.8} x1={0} y1={20} x2={1500} y2={20} stroke="var(--cyan)" />
-        <DrawLine at={1.8} x1={0} y1={10} x2={0} y2={30} stroke="var(--cyan)" />
-        <DrawLine at={1.8} x1={1500} y1={10} x2={1500} y2={30} stroke="var(--cyan)" />
-        <Reveal at={2.2}>
-          <text x={750} y={48} fill="var(--cyan)" fontFamily="var(--font-mono)" fontSize="14" textAnchor="middle">1500.00 PX</text>
-        </Reveal>
-      </svg>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-// ─── Scene 2 — Section ───────────────────────────────────────────
-function S2() {
-  return <Sprite start={SCENE} end={SCENE*2}>
-    <Header tag="DOCUMENT 02 · SECTION HEADER" />
-    <Frame at={0.05}>
-      <Reveal at={0.4} style={{ position: 'absolute', left: 80, top: 180 }}>
-        <div className="me-mono" style={{ color: 'var(--color-accent)', fontSize: 16, letterSpacing: '0.3em', marginBottom: 32 }}>── CHAPTER 02 ─────────────────────────────────────────────────</div>
-      </Reveal>
-      <Reveal at={0.8} style={{ position: 'absolute', left: 80, top: 260 }}>
-        <div className="me-h1" style={{ fontSize: 220 }}>The architecture.</div>
-      </Reveal>
-      <Reveal at={1.4} style={{ position: 'absolute', left: 80, top: 660 }}>
-        <div className="me-mono me-muted" style={{ fontSize: 18, letterSpacing: '0.2em' }}>3 PRIMITIVES · MEMORY · REASONING · RECOVERY</div>
-      </Reveal>
-      <svg style={{ position: 'absolute', left: 80, top: 760, width: 1500, height: 12, overflow: 'visible' }}>
-        <DrawLine at={1.6} dur={0.6} x1={0} y1={6} x2={1500} y2={6} stroke="var(--color-accent)" sw={2} />
-      </svg>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-// ─── Scene 3 — Kinetic ───────────────────────────────────────────
-function S3() {
-  const words = ['Most', 'agents', 'fail', 'because', 'they', 'forget.'];
-  return <Sprite start={SCENE*2} end={SCENE*3}>
-    <Header tag="DOCUMENT 03 · PREMISE" />
-    <Frame at={0.05}>
-      <div style={{ position: 'absolute', left: 80, top: 240, width: 1500 }}>
-        {words.map((w, i) => (
-          <Reveal key={i} at={0.5 + i * 0.18}>
-            <div className="me-h1" style={{ fontSize: 130, position: 'relative', display: 'inline-block', marginRight: 30, color: i === words.length - 1 ? 'var(--color-accent)' : 'inherit' }}>
-              <span style={{ position: 'absolute', top: -14, left: 0, right: 0, height: 1, background: 'var(--color-muted)' }} />
-              <span style={{ position: 'absolute', top: -14, left: 0, width: 1, height: 12, background: 'var(--color-muted)' }} />
-              <span style={{ position: 'absolute', top: -14, right: 0, width: 1, height: 12, background: 'var(--color-muted)' }} />
-              {w}
-              {i === words.length - 1 && <span style={{ position: 'absolute', inset: '-12px -8px', border: '1.5px solid var(--color-accent)' }} />}
-            </div>
-          </Reveal>
-        ))}
-      </div>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-// ─── Scene 4 — Bullet ────────────────────────────────────────────
-function S4() {
-  const items = [
-    ['ITEM 01', 'Context windows decay.',     'Δ = 12.4ms'],
-    ['ITEM 02', 'Tool selection drifts.',     'Δ = 09.1ms'],
-    ['ITEM 03', 'Plans go stale.',            'Δ = 22.6ms'],
-    ['ITEM 04', 'Errors compound.',           'Δ = 31.0ms'],
-    ['ITEM 05', 'Recovery requires restart.', 'Δ = 88.4ms'],
-  ];
-  return <Sprite start={SCENE*3} end={SCENE*4}>
-    <Header tag="DOCUMENT 04 · FAILURE MODES" />
-    <Frame at={0.05}>
-      <Reveal at={0.3} style={{ position: 'absolute', left: 80, top: 100 }}>
-        <div className="me-mono" style={{ fontSize: 14, color: 'var(--color-accent)', letterSpacing: '0.25em', marginBottom: 18 }}>◢ 4.1 KNOWN FAILURE MODES (n=5)</div>
-        <div className="me-h1" style={{ fontSize: 84 }}>Where agents break.</div>
-      </Reveal>
-      <div style={{ position: 'absolute', left: 80, right: 80, top: 360 }}>
-        {items.map(([n, t, m], i) => (
-          <Reveal key={n} at={0.7 + i * 0.18} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 200px', alignItems: 'baseline', padding: '22px 0', borderTop: '1px solid var(--color-border)' }}>
-            <span className="me-mono me-amber" style={{ fontSize: 13, letterSpacing: '0.2em' }}>{n}</span>
-            <span style={{ fontSize: 44 }}>{t}</span>
-            <span className="me-mono me-cyan" style={{ fontSize: 14, textAlign: 'right' }}>{m}</span>
-          </Reveal>
-        ))}
-      </div>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-// ─── Scene 5 — Stat ──────────────────────────────────────────────
-function S5() {
-  return <Sprite start={SCENE*4} end={SCENE*5}>
-    <Header tag="DOCUMENT 05 · MEASUREMENT" />
-    <Frame at={0.05}>
-      <Reveal at={0.3} style={{ position: 'absolute', left: 80, top: 100 }}>
-        <div className="me-mono me-amber" style={{ fontSize: 13, letterSpacing: '0.25em' }}>◢ FIG. 05.1 · FAILURE_RATE(step &gt; 4)</div>
-      </Reveal>
-      <div style={{ position: 'absolute', left: 80, top: 220, width: 1100 }}>
-        {/* Top dim line */}
-        <svg style={{ width: '100%', height: 36, overflow: 'visible', display: 'block' }}>
-          <DrawLine at={0.5} dur={0.6} x1={0} y1={18} x2={1100} y2={18} stroke="var(--cyan)" />
-          <DrawLine at={0.5} x1={0} y1={6} x2={0} y2={30} stroke="var(--cyan)" />
-          <DrawLine at={0.5} x1={1100} y1={6} x2={1100} y2={30} stroke="var(--cyan)" />
-        </svg>
-        <div className="me-h1 me-amber" style={{ fontSize: 420, lineHeight: 1.0, margin: '20px 0' }}>
-          <Ticker to={84} at={0.7} dur={1.1} suffix="" pad={2} /><span style={{ fontSize: 220 }}>%</span>
-        </div>
-        <svg style={{ width: '100%', height: 36, overflow: 'visible', display: 'block' }}>
-          <DrawLine at={1.6} dur={0.6} x1={0} y1={18} x2={1100} y2={18} stroke="var(--cyan)" />
-          <DrawLine at={1.6} x1={0} y1={6} x2={0} y2={30} stroke="var(--cyan)" />
-          <DrawLine at={1.6} x1={1100} y1={6} x2={1100} y2={30} stroke="var(--cyan)" />
-        </svg>
-      </div>
-      <Reveal at={2.1} style={{ position: 'absolute', right: 80, top: 320, width: 600 }}>
-        <div className="me-mono me-muted" style={{ fontSize: 12, letterSpacing: '0.25em', marginBottom: 18 }}>── CAPTION ──</div>
-        <div style={{ fontSize: 28, lineHeight: 1.35 }}>of agent failures occur after the 4th tool call.</div>
-        <div className="me-mono me-muted" style={{ fontSize: 13, marginTop: 24, letterSpacing: '0.15em' }}>SOURCE: BEACON.LOGS · N=12,840 · Q1·2026</div>
-      </Reveal>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-// ─── Scene 6 — Feature (2-col schematic + prose) ────────────────
-function S6() {
-  return <Sprite start={SCENE*5} end={SCENE*6}>
-    <Header tag="DOCUMENT 06 · FEATURE 01 of 03" />
-    <Frame at={0.05}>
-      {/* Left: wireframe schematic */}
-      <div style={{ position: 'absolute', left: 80, top: 100, width: 760, height: 760 }}>
-        <Reveal at={0.3}>
-          <div className="me-mono me-muted" style={{ fontSize: 12, letterSpacing: '0.25em', marginBottom: 18 }}>── SCHEMATIC · 06.1 ──</div>
-        </Reveal>
-        <svg width="760" height="700" style={{ overflow: 'visible' }}>
-          {/* Plan timeline boxes */}
-          {[0,1,2,3,4].map(i => (
-            <g key={i}>
-              <DrawLine at={0.6 + i*0.1} x1={20 + i*140} y1={140} x2={120 + i*140} y2={140} stroke="var(--color-muted)" />
-              <DrawLine at={0.6 + i*0.1} x1={20 + i*140} y1={120} x2={20 + i*140} y2={160} stroke="var(--color-muted)" />
-              <DrawLine at={0.6 + i*0.1} x1={120 + i*140} y1={120} x2={120 + i*140} y2={160} stroke="var(--color-muted)" />
-            </g>
-          ))}
-          {/* Snapshot ticks */}
-          {[0,1,2,3,4].map(i => (
-            <g key={'s'+i}>
-              <DrawLine at={1.2 + i*0.12} x1={70 + i*140} y1={140} x2={70 + i*140} y2={240} stroke="var(--color-accent)" sw={1.5} />
-              <Reveal at={1.4 + i*0.12}>
-                <circle cx={70 + i*140} cy={240} r="6" fill="var(--color-accent)" />
-              </Reveal>
-            </g>
-          ))}
-          {/* Rewind arrow */}
-          <DrawLine at={2.3} dur={0.6} x1={490} y1={340} x2={210} y2={340} stroke="var(--cyan)" sw={2} />
-          <Reveal at={2.9}>
-            <polygon points="210,340 222,332 222,348" fill="var(--cyan)" />
-            <text x={350} y={325} fill="var(--cyan)" fontFamily="var(--font-mono)" fontSize="14" textAnchor="middle">REWIND → snap_002</text>
-          </Reveal>
-          {/* Axis labels */}
-          <Reveal at={0.7}>
-            <text x={20} y={108} fill="var(--color-muted)" fontFamily="var(--font-mono)" fontSize="11" letterSpacing="0.15em">PLAN.STEP →</text>
-            <text x={20} y={280} fill="var(--color-muted)" fontFamily="var(--font-mono)" fontSize="11" letterSpacing="0.15em">SNAPSHOTS</text>
-          </Reveal>
-        </svg>
-      </div>
-      {/* Right: copy */}
-      <div style={{ position: 'absolute', right: 80, top: 100, width: 700 }}>
-        <Reveal at={0.3}>
-          <div className="me-mono me-amber" style={{ fontSize: 13, letterSpacing: '0.25em', marginBottom: 24 }}>◢ FEATURE 01 / 03</div>
-        </Reveal>
-        <Reveal at={0.6}>
-          <div className="me-h1" style={{ fontSize: 92, marginBottom: 36 }}>Checkpoint memory.</div>
-        </Reveal>
-        <Reveal at={1.1}>
-          <div style={{ fontSize: 26, lineHeight: 1.5, color: 'var(--color-muted)', marginBottom: 40 }}>
-            Snapshots an agent's reasoning state at each tool boundary. When a plan goes stale, the agent rewinds to the last point its world model was correct.
-          </div>
-        </Reveal>
-        <Reveal at={1.6}>
-          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-            <div><div className="me-mono me-muted" style={{ fontSize: 11, letterSpacing: '0.2em' }}>SNAPSHOT/MIN</div><div className="me-mono me-amber" style={{ fontSize: 36 }}><Ticker to={120} at={1.8} /></div></div>
-            <div><div className="me-mono me-muted" style={{ fontSize: 11, letterSpacing: '0.2em' }}>RESTORE</div><div className="me-mono me-amber" style={{ fontSize: 36 }}><Ticker to={9} at={1.8} /> ms</div></div>
-          </div>
-        </Reveal>
-      </div>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-// ─── Scene 7 — 3-card grid ───────────────────────────────────────
-function S7() {
-  const cards = [
-    { n: '01', name: 'Memory',    metric: '120 snap/min', sym: 'M' },
-    { n: '02', name: 'Reasoning', metric: '9 ms restore', sym: 'R' },
-    { n: '03', name: 'Recovery',  metric: '0 lost steps', sym: 'C' },
-  ];
-  return <Sprite start={SCENE*6} end={SCENE*7}>
-    <Header tag="DOCUMENT 07 · ARCHITECTURE OVERVIEW" />
-    <Frame at={0.05}>
-      <Reveal at={0.3} style={{ position: 'absolute', left: 80, top: 100 }}>
-        <div className="me-mono me-amber" style={{ fontSize: 13, letterSpacing: '0.25em', marginBottom: 18 }}>◢ FIG. 07 · PRIMITIVES (3)</div>
-        <div className="me-h1" style={{ fontSize: 84 }}>Three primitives.</div>
-      </Reveal>
-      <div style={{ position: 'absolute', left: 80, right: 80, top: 380, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 32 }}>
-        {cards.map((c, i) => (
-          <Reveal key={c.n} at={0.8 + i*0.15}>
-            <div style={{ position: 'relative', padding: 32, border: '1px solid var(--color-border)', minHeight: 420 }}>
-              <div className="me-corner tl" style={{ left: -1, top: -1 }} />
-              <div className="me-corner tr" style={{ right: -1, top: -1 }} />
-              <div className="me-corner bl" style={{ left: -1, bottom: -1 }} />
-              <div className="me-corner br" style={{ right: -1, bottom: -1 }} />
-              <div className="me-mono me-muted" style={{ fontSize: 12, letterSpacing: '0.25em' }}>PRIMITIVE {c.n} / 03</div>
-              <svg width="200" height="160" style={{ marginTop: 28 }}>
-                <circle cx="100" cy="80" r="50" fill="none" stroke="var(--color-accent)" strokeWidth="1.5" />
-                <text x="100" y="92" fill="var(--color-accent)" fontFamily="var(--font-display)" fontSize="44" fontWeight="500" textAnchor="middle">{c.sym}</text>
-                <line x1="40" y1="80" x2="160" y2="80" stroke="var(--color-muted)" strokeDasharray="2 4" />
-              </svg>
-              <div className="me-h1" style={{ fontSize: 56, marginTop: 24 }}>{c.name}</div>
-              <div className="me-mono me-cyan" style={{ fontSize: 14, marginTop: 16, letterSpacing: '0.15em' }}>◢ {c.metric}</div>
-            </div>
-          </Reveal>
-        ))}
-      </div>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-// ─── Scene 8 — UI showcase (blueprint of app) ────────────────────
-function S8() {
-  const callouts = [
-    { x: 380, y: 280, lx: 850, ly: 140, label: 'A · TIMELINE', desc: 'Live agent steps with checkpoint markers.' },
-    { x: 1100, y: 460, lx: 1450, ly: 600, label: 'B · MEMORY', desc: 'Active snapshot ring (last 12 minutes).' },
-    { x: 280, y: 720, lx: 100, ly: 820, label: 'C · CONTROLS', desc: 'Rewind, pin, branch.' },
-  ];
-  return <Sprite start={SCENE*7} end={SCENE*8}>
-    <Header tag="DOCUMENT 08 · CONSOLE UI" />
-    <Frame at={0.05}>
-      <Reveal at={0.3} style={{ position: 'absolute', left: 80, top: 80 }}>
-        <div className="me-mono me-amber" style={{ fontSize: 13, letterSpacing: '0.25em' }}>◢ FIG. 08 · BEACON.CONSOLE v0.4 · ANNOTATED</div>
-      </Reveal>
-      {/* App mock */}
-      <Reveal at={0.6}>
-        <div style={{ position: 'absolute', left: 80, top: 160, right: 80, bottom: 100, border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-          {/* sidebar */}
-          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 220, borderRight: '1px solid var(--color-border)', padding: 20 }}>
-            <div className="me-mono me-muted" style={{ fontSize: 11, letterSpacing: '0.25em', marginBottom: 16 }}>BEACON</div>
-            {['Runs','Memory','Plans','Tools','Traces','Evals'].map((x, i) => (
-              <div key={x} className="me-mono" style={{ padding: '8px 10px', fontSize: 14, color: i===1 ? 'var(--color-accent)' : 'var(--color-muted)', background: i===1 ? 'rgba(255,136,0,0.08)' : 'transparent', borderLeft: i===1 ? '2px solid var(--color-accent)' : '2px solid transparent' }}>{x}</div>
-            ))}
-          </div>
-          {/* timeline */}
-          <div style={{ position: 'absolute', left: 220, right: 280, top: 0, height: '60%', padding: 24, borderBottom: '1px solid var(--color-border)' }}>
-            <div className="me-mono me-muted" style={{ fontSize: 11, letterSpacing: '0.25em' }}>TIMELINE · session 41ac</div>
-            <svg width="100%" height="180" style={{ marginTop: 20 }}>
-              <line x1="0" y1="100" x2="100%" y2="100" stroke="var(--color-muted)" strokeWidth="1" />
-              {[0.05,0.18,0.31,0.44,0.57,0.70,0.83,0.95].map((p, i) => (
-                <g key={i}>
-                  <circle cx={`${p*100}%`} cy="100" r="5" fill={i===5 ? 'var(--color-accent)' : 'var(--color-border)'} stroke={i===5 ? 'var(--color-accent)' : 'var(--color-muted)'} />
-                  <text x={`${p*100}%`} y="135" fill="var(--color-muted)" fontSize="10" fontFamily="var(--font-mono)" textAnchor="middle">t{String(i).padStart(2,'0')}</text>
-                </g>
-              ))}
-            </svg>
-            <div className="me-mono" style={{ fontSize: 13, color: 'var(--color-fg)', marginTop: 16 }}>● Active: snap_006 · plan v3 · revising</div>
-          </div>
-          {/* logs */}
-          <div style={{ position: 'absolute', left: 220, right: 280, bottom: 0, top: '60%', padding: 24 }}>
-            <div className="me-mono me-muted" style={{ fontSize: 11, letterSpacing: '0.25em' }}>TRACE</div>
-            {['[t05] tool.search → 12 results','[t06] plan.revise → step 4 dropped','[t07] memory.snap → ok','[t08] reason.step → "select top-3 by F1"'].map((l, i) => (
-              <div key={i} className="me-mono" style={{ fontSize: 13, color: 'var(--color-muted)', marginTop: 8 }}>{l}</div>
-            ))}
-          </div>
-          {/* memory */}
-          <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 280, borderLeft: '1px solid var(--color-border)', padding: 20 }}>
-            <div className="me-mono me-muted" style={{ fontSize: 11, letterSpacing: '0.25em', marginBottom: 16 }}>MEMORY</div>
-            {[0,1,2,3,4,5,6,7,8,9,10,11].map(i => (
-              <div key={i} className="me-mono" style={{ fontSize: 12, padding: '5px 0', display: 'flex', justifyContent: 'space-between', color: i === 5 ? 'var(--color-accent)' : 'var(--color-muted)' }}>
-                <span>snap_{String(i).padStart(3,'0')}</span><span>{(i*0.4 + 0.2).toFixed(1)}s</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Reveal>
-      {/* Callouts */}
-      <svg style={{ position: 'absolute', inset: 0, pointerEvents: 'none', width: '100%', height: '100%' }}>
-        {callouts.map((c, i) => (
-          <g key={c.label}>
-            <DrawLine at={1.4 + i*0.25} dur={0.5} x1={c.x} y1={c.y} x2={c.lx} y2={c.ly} stroke="var(--color-accent)" />
-            <Reveal at={1.9 + i*0.25}>
-              <circle cx={c.x} cy={c.y} r="5" fill="var(--color-accent)" />
-              <circle cx={c.x} cy={c.y} r="11" fill="none" stroke="var(--color-accent)" />
-              <rect x={c.lx - 4} y={c.ly - 18} width={c.label.length * 9 + 60} height={20} fill="var(--color-bg)" />
-              <text x={c.lx} y={c.ly - 4} fill="var(--color-accent)" fontFamily="var(--font-mono)" fontSize="13" letterSpacing="0.15em">{c.label}</text>
-              <text x={c.lx} y={c.ly + 18} fill="var(--color-muted)" fontFamily="var(--font-mono)" fontSize="11">{c.desc}</text>
-            </Reveal>
-          </g>
-        ))}
-      </svg>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-// ─── Scene 9 — Content ───────────────────────────────────────────
-function S9() {
-  return <Sprite start={SCENE*8} end={SCENE*9}>
-    <Header tag="DOCUMENT 09 · MEMO" />
-    <Frame at={0.05}>
-      <Reveal at={0.3} style={{ position: 'absolute', left: 80, top: 100 }}>
-        <div className="me-mono me-amber" style={{ fontSize: 13, letterSpacing: '0.25em' }}>◢ MEMO · 2026.05 · BEACON.TEAM</div>
-      </Reveal>
-      <Reveal at={0.6} style={{ position: 'absolute', left: 80, top: 160 }}>
-        <div className="me-h1" style={{ fontSize: 84, marginBottom: 56 }}>What we believe.</div>
-      </Reveal>
-      <div style={{ position: 'absolute', left: 80, right: 80, top: 380, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 56 }}>
-        <Reveal at={0.9}>
-          <div style={{ fontSize: 30, lineHeight: 1.45, marginBottom: 24 }}>
-            The next decade of AI infrastructure will be built around <span className="me-amber">long runs</span> — agents that work for hours, not seconds.
-          </div>
-          <div className="me-mono me-muted" style={{ fontSize: 12, letterSpacing: '0.25em', paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>── THESIS A ──</div>
-        </Reveal>
-        <Reveal at={1.3}>
-          <div style={{ fontSize: 26, lineHeight: 1.5, color: 'var(--color-muted)', marginBottom: 24 }}>
-            The bottleneck won't be the model. It will be everything around the model — memory, recovery, observability. The unglamorous parts. The parts we are building.
-          </div>
-          <div className="me-mono me-muted" style={{ fontSize: 12, letterSpacing: '0.25em', paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>── THESIS B ──</div>
-        </Reveal>
-      </div>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-// ─── Scene 10 — CTA ──────────────────────────────────────────────
-function S10() {
-  return <Sprite start={SCENE*9} end={SCENE*10}>
-    <Header tag="DOCUMENT 10 · ACTION" />
-    <Frame at={0.05}>
-      {/* Reticle */}
-      <svg style={{ position: 'absolute', left: '50%', top: '46%', width: 600, height: 600, transform: 'translate(-50%, -50%)', overflow: 'visible' }}>
-        <Reveal at={0.4}>
-          <circle cx="300" cy="300" r="220" fill="none" stroke="var(--color-accent)" strokeWidth="1.5" />
-          <circle cx="300" cy="300" r="160" fill="none" stroke="var(--color-muted)" strokeWidth="1" strokeDasharray="3 4" />
-        </Reveal>
-        <DrawLine at={0.8} x1={300} y1={20} x2={300} y2={120} stroke="var(--color-accent)" />
-        <DrawLine at={0.8} x1={300} y1={580} x2={300} y2={480} stroke="var(--color-accent)" />
-        <DrawLine at={0.8} x1={20} y1={300} x2={120} y2={300} stroke="var(--color-accent)" />
-        <DrawLine at={0.8} x1={580} y1={300} x2={480} y2={300} stroke="var(--color-accent)" />
-      </svg>
-      <Reveal at={1.2} style={{ position: 'absolute', left: 0, right: 0, top: '42%', textAlign: 'center' }}>
-        <div className="me-h1" style={{ fontSize: 200 }}>Start the agent.</div>
-      </Reveal>
-      <Reveal at={1.7} style={{ position: 'absolute', left: 0, right: 0, top: '64%', textAlign: 'center' }}>
-        <div className="me-mono me-amber" style={{ fontSize: 28, letterSpacing: '0.15em' }}>BEACON.RUN/START</div>
-      </Reveal>
-      <Reveal at={2.1} style={{ position: 'absolute', left: 0, right: 0, bottom: 100, textAlign: 'center' }}>
-        <div className="me-mono me-muted" style={{ fontSize: 13, letterSpacing: '0.3em' }}>──────  BEACON · MAY 2026 · v0.4.0  ──────</div>
-      </Reveal>
-    </Frame>
-    <Counter /><CoordReadout />
-  </Sprite>;
-}
-
-function App() {
-  return (
-    <Stage width={1920} height={1080} duration={SCENE*10} background="var(--color-bg)" persistKey="motion-engineering-ref">
-      <div className="me-canvas">
-        <S1 /><S2 /><S3 /><S4 /><S5 /><S6 /><S7 /><S8 /><S9 /><S10 />
-      </div>
-    </Stage>
-  );
-}
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script>
+	<section>
+		<h2 class="me-h2 ref-heading">Scenes</h2>
+		<p class="me-body ref-intro">The settled frame of each sample (ui-showcase with its camera at rest, cta in its calm final state): one focal point in amber, measurement in cyan, the same grid at the same origin in every frame.</p>
+		<div class="ref-scenes">
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 900px; --key-y: 500px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-label" style="position: absolute; left: 160px; top: 318px; color: var(--fg-2)">Launch brief · 2026.11</div>
+						<div class="me-hero" style="position: absolute; left: 150px; top: 360px">Apogee 2.0</div>
+						<div class="me-body-lg" style="position: absolute; left: 160px; top: 736px">The build pipeline, engineered for zero drag.</div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><path d="M146 409V375H180M1655 409V375H1621M146 575V609H180M1655 575V609H1621" stroke="var(--amber)" stroke-width="3" fill="none"/><g stroke="var(--cyan)" stroke-width="2" fill="none"><path d="M160 621V657M1641 621V657M160 643H1641"/></g><rect x="790.5" y="621" width="220" height="44" fill="var(--color-bg)"/><text x="900.5" y="653" text-anchor="middle" fill="var(--cyan)" class="me-readout" style="font-size: var(--type-mono); text-transform: none">1,481 PX</text></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S01 / 10</span><span class="me-label" style="color: var(--fg-2)">Title</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:04.48</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">LOCK X 0160 Y 0389</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">title</span><span class="ref-caption">Hero on the x = 160 line; corners lock on; a dimension line measures its real width; the subtitle rises on the next cue.</span></figcaption>
+		</figure>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 440px; --key-y: 440px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-numeral me-signal" style="position: absolute; left: 144px; top: 236px">02</div>
+						<div class="me-display-sm" style="position: absolute; left: 872px; top: 272px">Under<br>the hood</div>
+						<div class="me-body" style="position: absolute; left: 880px; top: 620px; width: 860px">The task graph, the cache, and the deterministic core.</div>
+						<div class="me-readout" style="position: absolute; left: 174px; top: 862px; color: var(--color-muted)">01 Intro</div><div class="me-readout" style="position: absolute; left: 494px; top: 862px; color: var(--amber)">02 Under the hood</div><div class="me-readout" style="position: absolute; left: 814px; top: 862px; color: var(--color-muted)">03 Telemetry</div><div class="me-readout" style="position: absolute; left: 1134px; top: 862px; color: var(--color-muted)">04 Results</div><div class="me-readout" style="position: absolute; left: 1454px; top: 862px; color: var(--color-muted)">05 Ship it</div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><path d="M800 252V712" stroke="var(--hairline-strong)" stroke-width="2"/><path d="M160 836H1760M160 836v-18M200 836v-7M240 836v-7M280 836v-7M320 836v-7M360 836v-7M400 836v-7M440 836v-7M480 836v-18M520 836v-7M560 836v-7M600 836v-7M640 836v-7M680 836v-7M720 836v-7M760 836v-7M800 836v-18M840 836v-7M880 836v-7M920 836v-7M960 836v-7M1000 836v-7M1040 836v-7M1080 836v-7M1120 836v-18M1160 836v-7M1200 836v-7M1240 836v-7M1280 836v-7M1320 836v-7M1360 836v-7M1400 836v-7M1440 836v-18M1480 836v-7M1520 836v-7M1560 836v-7M1600 836v-7M1640 836v-7M1680 836v-7M1720 836v-7M1760 836v-18" stroke="var(--hairline)" stroke-width="2" fill="none"/><path d="M160 836H480" stroke="var(--cyan)" stroke-width="4"/><path d="M480 836H800" stroke="var(--amber)" stroke-width="4" style="filter: var(--glow-amber-filter)"/><path d="M480 806l-11 -18h22z" fill="var(--amber)" style="filter: var(--glow-amber-filter)"/></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S02 / 10</span><span class="me-label" style="color: var(--fg-2)">Section</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:03.83</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">UP NEXT · 03 TELEMETRY</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">section</span><span class="ref-caption">A 420px amber numeral, a rule, a two-line title; the ruler of sections draws and its marker locks on the current stop.</span></figcaption>
+		</figure>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 760px; --key-y: 560px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-hero" style="position: absolute; left: 148px; top: 136px; color: var(--color-muted)">Every build.</div>
+						<div class="me-hero" style="position: absolute; left: 148px; top: 376px; color: var(--fg-2)">Every test.</div>
+						<div class="me-hero me-signal" style="position: absolute; left: 148px; top: 616px">Measured.</div>
+						<div class="me-mono me-measure" style="position: absolute; left: 1556px; top: 850px">±0.4 ms</div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><path d="M156 870H1532M160 870v18M200 870v8M240 870v8M280 870v8M320 870v18M360 870v8M400 870v8M440 870v8M480 870v18M520 870v8M560 870v8M600 870v8M640 870v18M680 870v8M720 870v8M760 870v8M800 870v18M840 870v8M880 870v8M920 870v8M960 870v18M1000 870v8M1040 870v8M1080 870v8M1120 870v18M1160 870v8M1200 870v8M1240 870v8M1280 870v18M1320 870v8M1360 870v8M1400 870v8M1440 870v18M1480 870v8M1520 870v8" stroke="var(--cyan)" stroke-width="2" fill="none"/></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S03 / 10</span><span class="me-label" style="color: var(--fg-2)">Kinetic</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:05.13</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">SPAN 1376 PX · 34 CELLS</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">kinetic</span><span class="ref-caption">Three hero lines on three cues; earlier lines step down the type ladder; the amber word is measured by a ruler.</span></figcaption>
+		</figure>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 760px; --key-y: 600px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-label" style="position: absolute; left: 160px; top: 170px; color: var(--fg-2)">Release notes · 2.0</div>
+						<div class="me-h1" style="position: absolute; left: 154px; top: 206px">What’s new in 2.0</div>
+						<div style="position: absolute; left: 280px; top: 388px; width: 1480px; opacity: 0.5">
+							<div class="me-mono" style="position: absolute; left: 0; top: 10px; color: var(--cyan)">01</div>
+							<div style="position: absolute; left: 88px; right: 0; top: -4px; display: flex; align-items: center">
+								<span class="me-h2" style="white-space: nowrap">Incremental task graph</span>
+								<span style="flex: 1; height: 2px; margin: 8px 28px 0 36px; background: repeating-linear-gradient(to right, color-mix(in srgb, var(--cyan) 60%, transparent) 0 4px, transparent 4px 12px)"></span>
+								<span class="me-mono me-measure" style="font-weight: 560">−62% REBUILD</span>
+							</div>
+							<div class="me-body" style="position: absolute; left: 88px; top: 80px">Only what changed rebuilds.</div>
+						</div>
+						<div style="position: absolute; left: 280px; top: 568px; width: 1480px; opacity: 0.5">
+							<div class="me-mono" style="position: absolute; left: 0; top: 10px; color: var(--cyan)">02</div>
+							<div style="position: absolute; left: 88px; right: 0; top: -4px; display: flex; align-items: center">
+								<span class="me-h2" style="white-space: nowrap">Shared remote cache</span>
+								<span style="flex: 1; height: 2px; margin: 8px 28px 0 36px; background: repeating-linear-gradient(to right, color-mix(in srgb, var(--cyan) 60%, transparent) 0 4px, transparent 4px 12px)"></span>
+								<span class="me-mono me-measure" style="font-weight: 560">94% HIT RATE</span>
+							</div>
+							<div class="me-body" style="position: absolute; left: 88px; top: 80px">One build, every machine.</div>
+						</div>
+						<div style="position: absolute; left: 280px; top: 748px; width: 1480px; opacity: 1">
+							<div class="me-mono" style="position: absolute; left: 0; top: 10px; color: var(--amber)">03</div>
+							<div style="position: absolute; left: 88px; right: 0; top: -4px; display: flex; align-items: center">
+								<span class="me-h2" style="white-space: nowrap">Deterministic outputs</span>
+								<span style="flex: 1; height: 2px; margin: 8px 28px 0 36px; background: repeating-linear-gradient(to right, color-mix(in srgb, var(--cyan) 60%, transparent) 0 4px, transparent 4px 12px)"></span>
+								<span class="me-mono me-measure" style="font-weight: 560">BIT-EXACT ✓</span>
+							</div>
+							<div class="me-body" style="position: absolute; left: 88px; top: 80px">Same inputs, same bytes.</div>
+						</div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><path d="M200 350V890" stroke="var(--hairline)" stroke-width="2"/><circle cx="200" cy="420" r="9" fill="var(--color-bg)" stroke="var(--cyan)" stroke-width="3"/><path d="M212 420H264" stroke="var(--cyan)" stroke-width="2"/><circle cx="200" cy="600" r="9" fill="var(--color-bg)" stroke="var(--cyan)" stroke-width="3"/><path d="M212 600H264" stroke="var(--cyan)" stroke-width="2"/><circle cx="200" cy="780" r="9" fill="var(--color-bg)" stroke="var(--amber)" stroke-width="3"/><path d="M212 780H264" stroke="var(--amber)" stroke-width="2"/></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S04 / 10</span><span class="me-label" style="color: var(--fg-2)">Bullets</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:06.83</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">ITEM 03 / 03</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">bullet</span><span class="ref-caption">Items lock onto a cyan spine one cue at a time; a dotted leader carries each result to the right edge; the newest item is the focal point.</span></figcaption>
+		</figure>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 560px; --key-y: 640px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-label" style="position: absolute; left: 160px; top: 170px; color: var(--fg-2)">Benchmark · cold build</div>
+						<div class="me-mono" style="position: absolute; left: 160px; top: 240px; color: var(--fg-2)">v1.9</div>
+						<div class="me-mono" style="position: absolute; left: 160px; top: 400px; color: var(--fg-2)">v2.0</div>
+						<div style="position: absolute; left: 160px; top: 300px; width: 1544px; height: 64px; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cyan) 20%, transparent) 0 2px, color-mix(in srgb, var(--cyan) 6%, transparent) 2px 12px); box-shadow: inset -3px 0 0 var(--cyan), inset 0 0 0 2px color-mix(in srgb, var(--cyan) 50%, transparent)"></div>
+						<div style="position: absolute; left: 160px; top: 460px; width: 368px; height: 64px; background: var(--amber); box-shadow: var(--glow-amber)"></div>
+						<div class="me-mono me-measure" style="position: absolute; left: 1704px; top: 240px; font-weight: 560; transform: translateX(-100%)">38.6 s</div>
+						<div class="me-mono me-signal" style="position: absolute; left: 528px; top: 400px; font-weight: 560; transform: translateX(-100%)">9.2 s</div>
+						<div style="position: absolute; left: 152px; top: 690px; display: flex; align-items: last baseline; gap: 64px">
+							<div class="me-hero me-signal"><span class="me-num">4.2</span>×</div>
+							<div><div class="me-body-lg" style="color: var(--color-fg)">faster cold builds</div><div class="me-body">than 1.9, on a 1.2M-line monorepo.</div></div>
+						</div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><path d="M160 600H1760M160 600v16M200 600v7M240 600v7M280 600v7M320 600v16M360 600v7M400 600v7M440 600v7M480 600v16M520 600v7M560 600v7M600 600v7M640 600v16M680 600v7M720 600v7M760 600v7M800 600v16M840 600v7M880 600v7M920 600v7M960 600v16M1000 600v7M1040 600v7M1080 600v7M1120 600v16M1160 600v7M1200 600v7M1240 600v7M1280 600v16M1320 600v7M1360 600v7M1400 600v7M1440 600v16M1480 600v7M1520 600v7M1560 600v7M1600 600v16M1640 600v7M1680 600v7M1720 600v7M1760 600v16" stroke="var(--hairline)" stroke-width="2" fill="none"/><g fill="var(--color-muted)" class="me-readout" style="text-transform: none"><text x="160" y="648" text-anchor="start">0</text><text x="480" y="648" text-anchor="middle">8</text><text x="800" y="648" text-anchor="middle">16</text><text x="1120" y="648" text-anchor="middle">24</text><text x="1440" y="648" text-anchor="middle">32</text><text x="1760" y="648" text-anchor="end">40 s</text></g><path d="M1704 364V506M580 492H1704M580 482v20M1704 482v20" stroke="var(--cyan)" stroke-width="2" fill="none"/><rect x="1042" y="470" width="200" height="44" fill="var(--color-bg)"/><text x="1142" y="502" text-anchor="middle" fill="var(--cyan)" class="me-readout" style="font-size: var(--type-mono); text-transform: none">−29.4 s</text><g fill="none" style="filter: var(--glow-amber-filter)"><circle cx="528" cy="492" r="30" stroke="var(--color-bg)" stroke-width="7"/><path d="M476 492h18M562 492h18M528 440v18M528 526v18" stroke="var(--color-bg)" stroke-width="7"/><circle cx="528" cy="492" r="30" stroke="var(--amber)" stroke-width="3"/><path d="M476 492h18M562 492h18M528 440v18M528 526v18" stroke="var(--amber)" stroke-width="3"/><circle cx="528" cy="492" r="4" fill="var(--amber)"/></g></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S05 / 10</span><span class="me-label" style="color: var(--fg-2)">Stat</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:05.83</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">SCALE 1 CELL = 1.0 S</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">stat</span><span class="ref-caption">The grid is the scale (1 cell = 1 s). Bars grow with readouts on their tips; a reticle locks on, a dimension line measures the gap, the ratio ticks in at hero size.</span></figcaption>
+		</figure>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 1260px; --key-y: 540px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-label" style="position: absolute; left: 160px; top: 282px; color: var(--fg-2)">Incremental builds</div>
+						<div class="me-h1" style="position: absolute; left: 154px; top: 320px">Only what<br>changed<br>rebuilds.</div>
+						<div class="me-body" style="position: absolute; left: 160px; top: 648px; width: 540px">Every input is hashed, so<br>an edit rebuilds its own path<br>and nothing else.</div>
+						<div class="me-panel" style="position: absolute; left: 760px; top: 210px; width: 1000px; height: 660px">
+							<div style="position: absolute; left: 0; right: 0; top: 0; height: 64px; border-bottom: var(--line-hair) solid var(--color-border)"></div>
+							<div class="me-mono" style="position: absolute; left: 32px; top: 12px; color: var(--fg-2)">apogee build --watch</div>
+							<div class="me-readout" style="position: absolute; right: 32px; top: 22px; color: var(--color-muted)">3 BUILT · 2 CACHED</div>
+						</div>
+						<div style="position: absolute; left: 830px; top: 314px; width: 260px; height: 72px; border-radius: var(--radius-sm); border: var(--line-hair) dashed var(--hairline)">
+							<span class="me-mono" style="position: absolute; left: 22px; top: 15px; color: var(--fg-2)">cli.ts</span>
+							<span class="me-mono" style="position: absolute; right: 22px; top: 15px; color: var(--cyan)"></span>
+						</div>
+						<div style="position: absolute; left: 1150px; top: 314px; width: 260px; height: 72px; border-radius: var(--radius-sm); border: var(--line-hair) dashed var(--amber)">
+							<span class="me-mono" style="position: absolute; left: 22px; top: 15px; color: var(--fg-2)">cache.ts</span>
+							<span class="me-mono" style="position: absolute; right: 22px; top: 15px; color: var(--cyan)"></span>
+						</div>
+						<div style="position: absolute; left: 830px; top: 454px; width: 260px; height: 72px; border-radius: var(--radius-sm); border: var(--line-hair) solid color-mix(in srgb, var(--cyan) 60%, transparent); background: var(--surface-2); box-shadow: var(--edge-light)">
+							<span class="me-mono" style="position: absolute; left: 22px; top: 15px; color: var(--color-fg)">build:cli</span>
+							<span class="me-mono" style="position: absolute; right: 22px; top: 15px; color: var(--cyan)">✓</span>
+						</div>
+						<div style="position: absolute; left: 1150px; top: 454px; width: 260px; height: 72px; border-radius: var(--radius-sm); border: var(--line-hair) solid var(--amber); background: var(--surface-2); box-shadow: 0 0 0 1px var(--amber), var(--edge-light)">
+							<span class="me-mono" style="position: absolute; left: 22px; top: 15px; color: var(--color-fg)">build:core</span>
+							<span class="me-mono" style="position: absolute; right: 22px; top: 15px; color: var(--amber)">✓</span>
+						</div>
+						<div style="position: absolute; left: 830px; top: 594px; width: 260px; height: 72px; border-radius: var(--radius-sm); border: var(--line-hair) solid color-mix(in srgb, var(--cyan) 60%, transparent); background: var(--surface-2); box-shadow: var(--edge-light)">
+							<span class="me-mono" style="position: absolute; left: 22px; top: 15px; color: var(--color-fg)">test:cli</span>
+							<span class="me-mono" style="position: absolute; right: 22px; top: 15px; color: var(--cyan)">✓</span>
+						</div>
+						<div style="position: absolute; left: 1150px; top: 594px; width: 260px; height: 72px; border-radius: var(--radius-sm); border: var(--line-hair) solid var(--amber); background: var(--surface-2); box-shadow: 0 0 0 1px var(--amber), var(--edge-light)">
+							<span class="me-mono" style="position: absolute; left: 22px; top: 15px; color: var(--color-fg)">test:core</span>
+							<span class="me-mono" style="position: absolute; right: 22px; top: 15px; color: var(--amber)">✓</span>
+						</div>
+						<div style="position: absolute; left: 990px; top: 734px; width: 260px; height: 72px; border-radius: var(--radius-sm); border: var(--line-hair) solid var(--amber); background: var(--surface-2); box-shadow: 0 0 0 1px var(--amber), var(--edge-light)">
+							<span class="me-mono" style="position: absolute; left: 22px; top: 15px; color: var(--color-fg)">bundle</span>
+							<span class="me-mono" style="position: absolute; right: 22px; top: 15px; color: var(--amber)">✓</span>
+						</div>
+						<div style="position: absolute; left: 1486px; top: 316px"><div class="me-label" style="color: var(--fg-2)">Changed</div><div class="me-mono me-signal" style="margin-top: 6px; font-weight: 560">1 file</div></div>
+						<div style="position: absolute; left: 1486px; top: 736px"><div class="me-label" style="color: var(--fg-2)">Rebuilt</div><div class="me-mono me-signal" style="margin-top: 6px; font-weight: 560">3 of 5 · 2.1 s</div></div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><path d="M960 386V454M953 445L960 453L967 445" stroke="var(--cyan)" stroke-width="2" fill="none"/><path d="M960 526V594M953 585L960 593L967 585" stroke="var(--cyan)" stroke-width="2" fill="none"/><path d="M960 666V700.0H1080V734M1073 725L1080 733L1087 725" stroke="var(--cyan)" stroke-width="2" fill="none"/><path d="M1280 386V454M1273 445L1280 453L1287 445" stroke="var(--amber)" stroke-width="3" fill="none" style="filter: var(--glow-amber-filter)"/><path d="M1280 526V594M1273 585L1280 593L1287 585" stroke="var(--amber)" stroke-width="3" fill="none" style="filter: var(--glow-amber-filter)"/><path d="M1280 666V700.0H1160V734M1153 725L1160 733L1167 725" stroke="var(--amber)" stroke-width="3" fill="none" style="filter: var(--glow-amber-filter)"/><path d="M1140 338V304H1174M1420 338V304H1386M1140 362V396H1174M1420 362V396H1386" stroke="var(--amber)" stroke-width="3" fill="none"/><circle cx="1410" cy="350" r="5" fill="var(--amber)"/><path d="M1418 350H1470" stroke="var(--amber)" stroke-width="2"/><circle cx="1250" cy="770" r="5" fill="var(--amber)"/><path d="M1258 770H1470" stroke="var(--amber)" stroke-width="2"/></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S06 / 10</span><span class="me-label" style="color: var(--fg-2)">Feature</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:07.74</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">CACHE HIT 2 OF 5 TASKS</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">feature</span><span class="ref-caption">The claim on the left; on the right a panel draws its task graph. Corners lock on the changed file, the amber signal runs down its path, the rest replays from cache in cyan.</span></figcaption>
+		</figure>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 1500px; --key-y: 760px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-label" style="position: absolute; left: 160px; top: 170px; color: var(--fg-2)">Build matrix · 2.0</div>
+						<div class="me-h1" style="position: absolute; left: 154px; top: 206px">Six targets. One config.</div>
+						<div class="me-panel" style="position: absolute; left: 160px; top: 380px; width: 480px; height: 240px; opacity: 0.5">
+							<div class="me-label" style="position: absolute; left: 39px; top: 32px; color: var(--fg-2)">Linux · x64</div>
+							
+							<div style="position: absolute; left: 33px; top: 68px; display: flex; align-items: baseline; gap: 12px"><span class="me-h1 me-num">3.8</span><span class="me-body">s</span></div>
+							<div style="position: absolute; left: 39px; top: 196px; width: 282px; height: 10px; background: linear-gradient(var(--hairline), var(--hairline)) 0 0 / 100% 2px no-repeat, repeating-linear-gradient(to right, var(--hairline) 0 2px, transparent 2px 40px) 0 2px / 100% 8px no-repeat"></div>
+							<div style="position: absolute; left: 39px; top: 182px; width: 152px; height: 12px; background: var(--cyan)"></div>
+							<div class="me-readout" style="position: absolute; right: 39px; top: 190px; color: var(--ok)">✓ PASS</div>
+						</div>
+						<div class="me-panel" style="position: absolute; left: 720px; top: 380px; width: 480px; height: 240px; opacity: 0.5">
+							<div class="me-label" style="position: absolute; left: 39px; top: 32px; color: var(--fg-2)">Linux · arm64</div>
+							
+							<div style="position: absolute; left: 33px; top: 68px; display: flex; align-items: baseline; gap: 12px"><span class="me-h1 me-num">4.4</span><span class="me-body">s</span></div>
+							<div style="position: absolute; left: 39px; top: 196px; width: 282px; height: 10px; background: linear-gradient(var(--hairline), var(--hairline)) 0 0 / 100% 2px no-repeat, repeating-linear-gradient(to right, var(--hairline) 0 2px, transparent 2px 40px) 0 2px / 100% 8px no-repeat"></div>
+							<div style="position: absolute; left: 39px; top: 182px; width: 176px; height: 12px; background: var(--cyan)"></div>
+							<div class="me-readout" style="position: absolute; right: 39px; top: 190px; color: var(--ok)">✓ PASS</div>
+						</div>
+						<div class="me-panel" style="position: absolute; left: 1280px; top: 380px; width: 480px; height: 240px; opacity: 0.5">
+							<div class="me-label" style="position: absolute; left: 39px; top: 32px; color: var(--fg-2)">macOS · arm64</div>
+							
+							<div style="position: absolute; left: 33px; top: 68px; display: flex; align-items: baseline; gap: 12px"><span class="me-h1 me-num">3.1</span><span class="me-body">s</span></div>
+							<div style="position: absolute; left: 39px; top: 196px; width: 282px; height: 10px; background: linear-gradient(var(--hairline), var(--hairline)) 0 0 / 100% 2px no-repeat, repeating-linear-gradient(to right, var(--hairline) 0 2px, transparent 2px 40px) 0 2px / 100% 8px no-repeat"></div>
+							<div style="position: absolute; left: 39px; top: 182px; width: 124px; height: 12px; background: var(--cyan)"></div>
+							<div class="me-readout" style="position: absolute; right: 39px; top: 190px; color: var(--ok)">✓ PASS</div>
+						</div>
+						<div class="me-panel" style="position: absolute; left: 160px; top: 660px; width: 480px; height: 240px; opacity: 0.5">
+							<div class="me-label" style="position: absolute; left: 39px; top: 32px; color: var(--fg-2)">macOS · x64</div>
+							
+							<div style="position: absolute; left: 33px; top: 68px; display: flex; align-items: baseline; gap: 12px"><span class="me-h1 me-num">4.9</span><span class="me-body">s</span></div>
+							<div style="position: absolute; left: 39px; top: 196px; width: 282px; height: 10px; background: linear-gradient(var(--hairline), var(--hairline)) 0 0 / 100% 2px no-repeat, repeating-linear-gradient(to right, var(--hairline) 0 2px, transparent 2px 40px) 0 2px / 100% 8px no-repeat"></div>
+							<div style="position: absolute; left: 39px; top: 182px; width: 196px; height: 12px; background: var(--cyan)"></div>
+							<div class="me-readout" style="position: absolute; right: 39px; top: 190px; color: var(--ok)">✓ PASS</div>
+						</div>
+						<div class="me-panel" style="position: absolute; left: 720px; top: 660px; width: 480px; height: 240px; opacity: 0.5">
+							<div class="me-label" style="position: absolute; left: 39px; top: 32px; color: var(--fg-2)">Windows · x64</div>
+							
+							<div style="position: absolute; left: 33px; top: 68px; display: flex; align-items: baseline; gap: 12px"><span class="me-h1 me-num">5.6</span><span class="me-body">s</span></div>
+							<div style="position: absolute; left: 39px; top: 196px; width: 282px; height: 10px; background: linear-gradient(var(--hairline), var(--hairline)) 0 0 / 100% 2px no-repeat, repeating-linear-gradient(to right, var(--hairline) 0 2px, transparent 2px 40px) 0 2px / 100% 8px no-repeat"></div>
+							<div style="position: absolute; left: 39px; top: 182px; width: 224px; height: 12px; background: var(--cyan)"></div>
+							<div class="me-readout" style="position: absolute; right: 39px; top: 190px; color: var(--ok)">✓ PASS</div>
+						</div>
+						<div class="me-panel" style="position: absolute; left: 1280px; top: 660px; width: 480px; height: 240px; opacity: 1">
+							<div class="me-label" style="position: absolute; left: 39px; top: 32px; color: var(--fg-2)">wasm32</div>
+							<div class="me-label me-signal" style="position: absolute; right: 39px; top: 32px">New in 2.0</div>
+							<div style="position: absolute; left: 33px; top: 68px; display: flex; align-items: baseline; gap: 12px"><span class="me-h1 me-num" style="color: var(--amber)">2.7</span><span class="me-body">s</span></div>
+							<div style="position: absolute; left: 39px; top: 196px; width: 282px; height: 10px; background: linear-gradient(var(--hairline), var(--hairline)) 0 0 / 100% 2px no-repeat, repeating-linear-gradient(to right, var(--hairline) 0 2px, transparent 2px 40px) 0 2px / 100% 8px no-repeat"></div>
+							<div style="position: absolute; left: 39px; top: 182px; width: 108px; height: 12px; background: var(--amber); box-shadow: var(--glow-amber)"></div>
+							<div class="me-readout" style="position: absolute; right: 39px; top: 190px; color: var(--ok)">✓ PASS</div>
+						</div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><path d="M1266 680V646H1300M1774 680V646H1740M1266 880V914H1300M1774 880V914H1740" stroke="var(--amber)" stroke-width="3" fill="none"/></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S07 / 10</span><span class="me-label" style="color: var(--fg-2)">Grid</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:07.14</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">WASM32 · 1.4 MB BUNDLE</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">grid</span><span class="ref-caption">Six peers on the grid's own lines. Frames draw in reading order, each cell measures its build on a shared scale, then one cell becomes the signal and its peers recede.</span></figcaption>
+		</figure>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 1000px; --key-y: 560px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-panel" style="position: absolute; left: 160px; top: 160px; width: 1600px; height: 760px; border-radius: var(--radius-lg); overflow: hidden">
+							<div style="position: absolute; left: 0; right: 0; top: 0; height: 64px; border-bottom: var(--line-hair) solid var(--color-border); background: var(--surface-2)">
+								<div class="me-mono" style="position: absolute; left: 128px; top: 11px; color: var(--fg-2)">apogee.cloud/runs/4182</div>
+							</div>
+							<div style="position: absolute; left: 0; top: 64px; bottom: 0; width: 280px; border-right: var(--line-hair) solid var(--color-border)"><div style="position: absolute; left: 0; top: 44px; width: 3px; height: 46px; background: var(--cyan)"></div><div class="me-label" style="position: absolute; left: 40px; top: 56px; color: var(--color-fg)">Runs</div><div class="me-label" style="position: absolute; left: 40px; top: 120px; color: var(--color-muted)">Pipelines</div><div class="me-label" style="position: absolute; left: 40px; top: 184px; color: var(--color-muted)">Cache</div><div class="me-label" style="position: absolute; left: 40px; top: 248px; color: var(--color-muted)">Agents</div><div class="me-label" style="position: absolute; left: 40px; top: 312px; color: var(--color-muted)">Settings</div></div>
+							<div class="me-h2" style="position: absolute; left: 320px; top: 94px">Run #4182</div>
+							<div style="position: absolute; left: 760px; top: 104px; display: flex; gap: 16px"><span class="me-chip me-mono" style="color: var(--fg-2)">&#xE0A0; main</span><span class="me-chip me-readout" style="color: var(--ok); padding: 19px 16px">✓ PASSED</span></div>
+							<div class="me-readout" style="position: absolute; right: 40px; top: 124px; color: var(--color-muted)">WALL 8.2 S</div>
+							<div style="position: absolute; left: 320px; top: 200px; width: 820px; height: 520px; border: var(--line-hair) solid var(--color-border); border-radius: var(--radius-md); background: var(--surface-2); box-shadow: var(--edge-light); overflow: hidden">
+								<div class="me-label" style="position: absolute; left: 24px; top: 24px">Tasks</div><div class="me-readout" style="position: absolute; left: 240px; top: 24px; color: var(--color-muted); transform: translateX(0)">0</div><div class="me-readout" style="position: absolute; left: 360px; top: 24px; color: var(--color-muted); transform: translateX(-50%)">2</div><div class="me-readout" style="position: absolute; left: 480px; top: 24px; color: var(--color-muted); transform: translateX(-50%)">4</div><div class="me-readout" style="position: absolute; left: 600px; top: 24px; color: var(--color-muted); transform: translateX(-50%)">6</div><div class="me-readout" style="position: absolute; left: 720px; top: 24px; color: var(--color-muted); transform: translateX(-50%)">8 S</div>
+								<div style="position: absolute; left: 240px; top: 64px; width: 540px; bottom: 72px; background: repeating-linear-gradient(to right, var(--color-border) 0 1px, transparent 1px 60px)"></div>
+								<div style="position: absolute; left: 0; right: 0; top: 64px; height: 64px; border-top: var(--line-hair) solid var(--color-border)"><div class="me-mono" style="position: absolute; left: 24px; top: 11px; color: var(--fg-2)">install</div><div style="position: absolute; left: 240px; top: 18px; width: 24px; height: 28px; border-radius: var(--radius-sm); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cyan) 34%, transparent) 0 2px, color-mix(in srgb, var(--cyan) 10%, transparent) 2px 10px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cyan) 55%, transparent)"></div></div>
+								<div style="position: absolute; left: 0; right: 0; top: 128px; height: 64px; border-top: var(--line-hair) solid var(--color-border)"><div class="me-mono" style="position: absolute; left: 24px; top: 11px; color: var(--fg-2)">build:core</div><div style="position: absolute; left: 264px; top: 18px; width: 132px; height: 28px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--fg-2) 62%, transparent)"></div></div>
+								<div style="position: absolute; left: 0; right: 0; top: 192px; height: 64px; border-top: var(--line-hair) solid var(--color-border)"><div class="me-mono" style="position: absolute; left: 24px; top: 11px; color: var(--fg-2)">build:cli</div><div style="position: absolute; left: 264px; top: 18px; width: 18px; height: 28px; border-radius: var(--radius-sm); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cyan) 34%, transparent) 0 2px, color-mix(in srgb, var(--cyan) 10%, transparent) 2px 10px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cyan) 55%, transparent)"></div></div>
+								<div style="position: absolute; left: 0; right: 0; top: 256px; height: 64px; border-top: var(--line-hair) solid var(--color-border)"><div class="me-mono" style="position: absolute; left: 24px; top: 11px; color: var(--fg-2)">test:core</div><div style="position: absolute; left: 396px; top: 18px; width: 288px; height: 28px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--fg-2) 62%, transparent)"></div></div>
+								<div style="position: absolute; left: 0; right: 0; top: 320px; height: 64px; border-top: var(--line-hair) solid var(--color-border)"><div class="me-mono" style="position: absolute; left: 24px; top: 11px; color: var(--fg-2)">test:cli</div><div style="position: absolute; left: 282px; top: 18px; width: 24px; height: 28px; border-radius: var(--radius-sm); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cyan) 34%, transparent) 0 2px, color-mix(in srgb, var(--cyan) 10%, transparent) 2px 10px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cyan) 55%, transparent)"></div></div>
+								<div style="position: absolute; left: 0; right: 0; top: 384px; height: 64px; border-top: var(--line-hair) solid var(--color-border)"><div class="me-mono" style="position: absolute; left: 24px; top: 11px; color: var(--fg-2)">bundle</div><div style="position: absolute; left: 684px; top: 18px; width: 48px; height: 28px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--fg-2) 62%, transparent)"></div></div>
+							</div>
+							<div style="position: absolute; left: 1180px; top: 200px; width: 380px; height: 240px; border: var(--line-hair) solid var(--color-border); border-radius: var(--radius-md); background: var(--surface-2); box-shadow: var(--edge-light)">
+								<div class="me-label" style="position: absolute; left: 32px; top: 32px">Cache hits · 30 d</div>
+								<div class="me-h1 me-num me-signal" style="position: absolute; left: 28px; top: 76px">94%</div>
+								<div style="position: absolute; left: 32px; top: 198px; width: 316px; height: 2px; background: var(--hairline)"></div>
+								<div style="position: absolute; left: 32px; top: 194px; width: 297px; height: 10px; background: var(--amber)"></div>
+							</div>
+							<div style="position: absolute; left: 1180px; top: 480px; width: 380px; height: 240px; border: var(--line-hair) solid var(--color-border); border-radius: var(--radius-md); background: var(--surface-2); box-shadow: var(--edge-light)">
+								<div class="me-label" style="position: absolute; left: 32px; top: 32px">CPU saved · 30 d</div>
+								<div style="position: absolute; left: 28px; top: 76px; display: flex; align-items: baseline; gap: 12px"><span class="me-h1 me-num">37</span><span class="me-body">hours</span></div>
+								<div class="me-readout" style="position: absolute; left: 32px; top: 188px; color: var(--color-muted)">vs. cold builds</div>
+							</div>
+						</div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><g fill="none" style="filter: var(--glow-amber-filter)" transform="translate(1671 561)"><path d="M-26 0h16M10 0h16M0 -26v16M0 10v16" stroke="var(--color-bg)" stroke-width="7"/><path d="M-26 0h16M10 0h16M0 -26v16M0 10v16" stroke="var(--amber)" stroke-width="3"/><circle r="4" fill="var(--amber)"/></g></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S08 / 10</span><span class="me-label" style="color: var(--fg-2)">UI showcase</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:07.56</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">CACHE 47 OF 50 TASKS</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">ui-showcase</span><span class="ref-caption">A product window at legible scale. The camera frames one region at a time (the waterfall, then the cache card) while an amber crosshair marks each interaction, and rests at identity before the cut.</span></figcaption>
+		</figure>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 760px; --key-y: 560px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-panel" style="position: absolute; left: 160px; top: 200px; width: 800px; height: 680px">
+							<div style="position: absolute; left: 0; right: 0; top: 0; height: 64px; border-bottom: var(--line-hair) solid var(--color-border)"></div>
+							<div class="me-mono" style="position: absolute; left: 32px; top: 12px; color: var(--fg-2)">apogee.config.ts</div>
+							<div class="me-readout" style="position: absolute; right: 32px; top: 22px; color: var(--color-muted)">TYPESCRIPT</div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 79px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">1</div><div class="me-mono" style="position: absolute; left: 111px; top: 79px; line-height: 40px; white-space: pre"><span style="color: var(--color-muted)">import</span><span style="color: var(--color-muted)"> { </span><span style="color: var(--color-fg)">defineConfig</span><span style="color: var(--color-muted)"> } </span><span style="color: var(--color-muted)">from</span><span style="color: var(--color-muted)"> </span><span style="color: var(--fg-2)">"apogee"</span><span style="color: var(--color-muted)">;</span></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 119px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">2</div><div class="me-mono" style="position: absolute; left: 111px; top: 119px; line-height: 40px; white-space: pre"></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 159px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">3</div><div class="me-mono" style="position: absolute; left: 111px; top: 159px; line-height: 40px; white-space: pre"><span style="color: var(--color-muted)">export default</span><span style="color: var(--color-muted)"> </span><span style="color: var(--color-fg)">defineConfig</span><span style="color: var(--color-muted)">({</span></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 199px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">4</div><div class="me-mono" style="position: absolute; left: 111px; top: 199px; line-height: 40px; white-space: pre"><span style="color: var(--color-fg)">  targets</span><span style="color: var(--color-muted)">: [</span><span style="color: var(--fg-2)">"linux"</span><span style="color: var(--color-muted)">, </span><span style="color: var(--fg-2)">"macos"</span><span style="color: var(--color-muted)">, </span><span style="color: var(--fg-2)">"wasm"</span><span style="color: var(--color-muted)">],</span></div>
+							<div style="position: absolute; left: 0; right: 0; top: 239px; height: 40px; background: color-mix(in srgb, var(--cyan) 6%, transparent)"></div><div style="position: absolute; left: 0; top: 239px; width: 4px; height: 40px; background: var(--cyan)"></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 239px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">5</div><div class="me-mono" style="position: absolute; left: 111px; top: 239px; line-height: 40px; white-space: pre"><span style="color: var(--color-fg)">  cache</span><span style="color: var(--color-muted)">: </span><span style="color: var(--cyan)">"remote"</span><span style="color: var(--color-muted)">,</span></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 279px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">6</div><div class="me-mono" style="position: absolute; left: 111px; top: 279px; line-height: 40px; white-space: pre"><span style="color: var(--color-fg)">  test</span><span style="color: var(--color-muted)">: {</span></div>
+							<div style="position: absolute; left: 0; right: 0; top: 319px; height: 40px; background: color-mix(in srgb, var(--cyan) 6%, transparent)"></div><div style="position: absolute; left: 0; top: 319px; width: 4px; height: 40px; background: var(--cyan)"></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 319px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">7</div><div class="me-mono" style="position: absolute; left: 111px; top: 319px; line-height: 40px; white-space: pre"><span style="color: var(--color-fg)">    shards</span><span style="color: var(--color-muted)">: </span><span style="color: var(--cyan)">8</span><span style="color: var(--color-muted)">,</span></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 359px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">8</div><div class="me-mono" style="position: absolute; left: 111px; top: 359px; line-height: 40px; white-space: pre"><span style="color: var(--color-fg)">    retries</span><span style="color: var(--color-muted)">: </span><span style="color: var(--fg-2)">1</span><span style="color: var(--color-muted)">,</span></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 399px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">9</div><div class="me-mono" style="position: absolute; left: 111px; top: 399px; line-height: 40px; white-space: pre"><span style="color: var(--color-muted)">  },</span></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 439px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">10</div><div class="me-mono" style="position: absolute; left: 111px; top: 439px; line-height: 40px; white-space: pre"><span style="color: var(--color-fg)">  bundle</span><span style="color: var(--color-muted)">: {</span></div>
+							<div style="position: absolute; left: 0; right: 0; top: 479px; height: 40px; background: color-mix(in srgb, var(--amber) 9%, transparent)"></div><div style="position: absolute; left: 0; top: 479px; width: 4px; height: 40px; background: var(--amber)"></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 479px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">11</div><div class="me-mono" style="position: absolute; left: 111px; top: 479px; line-height: 40px; white-space: pre"><span style="color: var(--color-fg)">    deterministic</span><span style="color: var(--color-muted)">: </span><span style="color: var(--amber)">true</span><span style="color: var(--color-muted)">,</span></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 519px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">12</div><div class="me-mono" style="position: absolute; left: 111px; top: 519px; line-height: 40px; white-space: pre"><span style="color: var(--color-fg)">    minify</span><span style="color: var(--color-muted)">: </span><span style="color: var(--fg-2)">true</span><span style="color: var(--color-muted)">,</span></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 559px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">13</div><div class="me-mono" style="position: absolute; left: 111px; top: 559px; line-height: 40px; white-space: pre"><span style="color: var(--color-muted)">  },</span></div>
+							<div class="me-mono" style="position: absolute; left: 24px; top: 599px; width: 56px; text-align: right; line-height: 40px; color: var(--color-muted); opacity: 0.7">14</div><div class="me-mono" style="position: absolute; left: 111px; top: 599px; line-height: 40px; white-space: pre"><span style="color: var(--color-muted)">});</span></div>
+						</div>
+						<div class="me-h2" style="position: absolute; left: 1036px; top: 200px">One file.<br>Whole pipeline.</div>
+						<div style="position: absolute; left: 1056px; top: 449px; opacity: 0.5"><div class="me-label" style="color: var(--cyan)">Remote cache</div><div class="me-body" style="margin-top: 10px; color: var(--color-fg)">Every machine shares one build.</div></div>
+						<div style="position: absolute; left: 1056px; top: 609px; opacity: 0.5"><div class="me-label" style="color: var(--cyan)">Sharded tests</div><div class="me-body" style="margin-top: 10px; color: var(--color-fg)">Eight runners, one result.</div></div>
+						<div style="position: absolute; left: 1056px; top: 769px; opacity: 1"><div class="me-label" style="color: var(--amber)">Deterministic</div><div class="me-body" style="margin-top: 10px; color: var(--color-fg)">Rebuild anywhere, get the same bytes.</div></div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"><g stroke="var(--cyan)" stroke-width="2" fill="none" opacity="0.6"><path d="M603 460H1040"/><path d="M532 540H1000V620H1040"/></g><g fill="var(--cyan)" opacity="0.6"><circle cx="593" cy="460" r="6"/><circle cx="522" cy="540" r="6"/></g><path d="M708 700H1000V780H1040" stroke="var(--amber)" stroke-width="2" fill="none"/><circle cx="698" cy="700" r="6" fill="var(--amber)"/></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S09 / 10</span><span class="me-label" style="color: var(--fg-2)">Content</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:09.34</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">LINE 11 · DETERMINISTIC</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">content</span><span class="ref-caption">Code revealed line by line in a panel. Each cue marks one line (gutter mark, band, amber value), locks its end and leads out to a margin note; earlier notes recede to cyan.</span></figcaption>
+		</figure>
+		<figure class="ref-scene">
+		<div class="ref-frame"><div class="ref-1080">
+			<div class="me-stage" style="--key-x: 900px; --key-y: 560px">
+				<div class="me-grid"></div>
+				<div class="me-key"></div>
+				<div class="me-light"></div>
+				<div class="me-world">
+					<div class="me-content">
+						<div class="me-label" style="position: absolute; left: 160px; top: 318px; color: var(--fg-2)">Available today</div>
+						<div class="me-hero" style="position: absolute; left: 150px; top: 360px">Apogee 2.0</div>
+						<div class="me-panel" style="position: absolute; left: 160px; top: 680px; width: 1600px; height: 120px">
+							<div class="me-readout-lg me-signal" style="position: absolute; left: 40px; top: 31px">❯</div>
+							<div class="me-readout-lg" style="position: absolute; left: 112px; top: 31px; color: var(--color-fg); text-transform: none; white-space: pre">npx apogee@2 init<span style="display: inline-block; width: 4px; height: 60px; margin-left: 4px; vertical-align: -10px; background: var(--color-fg)"></span></div>
+							<div class="me-mono" style="position: absolute; right: 40px; top: 39px; color: var(--ok); font-weight: 560">✓ READY</div>
+						</div>
+						<div class="me-body-lg" style="position: absolute; left: 160px; top: 840px; color: var(--color-fg)">Your first cached build, in two minutes.</div>
+					</div>
+					<svg class="me-svg" viewBox="0 0 1920 1080"></svg>
+				</div>
+				<div class="me-grain"></div>
+				<div class="me-hud">
+					<div class="me-frame"></div>
+					<div class="me-hud-slot" data-at="tl"><span class="me-label">S10 / 10</span><span class="me-label" style="color: var(--fg-2)">CTA</span></div>
+					<div class="me-hud-slot" data-at="tr"><span class="me-readout">T+00:07.40</span></div>
+					<div class="me-hud-slot" data-at="bl"><span class="me-readout" style="color: var(--color-muted)">COLD START 1 M 52 S</span></div>
+					<div class="me-hud-slot" data-at="br"><span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span></div>
+				</div>
+			</div>
+		</div></div>
+			<figcaption><span class="me-label" style="color: var(--color-fg)">cta</span><span class="ref-caption">The title's lockup returns at the title's position. Corners move from the lockup to the input, the command types in, READY decodes; then only the ambient layer moves.</span></figcaption>
+		</figure>
+		</div>
+	</section>
 </body>
 </html>

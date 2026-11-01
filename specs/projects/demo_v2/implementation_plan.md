@@ -16,7 +16,7 @@ Every phase follows the clean-room rule, runs the render→look→iterate loop b
   - New design system: bundled fonts, `tokens.css`, `STYLE.md` (including transitions vocabulary and recipes), `brand.md`.
   - Samples: `title`, `section`, `kinetic`, `bullet`, `stat`.
   - Sync to the demo project. Render the samples and `demo_video`.
-- [ ] **Phase 2: Style completion.**
+- [x] **Phase 2: Style completion.**
   - Samples: `feature`, `grid`, `ui-showcase`, `content`, `cta`.
   - Rewrite `reference/scenes.html` and `animations.jsx`.
   - Update the picker blurb in `setup_new_style.md` and the README note.

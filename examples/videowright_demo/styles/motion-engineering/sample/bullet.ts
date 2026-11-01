@@ -315,6 +315,104 @@ function release(amb: Ambient, strokes: SVGGeometryElement[], marks: Element[]):
 	amb.rest(out * 1.4);
 	return out;
 }
+
+interface Box {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+}
+
+// An element's layout box in stage px, from the offset chain up to .me-content. Offsets
+// ignore the camera and the dev player's scaling.
+function boxOf(el: HTMLElement): Box {
+	let x = 0;
+	let y = 0;
+	let node: HTMLElement | null = el;
+	while (node && !node.classList.contains("me-content")) {
+		x += node.offsetLeft;
+		y += node.offsetTop;
+		const parent = node.offsetParent as HTMLElement | null;
+		if (parent && !parent.classList.contains("me-content")) {
+			x += parent.clientLeft;
+			y += parent.clientTop;
+		}
+		node = parent;
+	}
+	return { x, y, w: el.offsetWidth, h: el.offsetHeight };
+}
+
+// Registration corners: four amber L-brackets close in on a box from outside, settle, and
+// blink twice, like autofocus locking on. Release them as marks.
+function registerOn(parent: Element, box: Box, delay: number, pad = 14): SVGPathElement[] {
+	const { x, y, w, h } = box;
+	const amber = { stroke: "var(--amber)", "stroke-width": 3, fill: "none" };
+	const arm = 34;
+	return [
+		[x - pad, y - pad, 1, 1],
+		[x + w + pad, y - pad, -1, 1],
+		[x - pad, y + h + pad, 1, -1],
+		[x + w + pad, y + h + pad, -1, -1],
+	].map(([px, py, dx, dy]) => {
+		const c = svg(parent, "path", {
+			...amber,
+			d: `M${px} ${py + dy * arm}V${py}H${px + dx * arm}`,
+		});
+		c.animate([{ transform: `translate(${-dx * 72}px, ${-dy * 56}px)` }, { transform: "none" }], {
+			duration: 640,
+			delay,
+			easing: css("--ease-settle"),
+			fill: "both",
+		});
+		c.animate(
+			[
+				{ opacity: 0, easing: "linear" },
+				{ opacity: 1, offset: 0.25, easing: "steps(1, end)" },
+				{ opacity: 0.2, offset: 0.62, easing: "steps(1, end)" },
+				{ opacity: 1, offset: 0.7, easing: "steps(1, end)" },
+				{ opacity: 0.2, offset: 0.8, easing: "steps(1, end)" },
+				{ opacity: 1, offset: 0.88 },
+				{ opacity: 1 },
+			],
+			{ duration: 900, delay, fill: "both" },
+		);
+		return c;
+	});
+}
+
+// A panel measures itself in: its outline draws, the surface fills top-down behind it (the
+// clip bleeds past the box so the shadow survives), then the drawn outline hands over to the
+// panel's own hairline border. Returns the outline.
+function panelIn(stage: Stage, panel: HTMLElement, delay: number, duration = ms("--dur-draw")) {
+	const { x, y, w, h } = boxOf(panel);
+	const r = Number.parseFloat(getComputedStyle(panel).borderTopLeftRadius) || 0;
+	const [l, t, rt, b] = [x + 0.5, y + 0.5, x + w - 0.5, y + h - 0.5];
+	const outline = svg(stage.svg, "path", {
+		d: `M${l + r} ${t}H${rt - r}A${r} ${r} 0 0 1 ${rt} ${t + r}V${b - r}A${r} ${r} 0 0 1 ${rt - r} ${b}H${l + r}A${r} ${r} 0 0 1 ${l} ${b - r}V${t + r}A${r} ${r} 0 0 1 ${l + r} ${t}Z`,
+		fill: "none",
+		stroke: "var(--hairline-strong)",
+		"stroke-width": 1.5,
+	});
+	draw(outline, delay, duration);
+	panel.animate(
+		[
+			{ clipPath: "inset(-160px -160px 100% -160px)", opacity: 0.3 },
+			{ clipPath: "inset(-160px)", opacity: 1 },
+		],
+		{
+			duration: ms("--dur-slow"),
+			delay: delay + duration * 0.35,
+			easing: css("--ease-settle"),
+			fill: "both",
+		},
+	);
+	outline.animate([{ opacity: 1 }, { opacity: 0 }], {
+		duration: ms("--dur-normal"),
+		delay: delay + duration,
+		fill: "forwards",
+	});
+	return outline;
+}
 // ── Scene ───────────────────────────────────────────────────────────────────────────────
 // Bullets on a spine. Each item arrives on its cue: its node locks onto the spine, a leader
 // draws to the text, the text rises, and a dotted leader carries the item's measured result
