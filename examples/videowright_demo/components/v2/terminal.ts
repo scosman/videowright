@@ -58,6 +58,31 @@ const MASCOT = [
 	"    # #    # #    ",
 ];
 
+/** Draws the mascot at (left, top), `width` × `height` px (it is 18 × 5 half-cells). */
+export function drawMascot(
+	parent: Element,
+	left: number,
+	top: number,
+	width: number,
+	height: number,
+): SVGSVGElement {
+	const art = svg(parent, "svg", {
+		width,
+		height,
+		viewBox: "0 0 18 5",
+		preserveAspectRatio: "none",
+		style: `position:absolute; left:${left}px; top:${top}px; shape-rendering:crispEdges`,
+	});
+	MASCOT.forEach((pixels, y) => {
+		for (let x = 0; x < pixels.length; x++) {
+			if (pixels[x] === "#") {
+				svg(art, "rect", { x, y, width: 1.04, height: 1.04, fill: "var(--claude)" });
+			}
+		}
+	});
+	return art;
+}
+
 /** x where the text inside the input box starts (after "│ > "). */
 const INPUT_TEXT_X = 110;
 /** The input box's prompt chevron x. */
@@ -102,20 +127,7 @@ export function createTerminal(host: HTMLElement, opts: TerminalOptions): Termin
 	};
 
 	// Header: the mascot (columns 0-8, rows 0-2) and the session facts beside it.
-	const art = svg(world, "svg", {
-		width: 9 * TERM.col,
-		height: 100,
-		viewBox: "0 0 18 5",
-		preserveAspectRatio: "none",
-		style: `position:absolute; left:${TERM.left}px; top:${rowY(0) + 19}px; shape-rendering:crispEdges`,
-	});
-	MASCOT.forEach((pixels, y) => {
-		for (let x = 0; x < pixels.length; x++) {
-			if (pixels[x] === "#") {
-				svg(art, "rect", { x, y, width: 1.04, height: 1.04, fill: "var(--claude)" });
-			}
-		}
-	});
+	drawMascot(world, TERM.left, rowY(0) + 19, 9 * TERM.col, 100);
 	line(
 		0,
 		`<span class="v2-bold">Claude Code</span> <span class="v2-dim">${opts.version}</span>`,

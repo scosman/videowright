@@ -52,14 +52,41 @@ interface Typing {
 	coldOpenCharTimes(): number[];
 }
 
+interface Agent {
+	wrapColumns(text: string, cols: number): string[];
+}
+interface Gear {
+	cx: number;
+	cy: number;
+	teeth: number;
+	r: number;
+	phase: number;
+	ratio: number;
+}
+interface Gears {
+	gearTrain(
+		first: { x: number; y: number; phase?: number },
+		specs: ReadonlyArray<{ teeth: number; from?: number; angle?: number }>,
+		module: number,
+	): Gear[];
+	TRAIN: ReadonlyArray<{ teeth: number; from?: number; angle?: number }>;
+	MODULE: number;
+}
+
+const GALLERY = join(DEMO, "segments/v2-web-tech-gallery");
+
 let motion: Motion;
 let typing: Typing;
 let hud: Hud;
+let agent: Agent;
+let gears: Gears;
 
 beforeAll(async () => {
 	motion = (await loadModule(join(KIT, "motion.ts"))) as unknown as Motion;
 	typing = (await loadModule(join(KIT, "typing.ts"))) as unknown as Typing;
 	hud = (await loadModule(join(KIT, "hud.ts"))) as unknown as Hud;
+	agent = (await loadModule(join(KIT, "agent.ts"))) as unknown as Agent;
+	gears = (await loadModule(join(GALLERY, "gears.ts"))) as unknown as Gears;
 });
 
 /** A ticker driven by hand: step(t) runs every tick at time t, like one rAF frame. */
@@ -156,7 +183,7 @@ describe("HUD decode", () => {
 		expect(el.textContent).toBe("UP NEXT · 03 WEB TECH");
 	});
 
-	it("stops once its segment's signal aborts", () => {
+	it("drops a decode whose segment's signal aborts before it starts", () => {
 		const ticker = manualTicker();
 		const el = { textContent: "KEEP" };
 		const segment = new AbortController();
@@ -164,6 +191,21 @@ describe("HUD decode", () => {
 		segment.abort();
 		ticker.run(0, 1000);
 		expect(el.textContent).toBe("KEEP");
+	});
+
+	it("finishes a decode whose segment's signal aborts mid-way (no scrambled readout)", () => {
+		// The persistent HUD outlives segments: a segment unmounting while its probe decodes
+		// must not freeze the shared readout on noise.
+		const ticker = manualTicker();
+		const el = { textContent: "" };
+		const segment = new AbortController();
+		const text = "LOCK X 0320 Y 0526";
+		hud.decode(ticker, el, text, 0, { signal: segment.signal });
+		ticker.run(0, 96);
+		expect(el.textContent).not.toBe(text);
+		segment.abort();
+		ticker.run(112, 1500);
+		expect(el.textContent).toBe(text);
 	});
 });
 
@@ -249,10 +291,88 @@ describe("cold open typing", () => {
 	});
 });
 
+describe("agent pane wrapping", () => {
+	it("wraps at word boundaries, never past the column count, and keeps every word", () => {
+		const prompt =
+			"update the title card to our latest branding (name, tagline, design guide, colors), and add some motion";
+		const lines = agent.wrapColumns(prompt, 32);
+		expect(lines).toEqual([
+			"update the title card to our",
+			"latest branding (name, tagline,",
+			"design guide, colors), and add",
+			"some motion",
+		]);
+		for (const line of lines) expect(line.length).toBeLessThanOrEqual(32);
+		expect(lines.join(" ")).toBe(prompt);
+	});
+
+	it("splits a word longer than a line", () => {
+		expect(agent.wrapColumns("ab segments/title-card.ts", 10)).toEqual([
+			"ab",
+			"segments/t",
+			"itle-card.",
+			"ts",
+		]);
+		expect(agent.wrapColumns("", 10)).toEqual([""]);
+	});
+});
+
+describe("gallery gear train", () => {
+	const mod = (v: number, m: number) => ((v % m) + m) % m;
+	const deg = (rad: number) => (rad * 180) / Math.PI;
+
+	it("meshes: centre distances, speed ratios and tooth phases", () => {
+		const train = gears.gearTrain({ x: 300, y: 432, phase: 4 }, gears.TRAIN, gears.MODULE);
+		expect(train).toHaveLength(gears.TRAIN.length);
+		expect(train[0].ratio).toBe(1);
+		gears.TRAIN.forEach((spec, i) => {
+			const g = train[i];
+			expect(g.r).toBeCloseTo((gears.MODULE * spec.teeth) / 2);
+			if (spec.from === undefined) return;
+			const a = train[spec.from];
+			// Pitch circles touch.
+			expect(Math.hypot(g.cx - a.cx, g.cy - a.cy)).toBeCloseTo(a.r + g.r, 6);
+			// Meshing gears turn the other way, at the inverse tooth ratio.
+			expect(g.ratio).toBeCloseTo((-a.ratio * a.teeth) / g.teeth, 9);
+			// On the line of centres, a tooth of one faces a gap of the other: in tooth pitches,
+			// the two offsets from tooth 0 sum to a half.
+			const theta = deg(Math.atan2(g.cy - a.cy, g.cx - a.cx));
+			const uA = ((theta - a.phase) * a.teeth) / 360;
+			const uB = ((theta + 180 - g.phase) * g.teeth) / 360;
+			expect(mod(uA + uB, 1)).toBeCloseTo(0.5, 6);
+			// ...and still do once the train has turned (any drive angle).
+			const turn = 47.3;
+			const uA2 = ((theta - (a.phase + turn * a.ratio)) * a.teeth) / 360;
+			const uB2 = ((theta + 180 - (g.phase + turn * g.ratio)) * g.teeth) / 360;
+			expect(mod(uA2 + uB2, 1)).toBeCloseTo(0.5, 6);
+		});
+	});
+
+	it("never overlaps gears that do not mesh", () => {
+		const train = gears.gearTrain({ x: 300, y: 432, phase: 4 }, gears.TRAIN, gears.MODULE);
+		const tip = (g: Gear) => g.r + gears.MODULE;
+		for (let i = 0; i < train.length; i++) {
+			for (let j = i + 1; j < train.length; j++) {
+				const meshing = gears.TRAIN[j].from === i || gears.TRAIN[i].from === j;
+				if (meshing) continue;
+				const d = Math.hypot(train[i].cx - train[j].cx, train[i].cy - train[j].cy);
+				expect(d, `${i}-${j}`).toBeGreaterThan(tip(train[i]) + tip(train[j]));
+			}
+		}
+	});
+});
+
 describe("v2 sources", () => {
+	// Every source file of every v2 segment (a segment may split into modules), and the
+	// transition written for demo_v2.
 	const segments = readdirSync(join(DEMO, "segments"))
 		.filter((d) => d.startsWith("v2-"))
-		.map((d) => join(DEMO, "segments", d, "index.ts"));
+		.flatMap((d) =>
+			readdirSync(join(DEMO, "segments", d))
+				.filter((f) => f.endsWith(".ts"))
+				.map((f) => join(DEMO, "segments", d, f)),
+		)
+		.concat(join(DEMO, "transitions/me-split.ts"));
 	const kit = readdirSync(KIT)
 		.filter((f) => f.endsWith(".ts") || f.endsWith(".css"))
 		.map((f) => join(KIT, f));
@@ -260,7 +380,7 @@ describe("v2 sources", () => {
 	const read = (path: string) => readFileSync(path, "utf-8");
 
 	it("covers the kit and the segments", () => {
-		expect(segments.length).toBeGreaterThanOrEqual(2);
+		expect(segments.length).toBeGreaterThanOrEqual(9);
 		expect(kit.map((f) => f.split("/").pop())).toEqual(
 			expect.arrayContaining(["motion.ts", "hud.ts", "stage.ts", "terminal.ts", "v2.css"]),
 		);
@@ -282,10 +402,20 @@ describe("v2 sources", () => {
 		}
 	});
 
-	it("import only videowright and relative paths", () => {
+	it("import only videowright, relative paths and the demo's declared libraries", () => {
+		const pkg = JSON.parse(read(join(DEMO, "package.json"))) as {
+			dependencies: Record<string, string>;
+		};
+		const libraries = Object.keys(pkg.dependencies).filter((d) => d !== "videowright");
+		expect(libraries).toEqual(expect.arrayContaining(["echarts", "three", "lottie-web"]));
 		for (const file of files.filter((f) => f.endsWith(".ts"))) {
 			for (const m of read(file).matchAll(/^import[^"]*"([^"]+)";/gm)) {
-				expect(m[1] === "videowright" || m[1].startsWith("."), `${file}: ${m[1]}`).toBe(true);
+				const spec = m[1];
+				const ok =
+					spec === "videowright" ||
+					spec.startsWith(".") ||
+					libraries.some((lib) => spec === lib || spec.startsWith(`${lib}/`));
+				expect(ok, `${file}: ${spec}`).toBe(true);
 			}
 		}
 	});
@@ -309,10 +439,14 @@ describe("v2 sources", () => {
 		expect(read(join(KIT, "logo.ts"))).toContain(`MARK_BOUNDS = ${bounds}`);
 	});
 
-	it("bundle the wordmark face with its licence", () => {
+	it("bundle the wordmark face and the product UI's face with their licences", () => {
 		const css = read(join(KIT, "v2.css"));
 		expect(css).toContain('url("./assets/fonts/outfit-semibold.woff2")');
-		expect(css).toContain("font-display: block");
+		expect(css).toContain('url("./assets/fonts/inter-variable.woff2")');
+		expect(css.match(/font-display: block/g)?.length).toBe(2);
 		expect(read(join(KIT, "assets/fonts/OFL.txt"))).toContain("SIL Open Font License");
+		expect(read(join(KIT, "assets/fonts/INTER-OFL.txt"))).toContain("SIL Open Font License");
+		// fontsReady() awaits both, so no frame shows a fallback face.
+		expect(read(join(KIT, "fonts.ts"))).toContain('"Inter"');
 	});
 });

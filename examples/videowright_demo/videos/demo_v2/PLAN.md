@@ -17,7 +17,7 @@
 - Notes:
   - One world: every instrument segment shares one grid plane at the same origin, and one persistent HUD (`components/v2/hud.ts`): the corner frame, beat index (`02 / 08`), section name, a running timecode and the probe readout stay put across cuts and wipes; only readouts that change update.
   - The cold open is the exception: a real, neutral-dark terminal, full bleed, no grid and no HUD. The hard cut drops the viewer into the instrument world of the video Claude just made, and the HUD's clock starts there.
-  - The demo kit lives in `components/v2/` (fonts, motion, stage, hud, logo, title-lockup, terminal, typing).
+  - The demo kit lives in `components/v2/` (fonts, motion, stage, hud, logo, title-lockup, terminal, typing, sweep, browser, agent, dispose).
 
 ## Audio intent
 - Voiceover: yes — ElevenLabs v4, voice Cosman-1 (the user's instant voice clone), take `audio/originals/voiceovers/v1`.
@@ -41,6 +41,32 @@ See `voiceover_script/script.md` (verbatim from demo v1; one section per segment
 ---
 
 ## Log
+
+### 2026-11-01 — Phase 4: the gallery and the live loop
+- `v2-web-tech-gallery` (entered on `me-push`, out of the title card's "any web technologies"):
+  - The claim "If the browser can render it, Videowright can animate it." holds the left rail from frame 1 to the exit, on four lines (52px). Under it, a four-step spine names each technology as it plays: `01 Animated SVG`, `02 ECharts`, `03 Three.js + Lottie`, `04 Product UI`. The current step is amber, done steps are cyan and upcoming ones are muted, and the cyan fill grows down the spine. The spine is both the progress indicator and the labels.
+  - The demos fill a 1100 × 800 viewport on the right and swap under the signature sweep (`components/v2/sweep.ts`, a local copy of `me-sweep`) on their VO cues. The beam is the only seam: the outgoing demo is clipped away by the same edge, so nothing double-exposes.
+    - SVG: a generated gear train drawn like a blueprint. Teeth, hubs, bores with keyways and lightening holes draw stroke by stroke and fill. Cyan pitch circles, centre marks and tooth counts. The amber lock sits on the drive gear. The train then turns meshed: one clock, each gear at its tooth ratio, with the mesh unit-tested.
+    - ECharts 6 (canvas renderer, `devicePixelRatio: 1`): a streaming throughput area chart with its live value, render-ms bars and a cache-hit donut. All are in the instrument's palette and type (≥ 22px) and use ECharts' own entrance animation. The data streams on a fixed `ctx.clock()` schedule from seeded values.
+    - Three.js + Lottie: a planet built like a real WebGL showcase. It has a glossy ocean sphere (the sun glints on water only), smooth-shaded continents risen from seeded, domain-warped noise, a drifting cloud shell, a cool key and a cyan rim light behind it, a Fresnel atmosphere and an outer halo. It is scanned in by a clipping plane behind its wireframe, with a drawn orbit and a satellite. Beside it, the real `rocket-launch.json` sits in a player card with a frame counter. On "Three.js" the HUD locks onto the planet, and on "Lottie" it hands over to the card. The Lottie's start is derived from that cue, so the rocket leaves the pad (frame 56) mid-word.
+    - Product UI: a shadcn-style Acme Inc app in a light browser window, in Inter, at legible scale. The KPIs tick and the revenue chart draws. On "rendered", a cursor opens Customers: the route swaps on one frame, like a real SPA, and the rows rise in. The camera frames the table (zoom 1.26 inside the viewport), the cursor opens Note on Globex and the note types in, all paced from the window to "If". On "If", Send and a toast confirm, and the camera rests.
+  - Payoff on "Videowright supports it.": all four steps are done, the demo viewport steps back (dims), the HUD locks onto the claim, and its second half turns amber. The release lets the corners go and rests the camera before the exit.
+  - The HUD probe reports each technology (`SVG · 5 GEARS · 116 TEETH`, `ECHARTS 6.1 · CANVAS 2D`, `THREE.JS R184 · WEBGL 2`, `LOTTIE 5.13 · SVG PLAYER`, `ROUTE /CUSTOMERS`, `POST /NOTES · 201 CREATED`, `SUPPORTED · 4 / 4 STACKS`).
+- `v2-interactive-dev` (entered on the new `me-split`):
+  - Claude Code is on the left (40%). It is the same session as the cold open (`videowright_demo — claude`, `~/videowright_demo`): its last line is still "Video is ready. Preview: npm run dev". The browser on `localhost:5173/video/demo_v2` is on the right (60%), with a dev bar, a half-scale preview frame and the timeline's segment chips.
+  - The preview starts on the draft: "VideoRight" / "Video Agent Tool", in a generic system sans, plain white.
+  - The request types under the VO's "Request changes in your coding agent", wrapping in a growing input box. On "and": Enter, then `⏺ Updating segments/title-card.ts, styles/tokens.css…` with the spinner, while the key light glides to the preview.
+  - On "reloads": `✓ Done. Hot-reloaded.` The dev bar's HMR status flips to `hmr update · title-card.ts`, a refresh sweep runs down the preview, and the real title card plays its reveal. This is `createTitleLockup` on the same stage as beat 2, at half scale and unlabelled. It then holds ~2.8s.
+- Kit additions: `sweep.ts` (local and vertical sweeps), `browser.ts` (window chrome), `agent.ts` (a windowed Claude Code session, word-wrapped), `dispose.ts` (deferred disposal), a `labels` option on the title lockup, and Inter (bundled, OFL) for real screens' UI type: the product UI and the browser chrome.
+- New transition `me-split`: a cyan rule (with a dark knockout, so it reads over light scenes) draws down the incoming scene's split line over ~210ms, and two beams open from it to the frame edges. It is registered in `videowright.config.ts`.
+- Fix (Phase 3 review): a HUD decode cut off by its segment's unmount now finishes its text, so the persistent readout never freezes on noise.
+- Departures from the Direction, and why:
+  - "Each demo uses the full stage": the demos share the frame with the claim rail (the viewport is 1100 × 800 of the safe frame), because the claim must hold for the whole beat. Every demo fills its viewport, and the app is framed by a camera inside it.
+  - The gallery has four extra advances: "Three.js", "Lottie", "rendered" and "Videowright". Each sub-beat event is cued on its VO word rather than on holds.
+  - The cursor in the product UI is an ordinary arrow (with the HUD's amber click ring), not the style's crosshair pointer, so it reads as someone using the real app.
+  - The 3D sub-beat's planet orbit is drawn in fg-2, not amber: amber stays with the HUD's lock.
+  - The live-dev beat has no camera framing (the split windows nearly fill the safe frame, and any push would carry them into the HUD band). The key light carries the eye from the agent to the preview instead.
+  - The request types fast (16ms a character) because it has to land between "Request" and "and" (~1.8s). Phase 6 can widen the pause before "Request" if it reads rushed.
 
 ### 2026-11-01 — Phase 3: foundation, audio, the hook
 - Video folder: this PLAN, `voiceover_script/script.md`, `timeline.ts` (`v2-cold-open`, then `v2-title-card` on a hard `cut`, default audio track v1).

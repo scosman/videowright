@@ -60,7 +60,30 @@ function parseCues(plan: string): PlanCue[] {
 	});
 }
 
-const SEGMENT_IDS = ["v2-cold-open", "v2-title-card"];
+const SEGMENT_IDS = ["v2-cold-open", "v2-title-card", "v2-web-tech-gallery", "v2-interactive-dev"];
+
+/**
+ * The VO word each advance is cued on, per segment after the title card: every one sits 0.15s
+ * before its word (a segment's last advance before the next segment's first word).
+ */
+const CUE_WORDS: Record<string, string[]> = {
+	"v2-web-tech-gallery": [
+		"any", // -> ECharts
+		"advanced", // -> Three.js + Lottie
+		"Three.js", // lock on the planet
+		"Lottie", // lock on the rocket
+		"even", // -> the product UI
+		"rendered", // Customers, the note
+		"If", // send, the toast
+		"VideoWrite", // the claim lock ("Videowright supports it.")
+		"Request", // exit: live dev's first word
+	],
+	"v2-interactive-dev": [
+		"and", // Enter
+		"reloads", // the hot reload
+		"One", // exit: the export beat's first word
+	],
+};
 
 let timeline: Timeline;
 let track: AudioTrack;
@@ -81,12 +104,28 @@ beforeAll(async () => {
 });
 
 describe("demo_v2 timeline", () => {
-	it("loads with the built v2 segments in order, entering the title card on a hard cut", () => {
+	it("loads with the built v2 segments in order, each entered on its designed transition", () => {
 		expect(timeline.segments.map((s) => s.id)).toEqual(SEGMENT_IDS);
-		expect(timeline.segments[1].transition).toBe("cut");
+		expect(timeline.segments.map((s) => s.transition)).toEqual([
+			undefined,
+			"cut", // the hook lands on the hard cut
+			"me-push", // into the examples
+			"me-split", // into the split screen, opening from its divider
+		]);
 		expect(timeline.meta.style).toBeUndefined(); // the project default: motion-engineering
 		const source = readFileSync(join(VIDEO, "timeline.ts"), "utf-8");
 		expect(source).toContain('import "../../styles/motion-engineering/tokens.css";');
+	});
+
+	it("registers every custom transition it uses, and each file exists", () => {
+		const config = readFileSync(join(DEMO, "videowright.config.ts"), "utf-8");
+		for (const name of ["me-push", "me-split"]) {
+			expect(config).toContain(`"${name}": () => import("./transitions/${name}.js")`);
+			expect(existsSync(join(DEMO, "transitions", `${name}.ts`)), name).toBe(true);
+		}
+		// The split reads its line from the incoming scene, which declares it.
+		const dev = readFileSync(join(DEMO, "segments/v2-interactive-dev/index.ts"), "utf-8");
+		expect(dev).toContain("dataset.splitX");
 	});
 
 	it("every timeline segment has a segments/<id>/index.ts", () => {
@@ -103,6 +142,10 @@ describe("demo_v2 timeline", () => {
 				.split(",")
 				.map(Number);
 			expect(own, id).toEqual(track.timing.perSegment[id]);
+			// A segment that paces sub-beats from its advances keeps a copy (const ADV = [...]):
+			// it must be the same numbers, or a re-timed take would re-time only one of them.
+			const copy = source.match(/const ADV = \[([^\]]+)\]/)?.[1];
+			if (copy !== undefined) expect(copy.split(",").map(Number), `${id} ADV`).toEqual(own);
 		}
 	});
 });
@@ -175,6 +218,30 @@ describe("demo_v2 audio", () => {
 		expect(that.start).toBeGreaterThan(technologies.end);
 		expect(exit).toBeGreaterThan(release);
 		anchored(exit, that.start);
+
+		// Every later segment: each advance 0.15s before its cue word, in order.
+		let start = exit;
+		let after = that.start;
+		for (const [id, cues] of Object.entries(CUE_WORDS)) {
+			const advances = timing[id] ?? [];
+			expect(advances, id).toHaveLength(cues.length);
+			cues.forEach((word, i) => {
+				const cue = at(word, after);
+				expect(lead(start + advances[i], cue.start), `${id} [${i}] "${word}"`).toBeCloseTo(0.15, 2);
+				after = cue.start;
+			});
+			start += advances[advances.length - 1];
+		}
+	});
+
+	it("the gallery's Lottie is the byte-identical allowed asset, and the demo declares ECharts", () => {
+		const original = join(DEMO, "rocket-launch.json");
+		const copy = join(DEMO, "segments/v2-web-tech-gallery/rocket-launch.json");
+		expect(readFileSync(copy).equals(readFileSync(original))).toBe(true);
+		const pkg = JSON.parse(readFileSync(join(DEMO, "package.json"), "utf-8")) as {
+			dependencies: Record<string, string>;
+		};
+		expect(pkg.dependencies.echarts).toMatch(/^\^6\./);
 	});
 
 	it("typing SFX is the byte-identical allowed asset and sfx.ts records its measured length", async () => {

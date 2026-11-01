@@ -15,6 +15,9 @@ const track: AudioTrack = {
 			// [2] 5.45 release, after "technologies." (ends 12.55). [3] 6.37 exit, 0.15s before
 			// "That" (13.85).
 			"v2-title-card": [0.47, 4.19, 5.45, 6.37],
+			// The gallery and live dev: the voiceover's timing (cues annotated in voiceover.ts).
+			"v2-web-tech-gallery": [2.677, 5.424, 7.424, 8.404, 9.495, 11.415, 13.585, 15.365, 17.543],
+			"v2-interactive-dev": [1.9, 2.96, 5.785],
 		},
 	},
 	audio_plan_path: "../../audio_plan.md",

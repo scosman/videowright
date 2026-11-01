@@ -1,19 +1,21 @@
 import "./v2.css";
 
-// Every face demo_v2 draws with: the style's three (tokens.css) and the wordmark's Outfit
-// (v2.css). All use font-display: block, so no frame can show a fallback face once loaded.
+// Every face demo_v2 draws with: the style's three (tokens.css) and, from v2.css, the
+// wordmark's Outfit and Inter, the UI face of real screens (the Acme app, browser chrome).
+// All use font-display: block, so no frame can show a fallback face once loaded.
 const FACES: Array<[font: string, text?: string]> = [
 	['600 64px "Archivo"'],
 	['500 64px "JetBrains Mono"'],
 	['400 64px "ME Symbols"', "✓"],
 	['600 64px "Outfit"', "videowright"],
+	['500 64px "Inter"'],
 ];
 
 /**
  * Resolves once every demo_v2 face is loaded. Returns undefined (nothing to await) when they
  * already are: awaiting document.fonts.load() always resumes on a later task, and in a render
  * that task can land inside a frame, so play() would start off the frame grid and frames would
- * differ from run to run. The first segment loads all four faces during boot, so later mounts
+ * differ from run to run. The first segment loads every face during boot, so later mounts
  * never wait.
  */
 export function fontsReady(): Promise<unknown> | undefined {

@@ -68,6 +68,12 @@ export interface TitleLockup {
 export interface LockupOptions {
 	/** Uniform scale of the 1920 x 1080 canvas (default 1). */
 	scale?: number;
+	/**
+	 * Draw the HUD's labels (the dimension's value). Default: at scale 1 and up only. A lockup
+	 * inside an already scaled-down stage (a browser preview) passes false: its labels would
+	 * land under the 22px floor on screen.
+	 */
+	labels?: boolean;
 }
 
 export function createTitleLockup(host: HTMLElement, opts: LockupOptions = {}): TitleLockup {
@@ -118,7 +124,7 @@ export function createTitleLockup(host: HTMLElement, opts: LockupOptions = {}): 
 		return { ...logo, h: tg.top + tagline.offsetHeight - logo.y };
 	};
 	// Labels at a reduced scale would fall below the 22px legibility floor: draw strokes only.
-	const labels = scale >= 1;
+	const labels = opts.labels ?? scale >= 1;
 
 	const hide = () => {
 		for (const el of [...letters, taglineInner]) el.style.transform = "translateY(112%)";

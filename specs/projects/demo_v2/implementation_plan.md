@@ -26,7 +26,7 @@ Every phase follows the clean-room rule, runs the render→look→iterate loop b
   - `components/v2/` kit (fonts, stage, hud, motion, logo, title-lockup, terminal) and `transitions/` registered in config.
   - Audio: ingest the v1 take (`retime check` / `apply` → sync → `voiceover.ts`), or the placeholder if it is missing. Add the typing SFX, `audio_plan.md`, and the track.
   - Segments `v2-cold-open` and `v2-title-card`, including the hard cut.
-- [ ] **Phase 4: Gallery + live dev.**
+- [x] **Phase 4: Gallery + live dev.**
   - `v2-web-tech-gallery`: SVG, real ECharts, Three.js + Lottie, app UI with camera and cursor.
   - `v2-interactive-dev`: browser kit, hot-reload into the shared title lockup.
 - [ ] **Phase 5: Remaining beats.** `v2-pixel-perfect-export`, `v2-voiceover-sync`, `v2-any-coding-agent`, `v2-install-cta` (agent prompt box with `github.com/scosman/videowright`, 5s end hold). The full 8-segment timeline.

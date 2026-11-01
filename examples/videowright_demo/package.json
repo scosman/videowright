@@ -10,6 +10,7 @@
 	},
 	"dependencies": {
 		"@types/three": "^0.184.1",
+		"echarts": "^6.1.0",
 		"lottie-web": "^5.13.0",
 		"three": "^0.184.0",
 		"videowright": "file:../../packages/lib"

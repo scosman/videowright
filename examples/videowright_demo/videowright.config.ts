@@ -13,5 +13,7 @@ export default defineConfig({
 		// styles/motion-engineering/STYLE.md.
 		"me-sweep": () => import("./transitions/me-sweep.js"),
 		"me-push": () => import("./transitions/me-push.js"),
+		// demo_v2's split-screen entrance (beat 4): the sweep, opened from the split line.
+		"me-split": () => import("./transitions/me-split.js"),
 	},
 });

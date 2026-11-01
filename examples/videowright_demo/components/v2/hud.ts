@@ -28,7 +28,11 @@ const claimedBy = new WeakMap<Element, number>();
 export interface DecodeOptions {
 	/** ms between characters (default 26). */
 	perChar?: number;
-	/** Stops the decode once aborted, e.g. the segment that scheduled it unmounted. */
+	/**
+	 * Drops the decode if aborted before it starts writing (e.g. the segment that scheduled it
+	 * unmounted first). A decode that has started always finishes, so the element never stays
+	 * on half-scrambled characters.
+	 */
 	signal?: AbortSignal;
 }
 
@@ -45,7 +49,7 @@ export function decode(
 	created.set(el, id);
 	let claimed = false;
 	const tick: Tick = (t) => {
-		if (opts.signal?.aborted) return false;
+		if (opts.signal?.aborted && !claimed) return false;
 		const local = tidy(t - start);
 		// Not started yet: leave the element, and whatever is decoding into it, alone.
 		if (local < 0) return true;
@@ -243,7 +247,10 @@ export interface HudState {
 	 * title card, after the hard cut), so a dev restart or Prev matches the render.
 	 */
 	restart?: boolean;
-	/** The segment's ctx.signal: readout updates it scheduled stop if it unmounts first. */
+	/**
+	 * The segment's ctx.signal: readout updates it scheduled are dropped if it unmounts before
+	 * they start; one already decoding runs to its full text.
+	 */
 	signal: AbortSignal;
 }
 
