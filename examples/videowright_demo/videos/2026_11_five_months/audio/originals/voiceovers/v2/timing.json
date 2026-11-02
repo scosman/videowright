@@ -1,0 +1,524 @@
+{
+	"words": [
+		{
+			"word": "We",
+			"start": 0.63,
+			"end": 0.75
+		},
+		{
+			"word": "generated",
+			"start": 0.79,
+			"end": 1.21
+		},
+		{
+			"word": "the",
+			"start": 1.25,
+			"end": 1.37
+		},
+		{
+			"word": "same",
+			"start": 1.49,
+			"end": 1.73
+		},
+		{
+			"word": "video",
+			"start": 1.77,
+			"end": 2.05
+		},
+		{
+			"word": "with",
+			"start": 2.09,
+			"end": 2.23
+		},
+		{
+			"word": "Claude",
+			"start": 2.29,
+			"end": 2.63
+		},
+		{
+			"word": "five",
+			"start": 3.09,
+			"end": 3.29
+		},
+		{
+			"word": "months",
+			"start": 3.37,
+			"end": 3.55
+		},
+		{
+			"word": "apart.",
+			"start": 3.59,
+			"end": 3.95
+		},
+		{
+			"word": "The",
+			"start": 4.41,
+			"end": 4.57
+		},
+		{
+			"word": "difference",
+			"start": 4.63,
+			"end": 5.19
+		},
+		{
+			"word": "is",
+			"start": 5.25,
+			"end": 5.41
+		},
+		{
+			"word": "staggering.",
+			"start": 5.59,
+			"end": 6.15
+		},
+		{
+			"word": "In",
+			"start": 7.403,
+			"end": 7.503
+		},
+		{
+			"word": "May,",
+			"start": 7.543,
+			"end": 7.823
+		},
+		{
+			"word": "designs",
+			"start": 8.143,
+			"end": 8.543
+		},
+		{
+			"word": "were",
+			"start": 8.583,
+			"end": 8.743
+		},
+		{
+			"word": "basic.",
+			"start": 8.783,
+			"end": 9.203
+		},
+		{
+			"word": "Now,",
+			"start": 10.485,
+			"end": 10.805
+		},
+		{
+			"word": "it",
+			"start": 11.005,
+			"end": 11.105
+		},
+		{
+			"word": "uses",
+			"start": 11.165,
+			"end": 11.485
+		},
+		{
+			"word": "rich",
+			"start": 11.565,
+			"end": 11.825
+		},
+		{
+			"word": "animations",
+			"start": 11.865,
+			"end": 12.405
+		},
+		{
+			"word": "and",
+			"start": 12.425,
+			"end": 12.505
+		},
+		{
+			"word": "graphics.",
+			"start": 12.585,
+			"end": 13.085
+		},
+		{
+			"word": "3D",
+			"start": 15.86,
+			"end": 16.26
+		},
+		{
+			"word": "was",
+			"start": 16.3,
+			"end": 16.4
+		},
+		{
+			"word": "a",
+			"start": 16.46,
+			"end": 16.54
+		},
+		{
+			"word": "simple",
+			"start": 16.6,
+			"end": 16.82
+		},
+		{
+			"word": "shape.",
+			"start": 16.96,
+			"end": 17.28
+		},
+		{
+			"word": "Now,",
+			"start": 18.778,
+			"end": 19.078
+		},
+		{
+			"word": "it",
+			"start": 19.258,
+			"end": 19.358
+		},
+		{
+			"word": "renders",
+			"start": 19.398,
+			"end": 19.698
+		},
+		{
+			"word": "real-time",
+			"start": 19.858,
+			"end": 20.298
+		},
+		{
+			"word": "scenes",
+			"start": 20.418,
+			"end": 20.738
+		},
+		{
+			"word": "on",
+			"start": 20.778,
+			"end": 20.838
+		},
+		{
+			"word": "the",
+			"start": 20.858,
+			"end": 20.938
+		},
+		{
+			"word": "GPU.",
+			"start": 20.978,
+			"end": 21.498
+		},
+		{
+			"word": "Product",
+			"start": 23.06,
+			"end": 23.36
+		},
+		{
+			"word": "UI",
+			"start": 23.46,
+			"end": 23.8
+		},
+		{
+			"word": "was",
+			"start": 23.84,
+			"end": 23.92
+		},
+		{
+			"word": "a",
+			"start": 23.98,
+			"end": 24.08
+		},
+		{
+			"word": "dashboard",
+			"start": 24.12,
+			"end": 24.66
+		},
+		{
+			"word": "that",
+			"start": 24.68,
+			"end": 24.82
+		},
+		{
+			"word": "played",
+			"start": 24.88,
+			"end": 25.08
+		},
+		{
+			"word": "itself.",
+			"start": 25.12,
+			"end": 25.56
+		},
+		{
+			"word": "Now,",
+			"start": 26.443,
+			"end": 26.643
+		},
+		{
+			"word": "someone's",
+			"start": 26.783,
+			"end": 27.083
+		},
+		{
+			"word": "using",
+			"start": 27.143,
+			"end": 27.363
+		},
+		{
+			"word": "it.",
+			"start": 27.403,
+			"end": 27.463
+		},
+		{
+			"word": "A",
+			"start": 27.883,
+			"end": 27.963
+		},
+		{
+			"word": "cursor,",
+			"start": 28.023,
+			"end": 28.523
+		},
+		{
+			"word": "a",
+			"start": 28.663,
+			"end": 28.743
+		},
+		{
+			"word": "panning",
+			"start": 28.803,
+			"end": 29.103
+		},
+		{
+			"word": "camera,",
+			"start": 29.183,
+			"end": 29.543
+		},
+		{
+			"word": "a",
+			"start": 29.803,
+			"end": 29.823
+		},
+		{
+			"word": "real",
+			"start": 29.963,
+			"end": 30.143
+		},
+		{
+			"word": "route",
+			"start": 30.243,
+			"end": 30.463
+		},
+		{
+			"word": "change.",
+			"start": 30.523,
+			"end": 30.883
+		},
+		{
+			"word": "In",
+			"start": 32.477,
+			"end": 32.577
+		},
+		{
+			"word": "May,",
+			"start": 32.617,
+			"end": 32.897
+		},
+		{
+			"word": "narration",
+			"start": 33.277,
+			"end": 33.697
+		},
+		{
+			"word": "sync",
+			"start": 33.837,
+			"end": 34.077
+		},
+		{
+			"word": "was",
+			"start": 34.117,
+			"end": 34.257
+		},
+		{
+			"word": "by",
+			"start": 34.297,
+			"end": 34.457
+		},
+		{
+			"word": "line.",
+			"start": 34.517,
+			"end": 34.837
+		},
+		{
+			"word": "Now,",
+			"start": 35.73,
+			"end": 35.99
+		},
+		{
+			"word": "it's",
+			"start": 36.21,
+			"end": 36.39
+		},
+		{
+			"word": "timed",
+			"start": 36.45,
+			"end": 36.79
+		},
+		{
+			"word": "to",
+			"start": 36.85,
+			"end": 37.05
+		},
+		{
+			"word": "every",
+			"start": 37.11,
+			"end": 37.35
+		},
+		{
+			"word": "word.",
+			"start": 37.47,
+			"end": 37.77
+		},
+		{
+			"word": "Both",
+			"start": 39.295,
+			"end": 39.515
+		},
+		{
+			"word": "videos",
+			"start": 39.555,
+			"end": 39.895
+		},
+		{
+			"word": "were",
+			"start": 39.915,
+			"end": 40.015
+		},
+		{
+			"word": "made",
+			"start": 40.075,
+			"end": 40.255
+		},
+		{
+			"word": "with",
+			"start": 40.295,
+			"end": 40.475
+		},
+		{
+			"word": "VideoWrite,",
+			"start": 40.495,
+			"end": 41.035
+		},
+		{
+			"word": "an",
+			"start": 41.395,
+			"end": 41.535
+		},
+		{
+			"word": "open-source",
+			"start": 41.595,
+			"end": 42.075
+		},
+		{
+			"word": "framework",
+			"start": 42.175,
+			"end": 42.575
+		},
+		{
+			"word": "that",
+			"start": 42.615,
+			"end": 42.715
+		},
+		{
+			"word": "gives",
+			"start": 42.755,
+			"end": 42.955
+		},
+		{
+			"word": "Claude",
+			"start": 42.995,
+			"end": 43.255
+		},
+		{
+			"word": "everything",
+			"start": 43.495,
+			"end": 43.835
+		},
+		{
+			"word": "it",
+			"start": 43.875,
+			"end": 43.955
+		},
+		{
+			"word": "needs",
+			"start": 43.995,
+			"end": 44.255
+		},
+		{
+			"word": "to",
+			"start": 44.295,
+			"end": 44.355
+		},
+		{
+			"word": "make",
+			"start": 44.395,
+			"end": 44.575
+		},
+		{
+			"word": "videos:",
+			"start": 44.615,
+			"end": 45.035
+		},
+		{
+			"word": "animation,",
+			"start": 45.495,
+			"end": 46.075
+		},
+		{
+			"word": "styles,",
+			"start": 46.375,
+			"end": 46.895
+		},
+		{
+			"word": "voiceovers,",
+			"start": 47.135,
+			"end": 47.795
+		},
+		{
+			"word": "sound",
+			"start": 48.015,
+			"end": 48.195
+		},
+		{
+			"word": "effects,",
+			"start": 48.235,
+			"end": 48.615
+		},
+		{
+			"word": "music,",
+			"start": 48.815,
+			"end": 49.175
+		},
+		{
+			"word": "and",
+			"start": 49.355,
+			"end": 49.455
+		},
+		{
+			"word": "more.",
+			"start": 49.515,
+			"end": 49.735
+		},
+		{
+			"word": "Download",
+			"start": 50.255,
+			"end": 50.535
+		},
+		{
+			"word": "it",
+			"start": 50.555,
+			"end": 50.635
+		},
+		{
+			"word": "free",
+			"start": 50.755,
+			"end": 51.035
+		},
+		{
+			"word": "on",
+			"start": 51.075,
+			"end": 51.215
+		},
+		{
+			"word": "GitHub.",
+			"start": 51.235,
+			"end": 51.615
+		}
+	]
+}

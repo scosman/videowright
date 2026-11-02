@@ -116,6 +116,8 @@ const cues = {
 	duration: totalFrames / FPS,
 	segments,
 	sweeps,
+	/** The narration's last word's end ("GitHub."): the end hold starts here. */
+	lastWordEnd: words.at(-1).end,
 	voice,
 	music: {
 		// Out over the cut into the voice beat; back after the voice beat's last word.

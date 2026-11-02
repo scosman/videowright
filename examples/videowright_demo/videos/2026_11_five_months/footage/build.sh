@@ -31,7 +31,7 @@ cut then_product_ui demo_video.mp4 23.20 4.30    # the Acme dashboard, its tab s
 cut then_narration_sync demo_video.mp4 46.50 3.95 # the script view, its line highlighted
 
 # Now (v2_source): each clip starts at the sweep and covers the pair's Now hold.
-cut now_title_card v2_source.mp4 0.00 4.90       # from demo_v2's hard cut: the bloom, the strokes
+cut now_title_card v2_source.mp4 0.00 5.60       # from demo_v2's hard cut: the bloom, the strokes
 cut now_3d v2_source.mp4 12.10 6.70              # the planet and the Lottie card (launch ~16.4s)
 cut now_product_ui v2_source.mp4 20.20 6.30      # the cursor opens Customers, the note, the toast
-cut now_narration_sync v2_source.mp4 30.10 4.15  # line 2 lit word by word on its real times, then the edit begins
+cut now_narration_sync v2_source.mp4 30.10 4.40  # line 2 lit word by word on its real times, then the edit begins

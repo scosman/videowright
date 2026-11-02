@@ -25,7 +25,7 @@ Now, it uses rich animations and graphics.
 
 3 D was a simple shape.
 
-[[pause 1.0s]]
+[[pause 1.4s]]
 
 Now, it renders real-time scenes on the G P U.
 

@@ -1,41 +1,41 @@
 {
-	"standIn": true,
+	"standIn": false,
 	"pieces": [
 		{
 			"name": "narration",
-			"src": "v1",
+			"src": "v2",
 			"at": 0,
 			"from": 0,
-			"to": 40.148,
+			"to": 37.97,
 			"gainDb": 0,
-			"words": [0, 85]
+			"words": [0, 72]
 		},
 		{
 			"name": "voice_then",
 			"src": "voice_then",
-			"at": 42.428,
+			"at": 40.25,
 			"from": 0,
 			"to": 4.66,
 			"gainDb": 1.2,
-			"words": [86, 96]
+			"words": [73, 83]
 		},
 		{
 			"name": "voice_now",
 			"src": "voice_now",
-			"at": 47.988,
+			"at": 45.81,
 			"from": 0,
 			"to": 5.82,
 			"gainDb": 0,
-			"words": [97, 115]
+			"words": [84, 102]
 		},
 		{
 			"name": "cta",
-			"src": "v1",
-			"at": 54.908,
-			"from": 55.67,
-			"to": 73.326,
+			"src": "v2",
+			"at": 52.73,
+			"from": 39.095,
+			"to": 56.66,
 			"gainDb": 0,
-			"words": [116, 146]
+			"words": [103, 133]
 		}
 	]
 }

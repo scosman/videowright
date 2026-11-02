@@ -1,6 +1,6 @@
 import "../../styles/motion-engineering/tokens.css";
 import type { Timeline } from "videowright";
-import defaultAudioTrack from "./audio/tracks/v1/track.js";
+import defaultAudioTrack from "./audio/tracks/v2/track.js";
 
 // 5 months of progress in Claude video generation. Every pair is the same comparison rig at the
 // same pixels (components/fm/rig.ts), so pairs are joined by hard cuts: only the footage changes.
