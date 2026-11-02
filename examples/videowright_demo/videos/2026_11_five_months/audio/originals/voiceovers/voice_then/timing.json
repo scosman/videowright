@@ -1,0 +1,59 @@
+{
+	"words": [
+		{
+			"word": "Previously,",
+			"start": 0.12,
+			"end": 0.66
+		},
+		{
+			"word": "the",
+			"start": 0.88,
+			"end": 0.96
+		},
+		{
+			"word": "voice",
+			"start": 1,
+			"end": 1.2
+		},
+		{
+			"word": "was",
+			"start": 1.24,
+			"end": 1.44
+		},
+		{
+			"word": "slightly",
+			"start": 1.52,
+			"end": 1.84
+		},
+		{
+			"word": "robotic",
+			"start": 1.94,
+			"end": 2.56
+		},
+		{
+			"word": "and",
+			"start": 2.78,
+			"end": 2.9
+		},
+		{
+			"word": "lacked",
+			"start": 2.96,
+			"end": 3.3
+		},
+		{
+			"word": "any",
+			"start": 3.36,
+			"end": 3.52
+		},
+		{
+			"word": "emotion",
+			"start": 3.6,
+			"end": 4
+		},
+		{
+			"word": "cues.",
+			"start": 4.1,
+			"end": 4.46
+		}
+	]
+}

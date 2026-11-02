@@ -1,0 +1,41 @@
+{
+	"standIn": true,
+	"pieces": [
+		{
+			"name": "narration",
+			"src": "v1",
+			"at": 0,
+			"from": 0,
+			"to": 40.148,
+			"gainDb": 0,
+			"words": [0, 85]
+		},
+		{
+			"name": "voice_then",
+			"src": "voice_then",
+			"at": 42.428,
+			"from": 0,
+			"to": 4.66,
+			"gainDb": 1.2,
+			"words": [86, 96]
+		},
+		{
+			"name": "voice_now",
+			"src": "voice_now",
+			"at": 47.988,
+			"from": 0,
+			"to": 5.82,
+			"gainDb": 0,
+			"words": [97, 115]
+		},
+		{
+			"name": "cta",
+			"src": "v1",
+			"at": 54.908,
+			"from": 55.67,
+			"to": 73.326,
+			"gainDb": 0,
+			"words": [116, 146]
+		}
+	]
+}

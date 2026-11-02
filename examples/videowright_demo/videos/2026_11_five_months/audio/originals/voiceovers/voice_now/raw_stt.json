@@ -1,0 +1,99 @@
+{
+	"words": [
+		{
+			"word": "This",
+			"start": 0.2,
+			"end": 0.32
+		},
+		{
+			"word": "is",
+			"start": 0.36,
+			"end": 0.46
+		},
+		{
+			"word": "the",
+			"start": 0.5,
+			"end": 0.56
+		},
+		{
+			"word": "new",
+			"start": 0.6,
+			"end": 0.76
+		},
+		{
+			"word": "one.",
+			"start": 0.78,
+			"end": 0.98
+		},
+		{
+			"word": "It's",
+			"start": 1.38,
+			"end": 1.5
+		},
+		{
+			"word": "my",
+			"start": 1.54,
+			"end": 1.64
+		},
+		{
+			"word": "own",
+			"start": 1.68,
+			"end": 1.84
+		},
+		{
+			"word": "voice,",
+			"start": 1.9,
+			"end": 2.24
+		},
+		{
+			"word": "cloned,",
+			"start": 2.54,
+			"end": 2.94
+		},
+		{
+			"word": "and",
+			"start": 3.52,
+			"end": 3.74
+		},
+		{
+			"word": "it",
+			"start": 3.84,
+			"end": 3.9
+		},
+		{
+			"word": "can",
+			"start": 3.92,
+			"end": 4.08
+		},
+		{
+			"word": "match",
+			"start": 4.14,
+			"end": 4.36
+		},
+		{
+			"word": "its",
+			"start": 4.4,
+			"end": 4.58
+		},
+		{
+			"word": "tone",
+			"start": 4.64,
+			"end": 4.9
+		},
+		{
+			"word": "to",
+			"start": 4.94,
+			"end": 5.02
+		},
+		{
+			"word": "the",
+			"start": 5.06,
+			"end": 5.14
+		},
+		{
+			"word": "message.",
+			"start": 5.18,
+			"end": 5.62
+		}
+	]
+}

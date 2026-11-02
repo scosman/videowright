@@ -1,0 +1,19 @@
+We generated the same video with Claude, five months apart. The difference is staggering. [pause]
+
+In May, designs were basic. [pause]
+
+Now, it uses rich animations and graphics. [pause]
+
+3 D was a simple shape. [pause]
+
+Now, it renders real-time scenes on the G P U. [pause]
+
+Product U I was a dashboard that played itself. [pause]
+
+Now someone's using it: a cursor, a panning camera, a real route change. [pause]
+
+In May, narration sync was by line. [pause]
+
+Now, it's timed to every word. [pause]
+
+Both videos were made with Videowright: an open-source framework that gives Claude everything it needs to make videos. Animation, styles, voiceovers, sound effects, music, and more. Download it free on GitHub.

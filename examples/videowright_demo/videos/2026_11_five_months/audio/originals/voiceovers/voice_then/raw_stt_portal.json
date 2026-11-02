@@ -1,0 +1,121 @@
+{
+	"language_code": "eng",
+	"segments": [
+		{
+			"text": "Previously, the voice was slightly robotic and lacked any emotion cues.",
+			"start_time": 0.12,
+			"end_time": 4.46,
+			"speaker": {
+				"id": "speaker_0",
+				"name": "Speaker 0"
+			},
+			"words": [
+				{
+					"text": "Previously,",
+					"start_time": 0.12,
+					"end_time": 0.66
+				},
+				{
+					"text": " ",
+					"start_time": 0.66,
+					"end_time": 0.88
+				},
+				{
+					"text": "the",
+					"start_time": 0.88,
+					"end_time": 0.96
+				},
+				{
+					"text": " ",
+					"start_time": 0.96,
+					"end_time": 1.0
+				},
+				{
+					"text": "voice",
+					"start_time": 1.0,
+					"end_time": 1.2
+				},
+				{
+					"text": " ",
+					"start_time": 1.2,
+					"end_time": 1.24
+				},
+				{
+					"text": "was",
+					"start_time": 1.24,
+					"end_time": 1.44
+				},
+				{
+					"text": " ",
+					"start_time": 1.44,
+					"end_time": 1.52
+				},
+				{
+					"text": "slightly",
+					"start_time": 1.52,
+					"end_time": 1.84
+				},
+				{
+					"text": " ",
+					"start_time": 1.84,
+					"end_time": 1.94
+				},
+				{
+					"text": "robotic",
+					"start_time": 1.94,
+					"end_time": 2.56
+				},
+				{
+					"text": " ",
+					"start_time": 2.56,
+					"end_time": 2.78
+				},
+				{
+					"text": "and",
+					"start_time": 2.78,
+					"end_time": 2.9
+				},
+				{
+					"text": " ",
+					"start_time": 2.9,
+					"end_time": 2.96
+				},
+				{
+					"text": "lacked",
+					"start_time": 2.96,
+					"end_time": 3.3
+				},
+				{
+					"text": " ",
+					"start_time": 3.3,
+					"end_time": 3.36
+				},
+				{
+					"text": "any",
+					"start_time": 3.36,
+					"end_time": 3.52
+				},
+				{
+					"text": " ",
+					"start_time": 3.52,
+					"end_time": 3.6
+				},
+				{
+					"text": "emotion",
+					"start_time": 3.6,
+					"end_time": 4.0
+				},
+				{
+					"text": " ",
+					"start_time": 4.0,
+					"end_time": 4.1
+				},
+				{
+					"text": "cues.",
+					"start_time": 4.1,
+					"end_time": 4.46
+				}
+			]
+		}
+	]
+}

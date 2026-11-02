@@ -1,0 +1,201 @@
+{
+	"language_code": "eng",
+	"segments": [
+		{
+			"text": "This is the new one. It's my own voice, cloned, and it can match its tone to the message.",
+			"start_time": 0.2,
+			"end_time": 5.62,
+			"speaker": {
+				"id": "speaker_0",
+				"name": "Speaker 0"
+			},
+			"words": [
+				{
+					"text": "This",
+					"start_time": 0.2,
+					"end_time": 0.32
+				},
+				{
+					"text": " ",
+					"start_time": 0.32,
+					"end_time": 0.36
+				},
+				{
+					"text": "is",
+					"start_time": 0.36,
+					"end_time": 0.46
+				},
+				{
+					"text": " ",
+					"start_time": 0.46,
+					"end_time": 0.5
+				},
+				{
+					"text": "the",
+					"start_time": 0.5,
+					"end_time": 0.56
+				},
+				{
+					"text": " ",
+					"start_time": 0.56,
+					"end_time": 0.6
+				},
+				{
+					"text": "new",
+					"start_time": 0.6,
+					"end_time": 0.76
+				},
+				{
+					"text": " ",
+					"start_time": 0.76,
+					"end_time": 0.78
+				},
+				{
+					"text": "one.",
+					"start_time": 0.78,
+					"end_time": 0.98
+				},
+				{
+					"text": " ",
+					"start_time": 0.98,
+					"end_time": 1.38
+				},
+				{
+					"text": "It's",
+					"start_time": 1.38,
+					"end_time": 1.5
+				},
+				{
+					"text": " ",
+					"start_time": 1.5,
+					"end_time": 1.54
+				},
+				{
+					"text": "my",
+					"start_time": 1.54,
+					"end_time": 1.64
+				},
+				{
+					"text": " ",
+					"start_time": 1.64,
+					"end_time": 1.68
+				},
+				{
+					"text": "own",
+					"start_time": 1.68,
+					"end_time": 1.84
+				},
+				{
+					"text": " ",
+					"start_time": 1.84,
+					"end_time": 1.9
+				},
+				{
+					"text": "voice,",
+					"start_time": 1.9,
+					"end_time": 2.24
+				},
+				{
+					"text": " ",
+					"start_time": 2.24,
+					"end_time": 2.54
+				},
+				{
+					"text": "cloned,",
+					"start_time": 2.54,
+					"end_time": 2.94
+				},
+				{
+					"text": " ",
+					"start_time": 2.94,
+					"end_time": 2.96
+				},
+				{
+					"text": "and",
+					"start_time": 3.52,
+					"end_time": 3.74
+				},
+				{
+					"text": " ",
+					"start_time": 3.74,
+					"end_time": 3.84
+				},
+				{
+					"text": "it",
+					"start_time": 3.84,
+					"end_time": 3.9
+				},
+				{
+					"text": " ",
+					"start_time": 3.9,
+					"end_time": 3.92
+				},
+				{
+					"text": "can",
+					"start_time": 3.92,
+					"end_time": 4.08
+				},
+				{
+					"text": " ",
+					"start_time": 4.08,
+					"end_time": 4.14
+				},
+				{
+					"text": "match",
+					"start_time": 4.14,
+					"end_time": 4.36
+				},
+				{
+					"text": " ",
+					"start_time": 4.36,
+					"end_time": 4.4
+				},
+				{
+					"text": "its",
+					"start_time": 4.4,
+					"end_time": 4.58
+				},
+				{
+					"text": " ",
+					"start_time": 4.58,
+					"end_time": 4.64
+				},
+				{
+					"text": "tone",
+					"start_time": 4.64,
+					"end_time": 4.9
+				},
+				{
+					"text": " ",
+					"start_time": 4.9,
+					"end_time": 4.94
+				},
+				{
+					"text": "to",
+					"start_time": 4.94,
+					"end_time": 5.02
+				},
+				{
+					"text": " ",
+					"start_time": 5.02,
+					"end_time": 5.06
+				},
+				{
+					"text": "the",
+					"start_time": 5.06,
+					"end_time": 5.14
+				},
+				{
+					"text": " ",
+					"start_time": 5.14,
+					"end_time": 5.18
+				},
+				{
+					"text": "message.",
+					"start_time": 5.18,
+					"end_time": 5.62
+				}
+			]
+		}
+	]
+}

@@ -1,2 +1,5 @@
 # Local review builds (partial timelines rendered for checks); not part of the video.
 review/
+# The assembled narration is a build intermediate: audio/assemble.mjs makes it from the
+# committed takes (its timing.json and pieces.json are committed; the mix is audio/tracks/).
+audio/originals/voiceovers/assembled/audio.wav
