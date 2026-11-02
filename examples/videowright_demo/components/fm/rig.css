@@ -1,0 +1,136 @@
+/* The Then/Now comparison rig (2026_11_five_months). One fixed layout: the footage window,
+   the THEN/NOW rail, the caption row. Nothing in it moves between Then and Now except the
+   sweep. Geometry in px at 1920×1080 (see RIG in rig.ts). */
+
+.fm-rig {
+	position: absolute;
+	inset: 0;
+	z-index: 6;
+	pointer-events: none;
+}
+
+.fm-window {
+	position: absolute;
+	overflow: hidden;
+	background: #05080c;
+	box-shadow: var(--elev-2);
+}
+
+.fm-layer {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+}
+
+.fm-border {
+	position: absolute;
+	inset: 0;
+	border: 3px solid var(--hairline);
+	z-index: 40;
+}
+
+.fm-border[data-ref="border-now"] {
+	border-color: var(--amber);
+	box-shadow: inset 0 0 0 1px rgba(255, 181, 71, 0.35), 0 0 22px rgba(255, 181, 71, 0.28);
+	clip-path: inset(0 100% 0 0);
+}
+
+.fm-rail {
+	position: absolute;
+	display: flex;
+	align-items: center;
+	gap: 44px;
+}
+
+.fm-label {
+	font-family: var(--font-display);
+	font-size: 100px;
+	font-weight: 750;
+	font-stretch: var(--stretch-display);
+	letter-spacing: 0.02em;
+	line-height: 1;
+	color: var(--color-fg);
+	opacity: 0.26;
+}
+
+.fm-label[data-ref="label-now"] {
+	color: var(--amber);
+}
+
+.fm-label[data-lit] {
+	opacity: 1;
+}
+
+.fm-label[data-ref="label-now"][data-lit] {
+	text-shadow: 0 0 28px rgba(255, 181, 71, 0.45);
+}
+
+.fm-ruler {
+	position: relative;
+	flex: 1;
+	height: 40px;
+}
+
+.fm-ruler-line,
+.fm-ruler-fill {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 19px;
+	height: 2px;
+	background: var(--hairline);
+}
+
+.fm-ruler-fill {
+	background: var(--cyan);
+	box-shadow: 0 0 10px rgba(91, 216, 245, 0.5);
+	transform-origin: 0 50%;
+	transform: scaleX(0);
+}
+
+.fm-tick {
+	position: absolute;
+	top: 10px;
+	width: 2px;
+	height: 20px;
+	margin-left: -1px;
+	background: var(--hairline-strong);
+}
+
+.fm-marker {
+	position: absolute;
+	left: 0;
+	top: 20px;
+	width: 30px;
+	height: 30px;
+	margin: -15px 0 0 -15px;
+	border-radius: 50%;
+	background: var(--color-fg);
+	box-shadow: 0 0 0 6px rgba(230, 245, 250, 0.14);
+}
+
+.fm-caption {
+	position: absolute;
+	text-align: center;
+	font-family: var(--font-body);
+	font-size: 60px;
+	font-weight: 500;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.fm-caption > span {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+}
+
+.fm-caption [data-ref="caption-then"] {
+	color: var(--fg-2);
+}
+
+.fm-caption [data-ref="caption-now"] {
+	color: var(--color-fg);
+	opacity: 0;
+}
