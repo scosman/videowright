@@ -279,15 +279,17 @@ function loopDistance(a: number, b: number): number {
 	return Math.min(d, 1000 - d);
 }
 
+// File-level, so the browser stays open for every describe block below.
+afterAll(async () => {
+	if (!browser) return;
+	try {
+		await browser.close();
+	} catch {
+		// Suppress close errors to avoid masking test failures
+	}
+});
+
 describe.skipIf(!hasBrowser)("time shim: primitive-level DOM assertions", () => {
-	afterAll(async () => {
-		if (!browser) return;
-		try {
-			await browser.close();
-		} catch {
-			// Suppress close errors to avoid masking test failures
-		}
-	});
 
 	it("setTimeout fires at the correct virtual time", async () => {
 		const { page, context } = await createShimmedPage('<div id="marker">before</div>');
