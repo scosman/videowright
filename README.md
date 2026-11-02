@@ -1,7 +1,8 @@
-
-<img width="193" height="159" alt="Videowright Logo" src="https://github.com/user-attachments/assets/ec1a826f-3f44-465b-bc72-14660271db4f" />
-
-### Create a video with a prompt
+<h3 align="center">
+  <img width="193" height="159" alt="Videowright Logo" src="https://github.com/user-attachments/assets/ec1a826f-3f44-465b-bc72-14660271db4f" />
+  
+  Create a video with a prompt
+</h3>
 
 Videowright creates demo videos, explainer videos, and product walkthroughs from your coding agent. Just describe what you want and it generates your video (including audio). Iterate in chat until it's perfect.
 
@@ -9,7 +10,7 @@ Videowright is like `rails new` for video projects. It sets up all the scaffoldi
 
 ## Demo - Sound on!
 
-<video src="https://github.com/user-attachments/assets/ba106686-3ff5-4d57-8fbb-141ad40c8c86" width="600" controls></video>
+https://github.com/user-attachments/assets/b2e5aa08-5d4c-46aa-b650-d329553d5748
 
 Or check out the [blooper reel](https://github.com/user-attachments/assets/a1c86e90-8e15-491e-9b05-4e35cf2faa37), directed by my son!
 
@@ -37,31 +38,6 @@ The agent reads the install prompt and walks you through setup.
 ## How Does Videowright Work?
 
 You describe the video you want. The agent writes video segments -- self-contained web-components that each render one beat of the video. You preview in the dev server (`npx videowright dev`), give feedback in chat, and the agent iterates. Videowright will generate an AI voiceover, and sync the video to match. When you're happy, export with `npx videowright render`.
-
-## Styles
-
-Define your visual style, and reuse it across videos. Pick one of six built-in styles, or create your own from a brand guide, reference URL, or short description.
-
-> Note: most built-in styles were created with Opus 4.6. Newer models are better at design, so we suggest creating your own style. Motion Engineering has been upgraded: it now bundles its fonts and ships a full design and motion system, signature transition recipes, and ten new sample scenes.
-
-<img width="953" height="549" alt="Built-in style packs" src="https://github.com/user-attachments/assets/3aaeecc2-7ca4-4c5a-8ed2-9adc4e226b2d" />
-
-### Style Demo
-
-Two demo videos: the same prompt, different styles.
-
-<table><tr>
-<td width="45%">
-
-https://github.com/user-attachments/assets/1960c3e8-a3f2-4028-91ab-afbc79a53fca
-
-</td>
-<td width="45%">
-  
-https://github.com/user-attachments/assets/d2454377-9f02-4b1c-af9a-e59c9a0c8912
-
-</td>
-</tr></table>
 
 ## AI Voice-Overs
 
@@ -91,7 +67,32 @@ Just chat with videowright about edits you want to make, and it does the rest. I
 Two CLI commands:
 
 - **`npx videowright dev`** -- Dev server with a homepage listing all videos in the project. Click a video to open the player with hot reload. Hide the HUD for a clean screen-recording surface.
-- **`npx videowright render [slug]`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect output.
+- **`npx videowright render [video-name]`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect output.
+
+## Styles
+
+Define your visual style, and reuse it across videos. Pick one of six built-in styles, or create your own from a brand guide, reference URL, or short description.
+
+> Note: most built-in styles were created with Opus 4.6. Newer models are better at design, so we suggest creating your own style. Motion Engineering has been upgraded: it now bundles its fonts and ships a full design and motion system, signature transition recipes, and ten new sample scenes.
+
+<img width="953" height="549" alt="Built-in style packs" src="https://github.com/user-attachments/assets/3aaeecc2-7ca4-4c5a-8ed2-9adc4e226b2d" />
+
+### Style Demo
+
+Two demo videos: the same prompt, different styles.
+
+<table><tr>
+<td width="45%">
+
+https://github.com/user-attachments/assets/1960c3e8-a3f2-4028-91ab-afbc79a53fca
+
+</td>
+<td width="45%">
+  
+https://github.com/user-attachments/assets/d2454377-9f02-4b1c-af9a-e59c9a0c8912
+
+</td>
+</tr></table>
 
 ## Multi-Video Projects
 
