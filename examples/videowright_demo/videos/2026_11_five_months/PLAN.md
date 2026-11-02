@@ -63,7 +63,7 @@ One fixed layout for every Then/Now pair. Nothing moves between Then and Now exc
 
 | Pair | Then (`demo_video` render) | Now (`v2_source` render) |
 |---|---|---|
-| Title card | 9.10 + 4.25s (the reveal) | 0.00 + 4.90s (from the hard cut: bloom, strokes, wordmark) |
+| Title card | 9.35 + 4.20s (the reveal, from the headline's first frames) | 0.00 + 4.90s (from the hard cut: bloom, strokes, wordmark) |
 | 3D + Lottie | 19.25 + 3.55s | 12.10 + 6.70s (planet, satellite, Lottie launch) |
 | Product UI | 23.20 + 4.30s (KPIs, the tab switching itself) | 20.20 + 6.30s (cursor → Customers → note → toast) |
 | Narration sync | 46.50 + 3.95s (the line highlighted) | 30.10 + 4.15s (line 2 lit word by word on its real times, then the edit begins) |

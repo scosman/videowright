@@ -25,7 +25,7 @@ cut() { # name source start duration
 }
 
 # Then (demo_video): each clip covers its pair's Then hold plus the 0.64s sweep.
-cut then_title_card demo_video.mp4 9.10 4.25     # the title card's reveal
+cut then_title_card demo_video.mp4 9.35 4.20     # the title card's reveal, from the headline's first frames
 cut then_3d demo_video.mp4 19.25 3.55            # the Three.js + Lottie panel
 cut then_product_ui demo_video.mp4 23.20 4.30    # the Acme dashboard, its tab switching itself
 cut then_narration_sync demo_video.mp4 46.50 3.95 # the script view, its line highlighted
