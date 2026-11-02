@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadModule } from "../../src/cli/ts_loader.js";
 
@@ -66,5 +67,19 @@ describe("ts_loader", () => {
 		const value = mod.default as { meta: { title: string } };
 		expect(value).toBeDefined();
 		expect(value.meta.title).toBe("css-test");
+	});
+});
+
+describe("videowright imports under test", () => {
+	// test/setup/resolve_videowright_to_source.ts: tsx-loaded consumer files (the
+	// demo config) must run against source, so no suite depends on dist/.
+	it("resolve to the library source, not dist/", async () => {
+		const probe = join(tmpDir, "probe.mts");
+		writeFileSync(probe, 'export const resolved = import.meta.resolve("videowright");', "utf-8");
+
+		const { resolved } = await loadModule(probe);
+		expect(fileURLToPath(resolved as string)).toBe(
+			resolve(import.meta.dirname, "../../src/index.ts"),
+		);
 	});
 });

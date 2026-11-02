@@ -26,7 +26,7 @@
 			"import": "./dist/cli/index.js"
 		}
 	},
-	"files": ["dist", "skill", "src/cli/entry"],
+	"files": ["dist", "!dist/tsconfig.tsbuildinfo", "skill", "src/cli/entry"],
 	"scripts": {
 		"build": "tsc -b",
 		"prepack": "cp ../../README.md ./README.md",

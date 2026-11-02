@@ -5,6 +5,9 @@ export default defineConfig({
 	test: {
 		root: ".",
 		include: ["test/**/*.test.ts"],
+		// Maps `videowright` to source for modules Node imports directly (tsx-loaded
+		// consumer files), which the resolve.alias below does not reach.
+		setupFiles: ["test/setup/resolve_videowright_to_source.ts"],
 	},
 	resolve: {
 		alias: [

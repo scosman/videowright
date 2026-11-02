@@ -44,7 +44,7 @@ _vw_fix_playwright() {
 }
 
 _vw_build_lib() {
-	local stamp="$REPO_ROOT/packages/lib/tsconfig.tsbuildinfo"
+	local stamp="$REPO_ROOT/packages/lib/dist/tsconfig.tsbuildinfo"
 	if [ ! -f "$VW_BIN" ] || [ ! -f "$stamp" ] ||
 		[ -n "$(find "$REPO_ROOT/packages/lib/src" -name '*.ts' -newer "$stamp" -print -quit)" ]; then
 		echo "env.sh: building packages/lib" >&2
