@@ -290,7 +290,6 @@ afterAll(async () => {
 });
 
 describe.skipIf(!hasBrowser)("time shim: primitive-level DOM assertions", () => {
-
 	it("setTimeout fires at the correct virtual time", async () => {
 		const { page, context } = await createShimmedPage('<div id="marker">before</div>');
 
