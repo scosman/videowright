@@ -1,6 +1,6 @@
 # SFX: sweep_whoosh — portal handoff
 
-> Status: waiting for the sound.
+> Status (2026-11-02): received from the owner.
 
 One soft whoosh, reused under each Then → Now sweep (five times), low under the narration. It
 should be barely there.

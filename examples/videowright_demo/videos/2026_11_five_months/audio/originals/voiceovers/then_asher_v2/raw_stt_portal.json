@@ -1,0 +1,121 @@
+{
+	"language_code": "eng",
+	"segments": [
+		{
+			"text": "Previously, the voice was slightly robotic and lacked any emotion cues.",
+			"start_time": 0.12,
+			"end_time": 5.24,
+			"speaker": {
+				"id": "speaker_0",
+				"name": "Speaker 0"
+			},
+			"words": [
+				{
+					"text": "Previously,",
+					"start_time": 0.12,
+					"end_time": 0.8
+				},
+				{
+					"text": " ",
+					"start_time": 0.8,
+					"end_time": 1.18
+				},
+				{
+					"text": "the",
+					"start_time": 1.18,
+					"end_time": 1.3
+				},
+				{
+					"text": " ",
+					"start_time": 1.3,
+					"end_time": 1.4
+				},
+				{
+					"text": "voice",
+					"start_time": 1.4,
+					"end_time": 1.7
+				},
+				{
+					"text": " ",
+					"start_time": 1.7,
+					"end_time": 1.78
+				},
+				{
+					"text": "was",
+					"start_time": 1.78,
+					"end_time": 1.92
+				},
+				{
+					"text": " ",
+					"start_time": 1.92,
+					"end_time": 2.0
+				},
+				{
+					"text": "slightly",
+					"start_time": 2.0,
+					"end_time": 2.42
+				},
+				{
+					"text": " ",
+					"start_time": 2.42,
+					"end_time": 2.46
+				},
+				{
+					"text": "robotic",
+					"start_time": 2.46,
+					"end_time": 3.1
+				},
+				{
+					"text": " ",
+					"start_time": 3.1,
+					"end_time": 3.22
+				},
+				{
+					"text": "and",
+					"start_time": 3.22,
+					"end_time": 3.34
+				},
+				{
+					"text": " ",
+					"start_time": 3.34,
+					"end_time": 3.46
+				},
+				{
+					"text": "lacked",
+					"start_time": 3.46,
+					"end_time": 3.8
+				},
+				{
+					"text": " ",
+					"start_time": 3.8,
+					"end_time": 3.88
+				},
+				{
+					"text": "any",
+					"start_time": 3.88,
+					"end_time": 4.08
+				},
+				{
+					"text": " ",
+					"start_time": 4.08,
+					"end_time": 4.14
+				},
+				{
+					"text": "emotion",
+					"start_time": 4.14,
+					"end_time": 4.64
+				},
+				{
+					"text": " ",
+					"start_time": 4.64,
+					"end_time": 4.8
+				},
+				{
+					"text": "cues.",
+					"start_time": 4.8,
+					"end_time": 5.24
+				}
+			]
+		}
+	]
+}

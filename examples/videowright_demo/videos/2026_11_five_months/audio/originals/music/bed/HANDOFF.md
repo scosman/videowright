@@ -1,6 +1,6 @@
 # Music: bed — portal handoff
 
-> Status: waiting for the track.
+> Status (2026-11-02): received from the owner.
 
 A low instrumental bed under the narration. The mix ducks it under the VO, drops it out entirely
 for the voice beat, brings it back for the CTA and lets it resolve on the end hold, so it needs no

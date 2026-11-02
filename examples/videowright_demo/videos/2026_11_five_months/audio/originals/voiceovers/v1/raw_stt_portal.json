@@ -1,0 +1,1373 @@
+{
+	"language_code": "eng",
+	"segments": [
+		{
+			"text": "Same script, same brief. Claude made our demo video in May and again last week. ",
+			"start_time": 0.16,
+			"end_time": 5.62,
+			"speaker": {
+				"id": "speaker_0",
+				"name": "Speaker 0"
+			},
+			"words": [
+				{
+					"text": "Same",
+					"start_time": 0.16,
+					"end_time": 0.34
+				},
+				{
+					"text": " ",
+					"start_time": 0.34,
+					"end_time": 0.44
+				},
+				{
+					"text": "script,",
+					"start_time": 0.44,
+					"end_time": 0.8
+				},
+				{
+					"text": " ",
+					"start_time": 0.8,
+					"end_time": 0.8
+				},
+				{
+					"text": "same",
+					"start_time": 1.26,
+					"end_time": 1.44
+				},
+				{
+					"text": " ",
+					"start_time": 1.44,
+					"end_time": 1.5
+				},
+				{
+					"text": "brief.",
+					"start_time": 1.5,
+					"end_time": 1.86
+				},
+				{
+					"text": " ",
+					"start_time": 1.86,
+					"end_time": 1.86
+				},
+				{
+					"text": "Claude",
+					"start_time": 2.4,
+					"end_time": 2.68
+				},
+				{
+					"text": " ",
+					"start_time": 2.68,
+					"end_time": 2.72
+				},
+				{
+					"text": "made",
+					"start_time": 2.72,
+					"end_time": 2.84
+				},
+				{
+					"text": " ",
+					"start_time": 2.84,
+					"end_time": 2.88
+				},
+				{
+					"text": "our",
+					"start_time": 2.88,
+					"end_time": 2.98
+				},
+				{
+					"text": " ",
+					"start_time": 2.98,
+					"end_time": 3.02
+				},
+				{
+					"text": "demo",
+					"start_time": 3.02,
+					"end_time": 3.22
+				},
+				{
+					"text": " ",
+					"start_time": 3.22,
+					"end_time": 3.32
+				},
+				{
+					"text": "video",
+					"start_time": 3.32,
+					"end_time": 3.62
+				},
+				{
+					"text": " ",
+					"start_time": 3.62,
+					"end_time": 3.66
+				},
+				{
+					"text": "in",
+					"start_time": 3.66,
+					"end_time": 3.8
+				},
+				{
+					"text": " ",
+					"start_time": 3.8,
+					"end_time": 3.88
+				},
+				{
+					"text": "May",
+					"start_time": 3.88,
+					"end_time": 4.18
+				},
+				{
+					"text": " ",
+					"start_time": 4.18,
+					"end_time": 4.46
+				},
+				{
+					"text": "and",
+					"start_time": 4.46,
+					"end_time": 4.62
+				},
+				{
+					"text": " ",
+					"start_time": 4.62,
+					"end_time": 4.7
+				},
+				{
+					"text": "again",
+					"start_time": 4.7,
+					"end_time": 5.04
+				},
+				{
+					"text": " ",
+					"start_time": 5.04,
+					"end_time": 5.1
+				},
+				{
+					"text": "last",
+					"start_time": 5.1,
+					"end_time": 5.34
+				},
+				{
+					"text": " ",
+					"start_time": 5.34,
+					"end_time": 5.38
+				},
+				{
+					"text": "week.",
+					"start_time": 5.38,
+					"end_time": 5.62
+				},
+				{
+					"text": " ",
+					"start_time": 5.62,
+					"end_time": 5.62
+				}
+			]
+		},
+		{
+			"text": "In May, the title card was text on a grid. Now, the logo draws itself. ",
+			"start_time": 6.76,
+			"end_time": 12.3,
+			"speaker": {
+				"id": "speaker_0",
+				"name": "Speaker 0"
+			},
+			"words": [
+				{
+					"text": "In",
+					"start_time": 6.76,
+					"end_time": 6.88
+				},
+				{
+					"text": " ",
+					"start_time": 6.88,
+					"end_time": 6.94
+				},
+				{
+					"text": "May,",
+					"start_time": 6.94,
+					"end_time": 7.24
+				},
+				{
+					"text": " ",
+					"start_time": 7.24,
+					"end_time": 7.48
+				},
+				{
+					"text": "the",
+					"start_time": 7.48,
+					"end_time": 7.56
+				},
+				{
+					"text": " ",
+					"start_time": 7.56,
+					"end_time": 7.62
+				},
+				{
+					"text": "title",
+					"start_time": 7.62,
+					"end_time": 7.88
+				},
+				{
+					"text": " ",
+					"start_time": 7.88,
+					"end_time": 7.94
+				},
+				{
+					"text": "card",
+					"start_time": 7.94,
+					"end_time": 8.22
+				},
+				{
+					"text": " ",
+					"start_time": 8.22,
+					"end_time": 8.26
+				},
+				{
+					"text": "was",
+					"start_time": 8.26,
+					"end_time": 8.44
+				},
+				{
+					"text": " ",
+					"start_time": 8.44,
+					"end_time": 8.5
+				},
+				{
+					"text": "text",
+					"start_time": 8.5,
+					"end_time": 8.82
+				},
+				{
+					"text": " ",
+					"start_time": 8.82,
+					"end_time": 8.86
+				},
+				{
+					"text": "on",
+					"start_time": 8.86,
+					"end_time": 8.92
+				},
+				{
+					"text": " ",
+					"start_time": 8.92,
+					"end_time": 8.96
+				},
+				{
+					"text": "a",
+					"start_time": 8.96,
+					"end_time": 9.04
+				},
+				{
+					"text": " ",
+					"start_time": 9.04,
+					"end_time": 9.08
+				},
+				{
+					"text": "grid.",
+					"start_time": 9.08,
+					"end_time": 9.38
+				},
+				{
+					"text": " ",
+					"start_time": 9.38,
+					"end_time": 9.38
+				},
+				{
+					"text": "Now,",
+					"start_time": 10.36,
+					"end_time": 10.6
+				},
+				{
+					"text": " ",
+					"start_time": 10.6,
+					"end_time": 10.94
+				},
+				{
+					"text": "the",
+					"start_time": 10.94,
+					"end_time": 11.04
+				},
+				{
+					"text": " ",
+					"start_time": 11.04,
+					"end_time": 11.1
+				},
+				{
+					"text": "logo",
+					"start_time": 11.1,
+					"end_time": 11.4
+				},
+				{
+					"text": " ",
+					"start_time": 11.4,
+					"end_time": 11.5
+				},
+				{
+					"text": "draws",
+					"start_time": 11.54,
+					"end_time": 11.8
+				},
+				{
+					"text": " ",
+					"start_time": 11.8,
+					"end_time": 11.84
+				},
+				{
+					"text": "itself.",
+					"start_time": 11.84,
+					"end_time": 12.3
+				},
+				{
+					"text": " ",
+					"start_time": 12.3,
+					"end_time": 12.3
+				}
+			]
+		},
+		{
+			"text": "3D was a spinning polygon. Now, it's a planet shaded on the GPU with clouds and an atmosphere that follows the light. Product UI was a dashboard that played itself. Now, someone's using it. A cursor, a panning camera, a real route change. In May, narration sync was by line. Now, it's timed to every word. This is the new one. It's my real voice, cloned, and now it can actually sound excited. Both videos were made with VideoWrite, an open-source framework that gives Claude everything it needs to make videos: animation, styles, voiceovers, sound effects, music, and more. Download it free on GitHub.",
+			"start_time": 13.48,
+			"end_time": 55.34,
+			"speaker": {
+				"id": "speaker_0",
+				"name": "Speaker 0"
+			},
+			"words": [
+				{
+					"text": "3D",
+					"start_time": 13.48,
+					"end_time": 13.88
+				},
+				{
+					"text": " ",
+					"start_time": 13.88,
+					"end_time": 13.92
+				},
+				{
+					"text": "was",
+					"start_time": 13.92,
+					"end_time": 14.02
+				},
+				{
+					"text": " ",
+					"start_time": 14.02,
+					"end_time": 14.08
+				},
+				{
+					"text": "a",
+					"start_time": 14.08,
+					"end_time": 14.16
+				},
+				{
+					"text": " ",
+					"start_time": 14.16,
+					"end_time": 14.28
+				},
+				{
+					"text": "spinning",
+					"start_time": 14.28,
+					"end_time": 14.52
+				},
+				{
+					"text": " ",
+					"start_time": 14.52,
+					"end_time": 14.64
+				},
+				{
+					"text": "polygon.",
+					"start_time": 14.64,
+					"end_time": 15.2
+				},
+				{
+					"text": " ",
+					"start_time": 15.2,
+					"end_time": 15.2
+				},
+				{
+					"text": "Now,",
+					"start_time": 15.96,
+					"end_time": 16.239
+				},
+				{
+					"text": " ",
+					"start_time": 16.239,
+					"end_time": 16.28
+				},
+				{
+					"text": "it's",
+					"start_time": 16.28,
+					"end_time": 16.379
+				},
+				{
+					"text": " ",
+					"start_time": 16.379,
+					"end_time": 16.42
+				},
+				{
+					"text": "a",
+					"start_time": 16.42,
+					"end_time": 16.48
+				},
+				{
+					"text": " ",
+					"start_time": 16.48,
+					"end_time": 16.54
+				},
+				{
+					"text": "planet",
+					"start_time": 16.54,
+					"end_time": 16.94
+				},
+				{
+					"text": " ",
+					"start_time": 16.94,
+					"end_time": 17.22
+				},
+				{
+					"text": "shaded",
+					"start_time": 17.22,
+					"end_time": 17.54
+				},
+				{
+					"text": " ",
+					"start_time": 17.54,
+					"end_time": 17.58
+				},
+				{
+					"text": "on",
+					"start_time": 17.58,
+					"end_time": 17.66
+				},
+				{
+					"text": " ",
+					"start_time": 17.66,
+					"end_time": 17.68
+				},
+				{
+					"text": "the",
+					"start_time": 17.68,
+					"end_time": 17.76
+				},
+				{
+					"text": " ",
+					"start_time": 17.76,
+					"end_time": 17.8
+				},
+				{
+					"text": "GPU",
+					"start_time": 17.8,
+					"end_time": 18.36
+				},
+				{
+					"text": " ",
+					"start_time": 18.36,
+					"end_time": 18.5
+				},
+				{
+					"text": "with",
+					"start_time": 18.5,
+					"end_time": 18.64
+				},
+				{
+					"text": " ",
+					"start_time": 18.64,
+					"end_time": 18.7
+				},
+				{
+					"text": "clouds",
+					"start_time": 18.7,
+					"end_time": 19.16
+				},
+				{
+					"text": " ",
+					"start_time": 19.16,
+					"end_time": 19.18
+				},
+				{
+					"text": "and",
+					"start_time": 19.2,
+					"end_time": 19.26
+				},
+				{
+					"text": " ",
+					"start_time": 19.26,
+					"end_time": 19.3
+				},
+				{
+					"text": "an",
+					"start_time": 19.3,
+					"end_time": 19.42
+				},
+				{
+					"text": " ",
+					"start_time": 19.42,
+					"end_time": 19.5
+				},
+				{
+					"text": "atmosphere",
+					"start_time": 19.5,
+					"end_time": 20.02
+				},
+				{
+					"text": " ",
+					"start_time": 20.02,
+					"end_time": 20.04
+				},
+				{
+					"text": "that",
+					"start_time": 20.04,
+					"end_time": 20.12
+				},
+				{
+					"text": " ",
+					"start_time": 20.12,
+					"end_time": 20.26
+				},
+				{
+					"text": "follows",
+					"start_time": 20.26,
+					"end_time": 20.6
+				},
+				{
+					"text": " ",
+					"start_time": 20.6,
+					"end_time": 20.64
+				},
+				{
+					"text": "the",
+					"start_time": 20.64,
+					"end_time": 20.72
+				},
+				{
+					"text": " ",
+					"start_time": 20.72,
+					"end_time": 20.76
+				},
+				{
+					"text": "light.",
+					"start_time": 20.76,
+					"end_time": 21.02
+				},
+				{
+					"text": " ",
+					"start_time": 21.02,
+					"end_time": 21.02
+				},
+				{
+					"text": "Product",
+					"start_time": 21.96,
+					"end_time": 22.28
+				},
+				{
+					"text": " ",
+					"start_time": 22.28,
+					"end_time": 22.4
+				},
+				{
+					"text": "UI",
+					"start_time": 22.4,
+					"end_time": 22.86
+				},
+				{
+					"text": " ",
+					"start_time": 22.86,
+					"end_time": 22.9
+				},
+				{
+					"text": "was",
+					"start_time": 22.92,
+					"end_time": 23.0
+				},
+				{
+					"text": " ",
+					"start_time": 23.0,
+					"end_time": 23.04
+				},
+				{
+					"text": "a",
+					"start_time": 23.04,
+					"end_time": 23.14
+				},
+				{
+					"text": " ",
+					"start_time": 23.14,
+					"end_time": 23.18
+				},
+				{
+					"text": "dashboard",
+					"start_time": 23.18,
+					"end_time": 23.72
+				},
+				{
+					"text": " ",
+					"start_time": 23.72,
+					"end_time": 23.76
+				},
+				{
+					"text": "that",
+					"start_time": 23.76,
+					"end_time": 23.9
+				},
+				{
+					"text": " ",
+					"start_time": 23.9,
+					"end_time": 23.94
+				},
+				{
+					"text": "played",
+					"start_time": 23.94,
+					"end_time": 24.16
+				},
+				{
+					"text": " ",
+					"start_time": 24.16,
+					"end_time": 24.2
+				},
+				{
+					"text": "itself.",
+					"start_time": 24.2,
+					"end_time": 24.64
+				},
+				{
+					"text": " ",
+					"start_time": 24.64,
+					"end_time": 24.64
+				},
+				{
+					"text": "Now,",
+					"start_time": 25.48,
+					"end_time": 25.72
+				},
+				{
+					"text": " ",
+					"start_time": 25.72,
+					"end_time": 25.84
+				},
+				{
+					"text": "someone's",
+					"start_time": 25.84,
+					"end_time": 26.14
+				},
+				{
+					"text": " ",
+					"start_time": 26.14,
+					"end_time": 26.2
+				},
+				{
+					"text": "using",
+					"start_time": 26.2,
+					"end_time": 26.44
+				},
+				{
+					"text": " ",
+					"start_time": 26.44,
+					"end_time": 26.48
+				},
+				{
+					"text": "it.",
+					"start_time": 26.48,
+					"end_time": 26.6
+				},
+				{
+					"text": " ",
+					"start_time": 26.6,
+					"end_time": 26.98
+				},
+				{
+					"text": "A",
+					"start_time": 26.98,
+					"end_time": 27.04
+				},
+				{
+					"text": " ",
+					"start_time": 27.04,
+					"end_time": 27.12
+				},
+				{
+					"text": "cursor,",
+					"start_time": 27.12,
+					"end_time": 27.54
+				},
+				{
+					"text": " ",
+					"start_time": 27.54,
+					"end_time": 27.74
+				},
+				{
+					"text": "a",
+					"start_time": 27.74,
+					"end_time": 27.82
+				},
+				{
+					"text": " ",
+					"start_time": 27.82,
+					"end_time": 27.88
+				},
+				{
+					"text": "panning",
+					"start_time": 27.88,
+					"end_time": 28.2
+				},
+				{
+					"text": " ",
+					"start_time": 28.2,
+					"end_time": 28.26
+				},
+				{
+					"text": "camera,",
+					"start_time": 28.26,
+					"end_time": 28.62
+				},
+				{
+					"text": " ",
+					"start_time": 28.62,
+					"end_time": 28.92
+				},
+				{
+					"text": "a",
+					"start_time": 28.92,
+					"end_time": 28.96
+				},
+				{
+					"text": " ",
+					"start_time": 28.96,
+					"end_time": 29.1
+				},
+				{
+					"text": "real",
+					"start_time": 29.1,
+					"end_time": 29.32
+				},
+				{
+					"text": " ",
+					"start_time": 29.32,
+					"end_time": 29.44
+				},
+				{
+					"text": "route",
+					"start_time": 29.44,
+					"end_time": 29.62
+				},
+				{
+					"text": " ",
+					"start_time": 29.62,
+					"end_time": 29.68
+				},
+				{
+					"text": "change.",
+					"start_time": 29.68,
+					"end_time": 30.04
+				},
+				{
+					"text": " ",
+					"start_time": 30.04,
+					"end_time": 30.04
+				},
+				{
+					"text": "In",
+					"start_time": 31.0,
+					"end_time": 31.12
+				},
+				{
+					"text": " ",
+					"start_time": 31.12,
+					"end_time": 31.18
+				},
+				{
+					"text": "May,",
+					"start_time": 31.18,
+					"end_time": 31.44
+				},
+				{
+					"text": " ",
+					"start_time": 31.44,
+					"end_time": 31.74
+				},
+				{
+					"text": "narration",
+					"start_time": 31.74,
+					"end_time": 32.159
+				},
+				{
+					"text": " ",
+					"start_time": 32.159,
+					"end_time": 32.299
+				},
+				{
+					"text": "sync",
+					"start_time": 32.299,
+					"end_time": 32.54
+				},
+				{
+					"text": " ",
+					"start_time": 32.54,
+					"end_time": 32.58
+				},
+				{
+					"text": "was",
+					"start_time": 32.58,
+					"end_time": 32.7
+				},
+				{
+					"text": " ",
+					"start_time": 32.7,
+					"end_time": 32.74
+				},
+				{
+					"text": "by",
+					"start_time": 32.74,
+					"end_time": 32.9
+				},
+				{
+					"text": " ",
+					"start_time": 32.9,
+					"end_time": 32.96
+				},
+				{
+					"text": "line.",
+					"start_time": 32.96,
+					"end_time": 33.3
+				},
+				{
+					"text": " ",
+					"start_time": 33.3,
+					"end_time": 33.3
+				},
+				{
+					"text": "Now,",
+					"start_time": 34.04,
+					"end_time": 34.26
+				},
+				{
+					"text": " ",
+					"start_time": 34.26,
+					"end_time": 34.58
+				},
+				{
+					"text": "it's",
+					"start_time": 34.58,
+					"end_time": 34.74
+				},
+				{
+					"text": " ",
+					"start_time": 34.74,
+					"end_time": 34.8
+				},
+				{
+					"text": "timed",
+					"start_time": 34.8,
+					"end_time": 35.16
+				},
+				{
+					"text": " ",
+					"start_time": 35.16,
+					"end_time": 35.22
+				},
+				{
+					"text": "to",
+					"start_time": 35.22,
+					"end_time": 35.44
+				},
+				{
+					"text": " ",
+					"start_time": 35.44,
+					"end_time": 35.5
+				},
+				{
+					"text": "every",
+					"start_time": 35.5,
+					"end_time": 35.74
+				},
+				{
+					"text": " ",
+					"start_time": 35.74,
+					"end_time": 35.88
+				},
+				{
+					"text": "word.",
+					"start_time": 35.88,
+					"end_time": 36.14
+				},
+				{
+					"text": " ",
+					"start_time": 36.14,
+					"end_time": 36.14
+				},
+				{
+					"text": "This",
+					"start_time": 36.94,
+					"end_time": 37.08
+				},
+				{
+					"text": " ",
+					"start_time": 37.08,
+					"end_time": 37.12
+				},
+				{
+					"text": "is",
+					"start_time": 37.12,
+					"end_time": 37.24
+				},
+				{
+					"text": " ",
+					"start_time": 37.24,
+					"end_time": 37.28
+				},
+				{
+					"text": "the",
+					"start_time": 37.28,
+					"end_time": 37.36
+				},
+				{
+					"text": " ",
+					"start_time": 37.36,
+					"end_time": 37.4
+				},
+				{
+					"text": "new",
+					"start_time": 37.4,
+					"end_time": 37.56
+				},
+				{
+					"text": " ",
+					"start_time": 37.56,
+					"end_time": 37.62
+				},
+				{
+					"text": "one.",
+					"start_time": 37.62,
+					"end_time": 37.78
+				},
+				{
+					"text": " ",
+					"start_time": 37.78,
+					"end_time": 38.12
+				},
+				{
+					"text": "It's",
+					"start_time": 38.12,
+					"end_time": 38.24
+				},
+				{
+					"text": " ",
+					"start_time": 38.24,
+					"end_time": 38.3
+				},
+				{
+					"text": "my",
+					"start_time": 38.3,
+					"end_time": 38.48
+				},
+				{
+					"text": " ",
+					"start_time": 38.48,
+					"end_time": 38.52
+				},
+				{
+					"text": "real",
+					"start_time": 38.52,
+					"end_time": 38.68
+				},
+				{
+					"text": " ",
+					"start_time": 38.68,
+					"end_time": 38.78
+				},
+				{
+					"text": "voice,",
+					"start_time": 38.78,
+					"end_time": 39.12
+				},
+				{
+					"text": " ",
+					"start_time": 39.12,
+					"end_time": 39.38
+				},
+				{
+					"text": "cloned,",
+					"start_time": 39.38,
+					"end_time": 39.76
+				},
+				{
+					"text": " ",
+					"start_time": 39.76,
+					"end_time": 40.16
+				},
+				{
+					"text": "and",
+					"start_time": 40.16,
+					"end_time": 40.28
+				},
+				{
+					"text": " ",
+					"start_time": 40.28,
+					"end_time": 40.34
+				},
+				{
+					"text": "now",
+					"start_time": 40.34,
+					"end_time": 40.52
+				},
+				{
+					"text": " ",
+					"start_time": 40.52,
+					"end_time": 40.54
+				},
+				{
+					"text": "it",
+					"start_time": 40.54,
+					"end_time": 40.62
+				},
+				{
+					"text": " ",
+					"start_time": 40.62,
+					"end_time": 40.64
+				},
+				{
+					"text": "can",
+					"start_time": 40.64,
+					"end_time": 40.84
+				},
+				{
+					"text": " ",
+					"start_time": 40.84,
+					"end_time": 40.94
+				},
+				{
+					"text": "actually",
+					"start_time": 40.94,
+					"end_time": 41.32
+				},
+				{
+					"text": " ",
+					"start_time": 41.32,
+					"end_time": 41.38
+				},
+				{
+					"text": "sound",
+					"start_time": 41.38,
+					"end_time": 41.56
+				},
+				{
+					"text": " ",
+					"start_time": 41.56,
+					"end_time": 41.58
+				},
+				{
+					"text": "excited.",
+					"start_time": 41.6,
+					"end_time": 42.18
+				},
+				{
+					"text": " ",
+					"start_time": 42.18,
+					"end_time": 42.18
+				},
+				{
+					"text": "Both",
+					"start_time": 42.92,
+					"end_time": 43.1
+				},
+				{
+					"text": " ",
+					"start_time": 43.1,
+					"end_time": 43.18
+				},
+				{
+					"text": "videos",
+					"start_time": 43.18,
+					"end_time": 43.54
+				},
+				{
+					"text": " ",
+					"start_time": 43.54,
+					"end_time": 43.58
+				},
+				{
+					"text": "were",
+					"start_time": 43.58,
+					"end_time": 43.7
+				},
+				{
+					"text": " ",
+					"start_time": 43.7,
+					"end_time": 43.76
+				},
+				{
+					"text": "made",
+					"start_time": 43.76,
+					"end_time": 43.96
+				},
+				{
+					"text": " ",
+					"start_time": 43.96,
+					"end_time": 44.0
+				},
+				{
+					"text": "with",
+					"start_time": 44.0,
+					"end_time": 44.14
+				},
+				{
+					"text": " ",
+					"start_time": 44.14,
+					"end_time": 44.22
+				},
+				{
+					"text": "VideoWrite,",
+					"start_time": 44.22,
+					"end_time": 44.78
+				},
+				{
+					"text": " ",
+					"start_time": 44.78,
+					"end_time": 45.08
+				},
+				{
+					"text": "an",
+					"start_time": 45.08,
+					"end_time": 45.22
+				},
+				{
+					"text": " ",
+					"start_time": 45.22,
+					"end_time": 45.28
+				},
+				{
+					"text": "open-source",
+					"start_time": 45.28,
+					"end_time": 45.78
+				},
+				{
+					"text": " ",
+					"start_time": 45.78,
+					"end_time": 45.88
+				},
+				{
+					"text": "framework",
+					"start_time": 45.88,
+					"end_time": 46.28
+				},
+				{
+					"text": " ",
+					"start_time": 46.28,
+					"end_time": 46.32
+				},
+				{
+					"text": "that",
+					"start_time": 46.32,
+					"end_time": 46.44
+				},
+				{
+					"text": " ",
+					"start_time": 46.44,
+					"end_time": 46.46
+				},
+				{
+					"text": "gives",
+					"start_time": 46.46,
+					"end_time": 46.66
+				},
+				{
+					"text": " ",
+					"start_time": 46.66,
+					"end_time": 46.7
+				},
+				{
+					"text": "Claude",
+					"start_time": 46.7,
+					"end_time": 46.96
+				},
+				{
+					"text": " ",
+					"start_time": 46.96,
+					"end_time": 47.18
+				},
+				{
+					"text": "everything",
+					"start_time": 47.18,
+					"end_time": 47.56
+				},
+				{
+					"text": " ",
+					"start_time": 47.56,
+					"end_time": 47.6
+				},
+				{
+					"text": "it",
+					"start_time": 47.6,
+					"end_time": 47.7
+				},
+				{
+					"text": " ",
+					"start_time": 47.7,
+					"end_time": 47.74
+				},
+				{
+					"text": "needs",
+					"start_time": 47.74,
+					"end_time": 48.04
+				},
+				{
+					"text": " ",
+					"start_time": 48.04,
+					"end_time": 48.08
+				},
+				{
+					"text": "to",
+					"start_time": 48.08,
+					"end_time": 48.14
+				},
+				{
+					"text": " ",
+					"start_time": 48.14,
+					"end_time": 48.18
+				},
+				{
+					"text": "make",
+					"start_time": 48.18,
+					"end_time": 48.32
+				},
+				{
+					"text": " ",
+					"start_time": 48.32,
+					"end_time": 48.36
+				},
+				{
+					"text": "videos:",
+					"start_time": 48.36,
+					"end_time": 48.78
+				},
+				{
+					"text": " ",
+					"start_time": 48.78,
+					"end_time": 49.22
+				},
+				{
+					"text": "animation,",
+					"start_time": 49.22,
+					"end_time": 49.8
+				},
+				{
+					"text": " ",
+					"start_time": 49.8,
+					"end_time": 50.12
+				},
+				{
+					"text": "styles,",
+					"start_time": 50.12,
+					"end_time": 50.62
+				},
+				{
+					"text": " ",
+					"start_time": 50.62,
+					"end_time": 50.84
+				},
+				{
+					"text": "voiceovers,",
+					"start_time": 50.84,
+					"end_time": 51.52
+				},
+				{
+					"text": " ",
+					"start_time": 51.52,
+					"end_time": 51.72
+				},
+				{
+					"text": "sound",
+					"start_time": 51.72,
+					"end_time": 51.92
+				},
+				{
+					"text": " ",
+					"start_time": 51.92,
+					"end_time": 51.94
+				},
+				{
+					"text": "effects,",
+					"start_time": 51.94,
+					"end_time": 52.36
+				},
+				{
+					"text": " ",
+					"start_time": 52.36,
+					"end_time": 52.54
+				},
+				{
+					"text": "music,",
+					"start_time": 52.54,
+					"end_time": 52.9
+				},
+				{
+					"text": " ",
+					"start_time": 52.9,
+					"end_time": 53.02
+				},
+				{
+					"text": "and",
+					"start_time": 53.02,
+					"end_time": 53.12
+				},
+				{
+					"text": " ",
+					"start_time": 53.12,
+					"end_time": 53.18
+				},
+				{
+					"text": "more.",
+					"start_time": 53.18,
+					"end_time": 53.44
+				},
+				{
+					"text": " ",
+					"start_time": 53.44,
+					"end_time": 53.96
+				},
+				{
+					"text": "Download",
+					"start_time": 53.96,
+					"end_time": 54.24
+				},
+				{
+					"text": " ",
+					"start_time": 54.24,
+					"end_time": 54.28
+				},
+				{
+					"text": "it",
+					"start_time": 54.28,
+					"end_time": 54.32
+				},
+				{
+					"text": " ",
+					"start_time": 54.32,
+					"end_time": 54.48
+				},
+				{
+					"text": "free",
+					"start_time": 54.48,
+					"end_time": 54.76
+				},
+				{
+					"text": " ",
+					"start_time": 54.76,
+					"end_time": 54.82
+				},
+				{
+					"text": "on",
+					"start_time": 54.82,
+					"end_time": 54.94
+				},
+				{
+					"text": " ",
+					"start_time": 54.94,
+					"end_time": 54.98
+				},
+				{
+					"text": "GitHub.",
+					"start_time": 54.98,
+					"end_time": 55.34
+				}
+			]
+		}
+	]
+}

@@ -1,6 +1,6 @@
 # Voiceover then_asher_v2 (the voice beat's "Then" line) — portal handoff
 
-> Status: waiting for the take.
+> Status (2026-11-02): received from the owner.
 
 The old voice, generated the way May's demo was: the stock voice Asher on the v2 model. It plays in
 the voice beat under THEN, and its word timings drive that beat's captions.

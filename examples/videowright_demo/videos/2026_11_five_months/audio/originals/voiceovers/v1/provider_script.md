@@ -24,7 +24,7 @@ Now, the logo draws itself.
 
 3 D was a spinning polygon.
 
-[[pause 0.8s]]
+[[pause 1.0s]]
 
 Now it's a planet, shaded on the G P U, with clouds and an atmosphere that follows the light.
 
@@ -44,7 +44,7 @@ In May, narration sync was by line.
 
 Now, it's timed to every word.
 
-[[pause 8.0s]]
+[[pause 9.0s]]
 
 [warmly] This is the new one. It's my real voice, cloned. [excited] And now it can actually sound excited!
 
