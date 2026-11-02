@@ -38,10 +38,10 @@ git commit -am "Release videowright v$(node -p "require('./packages/lib/package.
 
 ## 4. Build
 
-`npm publish` does not build. Do a clean build so `dist/` has no stale files:
+`npm publish` does not build. Do a clean build so `dist/` has no stale files (the build info lives in `dist/`, so this forces a full rebuild):
 
 ```sh
-rm -rf packages/lib/dist packages/lib/tsconfig.tsbuildinfo
+rm -rf packages/lib/dist
 npm run build -w packages/lib
 ```
 
