@@ -15,7 +15,6 @@ import type { ViteDevServer } from "vite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	findPackageRoot,
-	fullReloadPlugin,
 	globalsVirtualModulePlugin,
 	projectVirtualModulePlugin,
 	segmentDiscoveryPlugin,
@@ -91,7 +90,6 @@ describe("render Vite plugin config", () => {
 			configFile: false,
 			root: entryDir,
 			plugins: [
-				fullReloadPlugin(),
 				segmentDiscoveryPlugin(tmpDir),
 				globalsVirtualModulePlugin({
 					timelinePath,
@@ -103,6 +101,8 @@ describe("render Vite plugin config", () => {
 			server: {
 				port: 0,
 				strictPort: false,
+				watch: null,
+				hmr: false,
 				fs: {
 					allow: [tmpDir, pkgRoot],
 				},

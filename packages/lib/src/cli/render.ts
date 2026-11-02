@@ -311,7 +311,6 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 	const { createServer } = await import("vite");
 	const {
 		findPackageRoot,
-		fullReloadPlugin,
 		globalsVirtualModulePlugin,
 		projectVirtualModulePlugin,
 		segmentDiscoveryPlugin,
@@ -324,7 +323,6 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 		configFile: false,
 		root: entryDir,
 		plugins: [
-			fullReloadPlugin(),
 			segmentDiscoveryPlugin(cwd),
 			globalsVirtualModulePlugin({
 				timelinePath,
@@ -336,6 +334,9 @@ export async function runRender(opts: RenderOptions): Promise<RenderResult> {
 		server: {
 			port: 0,
 			strictPort: false,
+			// File edits must not reload the page or reset its virtual clock mid-export.
+			watch: null,
+			hmr: false,
 			fs: {
 				allow: [cwd, pkgRoot],
 			},
