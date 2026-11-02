@@ -200,6 +200,14 @@ export class SegmentRunner {
 				// virtual time.
 				return performance.now() - this.mountedAt;
 			},
+			deferFrame: (work: Promise<unknown>) => {
+				// The render time shim installs the hook; the dev server has no shim, and a
+				// deferral there has nothing to wait for.
+				if (this.mode !== "render") return;
+				const hook = (globalThis as { __VW_DEFER_FRAME__?: (p: Promise<unknown>) => void })
+					.__VW_DEFER_FRAME__;
+				hook?.(work);
+			},
 		};
 	}
 }

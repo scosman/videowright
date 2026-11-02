@@ -70,6 +70,7 @@ The `ctx` object passed to `mount` and `play`:
 | `ctx.signal` | `AbortSignal` — aborted when the segment is unmounted. Wire this to fetch calls, animation loops, or anything that should stop when the segment leaves. |
 | `ctx.mode` | `'interactive'` (dev server) or `'render'` (export pipeline). Segments can branch on this if needed. |
 | `ctx.clock()` | Milliseconds since this segment was mounted. In render mode, returns deterministic time based on frame count. In interactive mode, returns wall-clock elapsed. |
+| `ctx.deferFrame(promise)` | Render mode: the frame being rendered is not captured until `promise` settles (it fails the render after 10s). For frame state that lands asynchronously, such as a `<video>` seek. Interactive mode: does nothing. |
 
 ### Timing: `waitForNext` vs. `hold`
 
@@ -94,7 +95,7 @@ Render mode uses a **virtual clock** that the render driver advances frame by fr
 These run on the browser's real clock, so in a render they play at the wrong speed and differ from run to run:
 
 - SVG SMIL animation (`<animate>`, `<animateTransform>`, `<animateMotion>`, `<set>`). Animate SVG elements with WAAPI or CSS instead.
-- Autoplaying `<video>`, and animated GIF, APNG or WebP images.
+- Autoplaying `<video>`, and animated GIF, APNG or WebP images. (Footage is fine when the segment seeks it from `ctx.clock()`: see recipe 7, video footage.)
 - Animations on any timeline but the page's own: scroll-driven animations (`animation-timeline: scroll()` / `view()`, `ScrollTimeline`, `ViewTimeline`), which aren't time-based, or a `new DocumentTimeline()`.
 - Content inside an `<iframe>`: the render clock drives only the top-level page.
 - CSS animations and transitions inside a shadow root (web components): the render clock only discovers animations in the page's own document tree. Drive those elements with WAAPI `el.animate()` instead.
@@ -254,6 +255,41 @@ async play(ctx) {
 const t = ctx.clock() / 1000;
 mesh.position.y = Math.sin(t * 2) * 0.5;
 ```
+
+**7. Video footage — seek from `ctx.clock()` and defer the frame** (screen recordings, earlier renders, any MP4/WebM). A playing `<video>` runs on the real clock, and a seek lands asynchronously, so in render mode keep the video paused, set `currentTime` from the clock in each frame callback, and pass the `seeked` promise to `ctx.deferFrame()` so the screenshot waits for the frame. In interactive mode, just play it.
+```ts
+// GOOD: footage driven by the render clock — render-safe
+async mount(el, ctx) {
+  video = document.createElement('video');
+  video.muted = true;          // the clip's own audio belongs in the audio plan
+  video.preload = 'auto';
+  video.src = clipUrl;         // import clipUrl from './clip.webm' (Vite serves it)
+  el.append(video);
+  await new Promise((r) => video.addEventListener('loadeddata', r, { once: true }));
+},
+async play(ctx) {
+  const fps = 60;              // the clip's frame rate
+  if (ctx.mode === 'interactive') {
+    void video.play();
+  } else {
+    let shown = -1;
+    const tick = () => {
+      if (ctx.signal.aborted) return;
+      const frame = Math.floor((ctx.clock() / 1000) * fps);
+      if (frame !== shown) {
+        shown = frame;
+        const seeked = new Promise((r) => video.addEventListener('seeked', r, { once: true }));
+        video.currentTime = (frame + 0.5) / fps; // the middle of the frame, never its edge
+        ctx.deferFrame(seeked);
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  await ctx.waitForNext();
+}
+```
+Encode clips as WebM (VP9) with a short keyframe interval (`-c:v libvpx-vp9 -g 10`), so each seek decodes only a few frames: the render's Chromium may not decode H.264.
 
 #### When `ctx.hold()` is the right choice
 

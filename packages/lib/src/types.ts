@@ -20,6 +20,14 @@ export interface PlayerContext {
 	mode: "interactive" | "render";
 	/** Milliseconds since this segment instance was mounted. */
 	clock(): number;
+	/**
+	 * Render mode: hold this frame's capture until `work` settles. Use it for frame state that
+	 * lands asynchronously, such as a `<video>` seek (`currentTime` set in a frame callback,
+	 * resolved on `seeked`). The render driver waits for every deferral made during a frame
+	 * before taking that frame's screenshot, and fails the render if one takes longer than 10s.
+	 * Interactive mode: does nothing.
+	 */
+	deferFrame(work: Promise<unknown>): void;
 }
 
 // ---- Segment ----

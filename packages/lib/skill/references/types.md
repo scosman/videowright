@@ -45,6 +45,7 @@ interface PlayerContext {
   signal: AbortSignal;
   mode: 'interactive' | 'render';
   clock(): number;
+  deferFrame(work: Promise<unknown>): void; // render: hold this frame's capture until work settles
 }
 ```
 

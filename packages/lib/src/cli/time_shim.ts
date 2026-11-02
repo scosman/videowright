@@ -45,6 +45,8 @@
  * It exposes:
  * - window.__VW_ADVANCE_CLOCK__(deltaMs) — advance the virtual clock, fire timers/RAFs, drive animations
  * - window.__VW_ENGAGE_VIRTUAL_TIME__() — switch from passthrough to driver-controlled mode
+ * - window.__VW_DEFER_FRAME__(promise) — the hook behind ctx.deferFrame: the clock advance in
+ *   progress does not return (so the frame is not captured) until the promise settles
  */
 
 export const TIME_SHIM_SOURCE = `
@@ -861,7 +863,54 @@ export const TIME_SHIM_SOURCE = `
       adoptRunningAnimations();
       finishedAny = driveAnimations();
     }
+
+    // Hold the frame until the work deferred during it has settled (e.g. a <video> seek made
+    // in a frame callback), so the screenshot that follows shows its result.
+    await settleDeferredWork();
   };
+
+  // ----- Deferred frame work (ctx.deferFrame) -----
+  // Promises registered during a clock advance. The advance does not return (so the driver
+  // does not capture the frame) until they settle. Waits on the real clock: the virtual clock
+  // stands still meanwhile. Work deferred while settling (a continuation that defers again) is
+  // waited for too, a bounded number of rounds.
+  var deferredWork = [];
+  var DEFERRED_WORK_TIMEOUT_MS = 10000;
+  // Tests shorten the limit with window.__VW_DEFER_TIMEOUT_MS__.
+  function deferredWorkTimeoutMs() {
+    return window.__VW_DEFER_TIMEOUT_MS__ > 0 ? window.__VW_DEFER_TIMEOUT_MS__ : DEFERRED_WORK_TIMEOUT_MS;
+  }
+
+  window.__VW_DEFER_FRAME__ = function(work) {
+    if (mode !== 'driver') return;
+    deferredWork.push(Promise.resolve(work).then(
+      function() {},
+      function(e) { console.error('[VW shim] deferred frame work failed:', e); }
+    ));
+  };
+
+  async function settleDeferredWork() {
+    for (var round = 0; deferredWork.length > 0 && round < 8; round++) {
+      var batch = deferredWork.splice(0);
+      var timer;
+      var timedOut = await Promise.race([
+        Promise.all(batch).then(function() { return false; }),
+        new Promise(function(resolve) {
+          timer = realSetTimeout(function() { resolve(true); }, deferredWorkTimeoutMs());
+        })
+      ]);
+      realClearTimeout(timer);
+      if (timedOut) {
+        deferredWork = [];
+        throw new Error('ctx.deferFrame: work deferred at ' + virtualMs.toFixed(1) +
+          'ms was still pending after ' + deferredWorkTimeoutMs() + 'ms');
+      }
+      // Changes made as the work settled start their animations at this frame's time.
+      await drainMicrotasks();
+      adoptRunningAnimations();
+      driveAnimations();
+    }
+  }
 
   async function drainMicrotasks() {
     for (var d = 0; d < 8; d++) await Promise.resolve();

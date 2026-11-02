@@ -2104,3 +2104,192 @@ describe.skipIf(!hasBrowser)("time shim: primitive-level DOM assertions", () => 
 		}
 	});
 });
+
+// ---- Deferred frame work (ctx.deferFrame) ----
+
+/**
+ * In-page helper source: `window.__realTicks(n)` resolves after n round trips through a
+ * MessageChannel. Message events run on the browser's real event loop (the shim does not
+ * virtualize them), so the promise settles after the clock advance would otherwise have
+ * returned: it stands in for a <video> seek.
+ */
+const REAL_TICKS = `window.__realTicks = (n) => new Promise((resolve) => {
+	const ch = new MessageChannel(); let k = 0;
+	ch.port1.onmessage = () => { if (++k >= n) resolve(); else ch.port2.postMessage(0); };
+	ch.port2.postMessage(0);
+});`;
+
+/** A frame callback that defers real-async work which then marks the DOM. */
+function deferFromFrameCallback(page: ShimPage, ticks: number, marker = "done") {
+	return page.evaluate(
+		`${REAL_TICKS}
+		requestAnimationFrame(() => {
+			window.__VW_DEFER_FRAME__(window.__realTicks(${ticks}).then(() => {
+				document.body.dataset.mark = ${JSON.stringify(marker)};
+			}));
+		});`,
+	);
+}
+
+/**
+ * A 10-frame VP9 WebM (lossless, 25fps, 16×16), frame i a solid gray of level 20 + 20·i,
+ * as a data URL. Null when ffmpeg is unavailable.
+ */
+async function grayStepsWebm(): Promise<string | null> {
+	const { execFileSync } = await import("node:child_process");
+	const { mkdtempSync, readFileSync, rmSync } = await import("node:fs");
+	const { join } = await import("node:path");
+	const { tmpdir } = await import("node:os");
+	const dir = mkdtempSync(join(tmpdir(), "vw-defer-"));
+	try {
+		const out = join(dir, "steps.webm");
+		// geq paints each frame from its index N.
+		execFileSync(
+			"ffmpeg",
+			[
+				"-y",
+				"-loglevel",
+				"error",
+				"-f",
+				"lavfi",
+				"-i",
+				"color=c=black:s=16x16:r=25:d=0.4,format=gray,geq=lum='20+20*N'",
+				"-c:v",
+				"libvpx-vp9",
+				"-lossless",
+				"1",
+				"-g",
+				"1",
+				"-pix_fmt",
+				"yuv420p",
+				out,
+			],
+			{ stdio: "ignore" },
+		);
+		return `data:video/webm;base64,${readFileSync(out).toString("base64")}`;
+	} catch {
+		return null;
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
+describe.skipIf(!hasBrowser)("time shim: deferred frame work", () => {
+	it("the clock advance waits for work deferred in a frame callback", async () => {
+		const { page, context } = await createShimmedPage();
+		try {
+			await deferFromFrameCallback(page, 20);
+			await page.evaluate("window.__VW_ADVANCE_CLOCK__(16)");
+			// Settled before the advance returned, so a screenshot taken now would show it.
+			expect(await page.evaluate("document.body.dataset.mark")).toBe("done");
+		} finally {
+			await context.close();
+		}
+	});
+
+	it("work deferred while settling is waited for too", async () => {
+		const { page, context } = await createShimmedPage();
+		try {
+			await page.evaluate(
+				`${REAL_TICKS}
+				requestAnimationFrame(() => {
+					window.__VW_DEFER_FRAME__(window.__realTicks(5).then(() => {
+						window.__VW_DEFER_FRAME__(window.__realTicks(5).then(() => {
+							document.body.dataset.mark = "second";
+						}));
+					}));
+				});`,
+			);
+			await page.evaluate("window.__VW_ADVANCE_CLOCK__(16)");
+			expect(await page.evaluate("document.body.dataset.mark")).toBe("second");
+		} finally {
+			await context.close();
+		}
+	});
+
+	it("a rejected deferral does not fail the frame", async () => {
+		const { page, context } = await createShimmedPage();
+		try {
+			await page.evaluate(
+				`requestAnimationFrame(() => { window.__VW_DEFER_FRAME__(Promise.reject(new Error("x"))); });`,
+			);
+			await expect(page.evaluate("window.__VW_ADVANCE_CLOCK__(16)")).resolves.toBeUndefined();
+		} finally {
+			await context.close();
+		}
+	});
+
+	it("work still pending at the limit fails the advance", async () => {
+		const { page, context } = await createShimmedPage();
+		try {
+			await page.evaluate(
+				`window.__VW_DEFER_TIMEOUT_MS__ = 200;
+				requestAnimationFrame(() => { window.__VW_DEFER_FRAME__(new Promise(() => {})); });`,
+			);
+			await expect(page.evaluate("window.__VW_ADVANCE_CLOCK__(16)")).rejects.toThrow(
+				/ctx\.deferFrame: work deferred at .* was still pending after 200ms/,
+			);
+		} finally {
+			await context.close();
+		}
+	});
+
+	it("deferrals before engagement are ignored", async () => {
+		const { page, context } = await createShimmedPage("", false);
+		try {
+			await page.evaluate("window.__VW_DEFER_FRAME__(new Promise(() => {}))");
+			await page.evaluate("window.__VW_ENGAGE_VIRTUAL_TIME__()");
+			await expect(page.evaluate("window.__VW_ADVANCE_CLOCK__(16)")).resolves.toBeUndefined();
+		} finally {
+			await context.close();
+		}
+	});
+
+	it("a <video> seeked from the frame clock shows the right frame at every advance", async () => {
+		const src = await grayStepsWebm();
+		if (!src) return; // no ffmpeg: nothing to decode
+		const { page, context } = await createShimmedPage();
+		try {
+			await page.evaluate(
+				`new Promise((resolve, reject) => {
+					const v = document.createElement("video");
+					v.muted = true; v.preload = "auto"; v.src = ${JSON.stringify(src)};
+					v.onloadeddata = resolve; v.onerror = () => reject(new Error("video failed to load"));
+					document.body.appendChild(v);
+					window.__video = v;
+				})`,
+			);
+			// The clip pattern: each frame callback seeks to the middle of the source frame for
+			// this virtual time and defers the frame until the seek lands. 40ms frames = 25fps.
+			await page.evaluate(
+				`const v = window.__video; const start = performance.now();
+				const tick = () => {
+					const n = Math.round((performance.now() - start) / 40);
+					const seeked = new Promise((r) => v.addEventListener("seeked", r, { once: true }));
+					v.currentTime = (n + 0.5) / 25;
+					window.__VW_DEFER_FRAME__(seeked);
+					requestAnimationFrame(tick);
+				};
+				requestAnimationFrame(tick);`,
+			);
+			const levels: number[] = [];
+			for (let n = 0; n < 8; n++) {
+				// Read the frame the moment the advance returns, as the driver's screenshot does.
+				levels.push(
+					(await page.evaluate(`(async () => {
+						await window.__VW_ADVANCE_CLOCK__(40);
+						const c = document.createElement("canvas"); c.width = 16; c.height = 16;
+						const g = c.getContext("2d"); g.drawImage(window.__video, 0, 0);
+						return g.getImageData(8, 8, 1, 1).data[0];
+					})()`)) as number,
+				);
+			}
+			// Advance n (from 1) shows source frame n: gray 20 + 20n, within YUV rounding.
+			levels.forEach((level, i) => {
+				expect(Math.abs(level - (20 + 20 * (i + 1)))).toBeLessThanOrEqual(3);
+			});
+		} finally {
+			await context.close();
+		}
+	});
+});
