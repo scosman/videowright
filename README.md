@@ -39,31 +39,6 @@ The agent reads the install prompt and walks you through setup.
 
 You describe the video you want. The agent writes video segments -- self-contained web-components that each render one beat of the video. You preview in the dev server (`npx videowright dev`), give feedback in chat, and the agent iterates. Videowright will generate an AI voiceover, and sync the video to match. When you're happy, export with `npx videowright render`.
 
-## Styles
-
-Define your visual style, and reuse it across videos. Pick one of six built-in styles, or create your own from a brand guide, reference URL, or short description.
-
-> Note: built-in styles were created with Opus 4.6. Newer models are better at design, so we suggest creating your own style.
-
-<img width="953" height="549" alt="Built-in style packs" src="https://github.com/user-attachments/assets/3aaeecc2-7ca4-4c5a-8ed2-9adc4e226b2d" />
-
-### Style Demo
-
-Two demo videos: the same prompt, different styles.
-
-<table><tr>
-<td width="45%">
-
-https://github.com/user-attachments/assets/1960c3e8-a3f2-4028-91ab-afbc79a53fca
-
-</td>
-<td width="45%">
-  
-https://github.com/user-attachments/assets/d2454377-9f02-4b1c-af9a-e59c9a0c8912
-
-</td>
-</tr></table>
-
 ## AI Voice-Overs
 
 Videowright supports a full voiceover pipeline: write a narration script, generate audio with text-to-speech, get precise word-level timestamps via speech-to-text, then auto-align every video beat to your narration.
@@ -92,7 +67,32 @@ Just chat with videowright about edits you want to make, and it does the rest. I
 Two CLI commands:
 
 - **`npx videowright dev`** -- Dev server with a homepage listing all videos in the project. Click a video to open the player with hot reload. Hide the HUD for a clean screen-recording surface.
-- **`npx videowright render [slug]`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect output.
+- **`npx videowright render [video-name]`** -- Deterministic frame-by-frame MP4 export via Playwright + ffmpeg. Pixel-perfect output.
+
+## Styles
+
+Define your visual style, and reuse it across videos. Pick one of six built-in styles, or create your own from a brand guide, reference URL, or short description.
+
+> Note: built-in styles were created with Opus 4.6. Newer models are better at design, so we suggest creating your own style.
+
+<img width="953" height="549" alt="Built-in style packs" src="https://github.com/user-attachments/assets/3aaeecc2-7ca4-4c5a-8ed2-9adc4e226b2d" />
+
+### Style Demo
+
+Two demo videos: the same prompt, different styles.
+
+<table><tr>
+<td width="45%">
+
+https://github.com/user-attachments/assets/1960c3e8-a3f2-4028-91ab-afbc79a53fca
+
+</td>
+<td width="45%">
+  
+https://github.com/user-attachments/assets/d2454377-9f02-4b1c-af9a-e59c9a0c8912
+
+</td>
+</tr></table>
 
 ## Multi-Video Projects
 
