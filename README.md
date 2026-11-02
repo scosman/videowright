@@ -10,7 +10,7 @@ Videowright is like `rails new` for video projects. It sets up all the scaffoldi
 
 ## Demo - Sound on!
 
-https://github.com/user-attachments/assets/b2e5aa08-5d4c-46aa-b650-d329553d5748
+https://github.com/user-attachments/assets/a701110b-a62f-498b-98fa-4dc3c8cef362
 
 Or check out the [blooper reel](https://github.com/user-attachments/assets/a1c86e90-8e15-491e-9b05-4e35cf2faa37), directed by my son!
 
