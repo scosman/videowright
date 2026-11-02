@@ -7,7 +7,7 @@ import cues from "../../videos/2026_11_five_months/audio/cues.json";
 
 // The close: both videos were made with Videowright. The v2 logo draws at the centre of the
 // frame (the wordmark rises on "Videowright", then the tagline "Build videos in Claude Code").
-// On "open-source" it glides up and shrinks to make room. On "animation" the six features arrive
+// On "everything" it glides up and shrinks to make room. On "animation" the six features arrive
 // as one gesture: a row of tiles, each with a line icon that draws itself. On "Download" the
 // GitHub link rises whole. Then the end hold: only the ambient layer moves.
 
@@ -42,7 +42,7 @@ const ICONS: Array<[label: string, shapes: string]> = [
 	],
 	["And more", `<circle cx="24" cy="24" r="17"/><path d="M24 15.5v17M15.5 24h17"/>`],
 ];
-const TILE = { w: 240, h: 230, gap: 16, top: 412 };
+const TILE = { w: 268, h: 256, gap: 18, top: 400 };
 
 let stage: Stage;
 let lockup: TitleLockup;
@@ -56,7 +56,7 @@ export default defineSegment({
 	voiceover:
 		"Both videos were made with Videowright: an open-source framework that gives Claude everything it needs to make videos. Animation, styles, voiceovers, sound effects, music, and more. Download it free on GitHub.",
 	notes:
-		"Entered on me-sweep from the voice beat. Advance 1: the wordmark, 0.15s before 'Videowright'. Advance 2: the logo moves up, before 'open-source'. Advance 3: the feature tiles, before 'animation'. Advance 4: the link, before 'Download'. Advance 5: the end of the track (the 5s end hold).",
+		"Entered on me-sweep from the voice beat. Advance 1: the wordmark, 0.15s before 'Videowright'. Advance 2: the logo moves up, before 'everything'. Advance 3: the feature tiles, before 'animation'. Advance 4: the link, before 'Download'. Advance 5: the end of the track (the 5s end hold).",
 
 	async mount(el) {
 		await fontsReady();
@@ -72,8 +72,8 @@ export default defineSegment({
 		row.innerHTML = ICONS.map(
 			([label, shapes]) => `
 			<div class="me-panel" style="width:${TILE.w}px; height:${TILE.h}px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; opacity:0">
-				<svg width="104" height="104" viewBox="0 0 48 48" fill="none" stroke="var(--cyan)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:var(--glow-cyan-filter)">${shapes}</svg>
-				<div style="font-family:var(--font-body); font-size:34px; font-weight:560; color:var(--color-fg); white-space:nowrap">${label}</div>
+				<svg width="120" height="120" viewBox="0 0 48 48" fill="none" stroke="var(--cyan)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:var(--glow-cyan-filter)">${shapes}</svg>
+				<div style="font-family:var(--font-body); font-size:38px; font-weight:560; color:var(--color-fg); white-space:nowrap">${label}</div>
 			</div>`,
 		).join("");
 		stage.content.appendChild(row);
@@ -86,7 +86,7 @@ export default defineSegment({
 
 		link = document.createElement("div");
 		link.style.cssText =
-			"position:absolute; left:0; right:0; top:724px; display:flex; flex-direction:column; align-items:center; gap:22px; opacity:0";
+			"position:absolute; left:0; right:0; top:736px; display:flex; flex-direction:column; align-items:center; gap:22px; opacity:0";
 		link.innerHTML = `
 			<div class="me-label" style="font-size:28px; color:var(--fg-2)">FREE AND OPEN SOURCE</div>
 			<div style="padding:26px 56px; border:2px solid var(--amber); border-radius:12px; background:rgba(10,14,20,0.72); box-shadow:0 0 28px rgba(255,181,71,0.18); font-family:var(--font-mono); font-size:72px; font-weight:500; color:var(--amber)">github.com/scosman/videowright</div>`;

@@ -27,7 +27,7 @@ const PLAN = [
 	["fm-pair-product-ui", ["Now", "In"]],
 	["fm-pair-narration-sync", ["Now", { before: "Previously", frames: 36 }]],
 	["fm-voice", ["This", "Both"]],
-	["fm-cta", ["VideoWrite", "open-source", "animation", "Download", { end: true }]],
+	["fm-cta", ["VideoWrite", "everything", "animation", "Download", { end: true }]],
 ];
 /** Segments whose first advance is a Then → Now sweep (the whooshes land on these). */
 const SWEEPS = [

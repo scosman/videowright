@@ -108,3 +108,7 @@ See `voiceover_script/script.md` (round 2, one section per segment, with each ca
 - CTA: redesigned (logo centre, then up; the features as six line-icon tiles in one gesture instead of word-by-word chips; the link whole, no typing).
 - Clips: the title-card Now clip is 5.6s and the narration-sync Now clip 4.4s (their holds grew).
 
+
+### 2026-11-02 — Round 2 render (v2), and two CTA fixes for the next render
+- `npx videowright render 2026_11_five_months`: 70.25s, 4,215 frames, track v2 (-14.0 LUFS, -1.7 dBTP in the MP4). Stills checked across every beat; sent to the owner.
+- From that review (not yet rendered): the CTA's logo now glides up on "everything" instead of "open-source", so the whole lockup holds at the centre ~2.7s (it was ~1.1s, mostly the mark alone); the feature tiles are larger for phone viewing (268×256, 120px icons, 38px labels, the row ~1700px wide).

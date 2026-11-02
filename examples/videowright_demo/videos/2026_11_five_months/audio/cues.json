@@ -8,40 +8,70 @@
 		"fm-title": {
 			"start": 0,
 			"startFrame": 0,
-			"advances": [6.35, 7.25]
+			"advances": [
+				6.35,
+				7.25
+			]
 		},
 		"fm-pair-title-card": {
 			"start": 7.25,
 			"startFrame": 435,
-			"advances": [3.083, 8.467]
+			"advances": [
+				3.083,
+				8.467
+			]
 		},
 		"fm-pair-3d": {
 			"start": 15.716666666666667,
 			"startFrame": 943,
-			"advances": [2.917, 7.2]
+			"advances": [
+				2.917,
+				7.2
+			]
 		},
 		"fm-pair-product-ui": {
 			"start": 22.916666666666668,
 			"startFrame": 1375,
-			"advances": [3.383, 9.417]
+			"advances": [
+				3.383,
+				9.417
+			]
 		},
 		"fm-pair-narration-sync": {
 			"start": 32.333333333333336,
 			"startFrame": 1940,
-			"advances": [3.25, 7.433]
+			"advances": [
+				3.25,
+				7.433
+			]
 		},
 		"fm-voice": {
 			"start": 39.766666666666666,
 			"startFrame": 2386,
-			"advances": [6.1, 13.017]
+			"advances": [
+				6.1,
+				13.017
+			]
 		},
 		"fm-cta": {
 			"start": 52.78333333333333,
 			"startFrame": 3167,
-			"advances": [1.2, 2.3, 6.2, 10.95, 17.467]
+			"advances": [
+				1.2,
+				4.2,
+				6.2,
+				10.95,
+				17.467
+			]
 		}
 	},
-	"sweeps": [10.333, 18.633666666666667, 26.299666666666667, 35.583333333333336, 45.86666666666667],
+	"sweeps": [
+		10.333,
+		18.633666666666667,
+		26.299666666666667,
+		35.583333333333336,
+		45.86666666666667
+	],
 	"lastWordEnd": 65.25,
 	"voice": {
 		"start": 39.766666666666666,
