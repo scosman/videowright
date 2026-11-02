@@ -12,7 +12,7 @@ import timing from "../../videos/2026_11_five_months/audio/originals/voiceovers/
 
 /** This segment's start on the track (s). */
 const START = 55.717;
-const FEATURES = ["Animation", "Styles", "Voiceovers", "Sound effects", "Music", "& more"];
+const FEATURES = ["Animation", "Styles", "Voiceovers", "Sound effects", "Music", "and more"];
 /** The narration word that lights each feature. */
 const FEATURE_WORDS = ["animation,", "styles,", "voiceovers,", "sound", "music,", "more."];
 const URL = "github.com/scosman/videowright";
@@ -63,7 +63,7 @@ export default defineSegment({
 		link.style.cssText =
 			"position:absolute; left:0; right:0; top:730px; display:flex; flex-direction:column; align-items:center; gap:22px; opacity:0";
 		link.innerHTML = `
-			<div class="me-label" style="font-size:28px; color:var(--fg-2)">FREE &amp; OPEN SOURCE</div>
+			<div class="me-label" style="font-size:28px; color:var(--fg-2)">FREE AND OPEN SOURCE</div>
 			<div style="padding:26px 48px; border:2px solid var(--hairline-strong); border-radius:12px; background:rgba(10,14,20,0.7); font-family:var(--font-mono); font-size:68px; font-weight:500; color:var(--color-fg); min-width:1340px; text-align:center">
 				<span data-ref="url"></span><span style="color:var(--amber)">▍</span>
 			</div>`;

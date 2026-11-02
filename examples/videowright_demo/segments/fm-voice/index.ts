@@ -76,9 +76,9 @@ function buildPanel(
 	played: string,
 ): Panel {
 	layer.innerHTML = `
-		<div style="position:absolute; left:0; right:0; top:52px; display:flex; justify-content:center">
-			<div style="display:flex; align-items:center; gap:20px; padding:14px 34px; border:2px solid var(--amber); border-radius:999px; color:var(--amber); font-family:var(--font-body); font-size:40px; font-weight:600; letter-spacing:0.02em">
-				<svg width="44" height="40" viewBox="0 0 44 40" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+		<div style="position:absolute; left:0; right:0; top:44px; display:flex; justify-content:center">
+			<div style="display:flex; align-items:center; gap:20px; padding:16px 40px; border:3px solid var(--amber); border-radius:999px; color:var(--amber); font-family:var(--font-body); font-size:50px; font-weight:600; letter-spacing:0.02em">
+				<svg width="56" height="50" viewBox="0 0 44 40" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M4 14h8l10-9v30l-10-9H4z" fill="currentColor" stroke="none"/>
 					<path d="M29 13c3 4 3 10 0 14"/><path d="M35 8c6 7 6 17 0 24"/>
 				</svg>
@@ -128,7 +128,7 @@ function buildPanel(
 			const chip = document.createElement("span");
 			chip.textContent = w.tag.toUpperCase();
 			chip.style.cssText =
-				"display:inline-block; vertical-align:0.18em; margin-right:0.3em; padding:4px 14px; border:2px solid var(--amber); border-radius:8px; color:var(--amber); font-family:var(--font-mono); font-size:30px; font-weight:600; letter-spacing:0.1em; line-height:1.2";
+				"display:inline-block; vertical-align:0.18em; margin-right:0.3em; padding:4px 16px; border:3px solid var(--amber); border-radius:10px; color:var(--amber); font-family:var(--font-mono); font-size:40px; font-weight:600; letter-spacing:0.1em; line-height:1.2";
 			box.appendChild(chip);
 			spans.push({ el: chip, at: w.at - 0.25 });
 		}

@@ -169,21 +169,31 @@ export function createRig(host: HTMLElement, opts: RigOptions): Rig {
 				timing,
 			);
 			travel("then", "now", duration);
-			// The caption swaps as the beam passes the middle.
-			const swap = { duration: duration * 0.4, delay: duration * 0.3, fill: "forwards" as const };
+			// The caption swaps as the beam passes the middle: the old line leaves, then the new one
+			// arrives, so the two never overlap.
 			captionThen.animate(
 				[
 					{ opacity: 1, transform: "translateY(0)" },
 					{ opacity: 0, transform: "translateY(-14px)" },
 				],
-				{ ...swap, easing: css("--ease-exit") },
+				{
+					duration: duration * 0.22,
+					delay: duration * 0.3,
+					easing: css("--ease-exit"),
+					fill: "forwards",
+				},
 			);
 			captionNow.animate(
 				[
 					{ opacity: 0, transform: "translateY(14px)" },
 					{ opacity: 1, transform: "translateY(0)" },
 				],
-				{ ...swap, easing: css("--ease-settle") },
+				{
+					duration: duration * 0.4,
+					delay: duration * 0.52,
+					easing: css("--ease-settle"),
+					fill: "both",
+				},
 			);
 			return end;
 		},
