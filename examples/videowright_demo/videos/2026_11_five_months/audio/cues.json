@@ -45,7 +45,7 @@
 	"lastWordEnd": 65.25,
 	"voice": {
 		"start": 39.766666666666666,
-		"then": {
+		"thenLine": {
 			"words": [
 				{
 					"word": "Previously,",
@@ -104,7 +104,7 @@
 				}
 			]
 		},
-		"now": {
+		"nowLine": {
 			"words": [
 				{
 					"word": "This",

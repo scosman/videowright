@@ -17,7 +17,7 @@
 - Notes: reuse the `components/v2/` kit (fonts, motion, stage, logo, title-lockup, sweep). No v2 HUD readouts in the comparison beats: the rail is this video's instrument. The cyan sweep is the Then → Now gesture.
 
 ## Audio intent
-- Voiceover: yes. ElevenLabs v4, voice Cosman-1 (the owner's instant voice clone), for all narration. One line in ElevenLabs v2 (`eleven_multilingual_v2`, stock voice Asher, the May settings) for the voice beat's "Then".
+- Voiceover: yes. ElevenLabs v4, voice Cosman-1 (the owner's instant voice clone), for all narration. One line in ElevenLabs v2 (`eleven_multilingual_v2`, stock voice Asher, the May settings) for the voice beat's "Then". Round 2: the voice beat's Now line is calm, with `[factual]` / `[confident]` tags.
 - Sound effects: yes, light. One soft whoosh under each Then → Now sweep, low under the VO. Nothing else.
 - Background music: yes. A low instrumental bed under the VO; out entirely for the voice beat (so the two voices compare cleanly), back for the CTA, resolving on the end hold.
 - Notes: the comparison clips are muted (their own audio is never heard). The voice beat's narration is the example: the old voice describes itself, then the new voice answers.
@@ -47,13 +47,14 @@ One fixed layout for every Then/Now pair. Nothing moves between Then and Now exc
 - Build the rig first (on the 3D pair) and get the owner's sign-off on a render before the other beats.
 
 ## Segment outline
-1. `fm-title` — "5 months of progress" / "in Claude video generation" / "Same script. Same brief. New model." The ruler draws `MAY 15` → `NOV 2` with a `171 DAYS` dimension, then slides down to become the rail as the footage window opens.
-2. `fm-pair-title-card` — the two Videowright title cards. Caption: "text on a grid" → "a logo that draws itself".
-3. `fm-pair-3d` — 3D + Lottie. Caption: "a spinning polygon" → "a GPU-shaded planet".
-4. `fm-pair-product-ui` — the Acme app. Caption: "a dashboard that plays itself" → "an app someone's using".
-5. `fm-pair-narration-sync` — the voiceover-sync beats. Caption: "synced by line" → "timed to every word" (the Now caption's words light as they're spoken).
-6. `fm-voice` — no footage: a "Sound on for this one" chip, then a large waveform of the line being spoken with a playhead and 72px+ word-timed captions; emotion tags show as small amber chips (`WARMLY`, `EXCITED`). Caption: "ElevenLabs v2 · stock voice" → "ElevenLabs v4 · my cloned voice". The Asher line plays under THEN, the Cosman-1 line under NOW.
-7. `fm-cta` — the v2 title lockup draws (mark + "videowright"), "Build videos in Claude Code", feature chips lighting with the VO (Animation · Styles · Voiceovers · Sound effects · Music · & more), "Free & open source", `github.com/scosman/videowright` in amber. ~5s end hold.
+Round 2 (the owner's notes on the first render). Captions use the narration's own words, so what a muted viewer reads is what the narration says.
+1. `fm-title` — one title, whole on frame 1 (the thumbnail): a huge **5 months** over "of progress in Claude video generation". No rail, dates or claim line. It rises out on the release cue.
+2. `fm-pair-title-card` — the first pair builds the rig in (window, rail, caption, ~0.7s). Caption: "designs were basic" → "rich animations and graphics".
+3. `fm-pair-3d` — Caption: "a simple shape" → "real-time scenes on the GPU".
+4. `fm-pair-product-ui` — Caption: "a dashboard that played itself" → "a cursor, a panning camera, a real route change" (auto-fit to one line).
+5. `fm-pair-narration-sync` — Caption: "narration sync was by line" → "timed to every word".
+6. `fm-voice` — the rig with a voice instrument: the line's real waveform with a playhead and 70px words lit on their real times; the Now line's `FACTUAL` / `CONFIDENT` tags as amber chips. No "Sound on" chip. Caption: "ElevenLabs v2 · stock voice" → "ElevenLabs v4 · my cloned voice".
+7. `fm-cta` — the v2 logo draws at the centre (wordmark on "Videowright", then "Build videos in Claude Code"), glides up on "open-source", the six feature tiles (line icons that draw themselves: Animation, Styles, Voiceovers, Sound effects, Music, And more) arrive as one staggered gesture on "animation", the GitHub link rises whole on "Download" ("FREE AND OPEN SOURCE", `github.com/scosman/videowright` in amber). ~5s end hold.
 
 ## Footage
 - Approach: render both videos, cut short clips, play them in `<video>` driven by the segment clock (`components/fm/clip.ts`). Chosen over mounting the original segments in divs (they can only play from their own start, their style tokens collide, v2's HUD binds to the nearest player host, and it would be May's code on today's library) and over iframes (the render clock only drives the top-level page).
@@ -69,7 +70,7 @@ One fixed layout for every Then/Now pair. Nothing moves between Then and Now exc
 | Narration sync | 46.50 + 3.95s (the line highlighted) | 30.10 + 4.15s (line 2 lit word by word on its real times, then the edit begins) |
 
 ## Script
-See `voiceover_script/script.md` (one section per segment). Provider scripts: `audio/originals/voiceovers/v1/provider_script.md` (Cosman-1, v4) and `audio/originals/voiceovers/then_asher_v2/provider_script.md` (Asher, v2).
+See `voiceover_script/script.md` (round 2, one section per segment, with each caption). Audio sources: `audio/originals/voiceovers/v2/` (Cosman-1, v4: the whole narration but the voice beat, one take), `voice_then/` (Asher, v2) and `voice_now/` (Cosman-1, v4, `[factual]` / `[confident]`). `audio/assemble.mjs` joins them; `audio/sync.mjs` computes every cue into `audio/cues.json`, which the track, the voiceover and the segments read; `audio/mix.mjs` is the audio plan's mix command.
 
 ---
 
@@ -98,3 +99,12 @@ See `voiceover_script/script.md` (one section per segment). Provider scripts: `a
 - Checked: stills across every beat; the voice beat and CTA fixes are in; the first sweep's beam is ~58% across the window at the whoosh's peak (11.0s), so the sound lands mid-gesture; the dev player plays the clips (no console errors).
 - Also from review: the Then title clip starts at 9.35s (its first 0.25s was an almost empty frame), and the shim tests' browser is closed at file level (the deferred-frame block had been running on a closed browser when the whole file ran).
 - Waiting on the owner: sign-off on the rig, a listen to the mix.
+
+### 2026-11-02 — Round 2 (the owner's notes on the first render)
+- Title: one title only (option A: a huge "5 months" over "of progress in Claude video generation"), the descender clipping fixed (masks have room in px of each line's size). The first pair now builds the rig in.
+- Narration: shorter and more general (`voiceover_script/script.md`). New opener ("We generated the same video with Claude, five months apart. The difference is staggering."), new title-card and 3D lines; the product UI and narration-sync lines as before. Captions are the narration's own words.
+- Audio: the owner's round-2 one take (v2) passes retime check; the 3D pair's pause after "shape." is 1.4s (so its Then clip holds ~2.9s). The voice beat's takes are new: the correct Asher voice (v1's then_asher_v2 used the wrong library voice) and a calm Cosman-1 line. `audio/assemble.mjs` joins the three takes (70.25s; Asher +1.2 dB); `audio/sync.mjs` writes every advance into `audio/cues.json`; track v2 via `audio/mix.mjs` (-13.9 LUFS, -1.9 dBTP; the voice beat's lines -13.2 / -13.3 LUFS).
+- Voice beat: the "Sound on" chip is gone; the waveform and words fill the window.
+- CTA: redesigned (logo centre, then up; the features as six line-icon tiles in one gesture instead of word-by-word chips; the link whole, no typing).
+- Clips: the title-card Now clip is 5.6s and the narration-sync Now clip 4.4s (their holds grew).
+

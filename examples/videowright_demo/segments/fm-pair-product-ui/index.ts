@@ -6,9 +6,8 @@ export default definePair({
 	id: "fm-pair-product-ui",
 	thenSrc,
 	nowSrc,
-	captions: ["a dashboard that plays itself", "an app someone's using"],
+	captions: ["a dashboard that played itself", "a cursor, a panning camera, a real route change"],
 	enteredFrom: "pair",
-	advances: [3.567, 9.7],
 	voiceover:
 		"Product UI was a dashboard that played itself. Now someone's using it: a cursor, a panning camera, a real route change.",
 	notes:

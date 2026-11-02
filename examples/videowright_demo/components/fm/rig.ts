@@ -27,6 +27,8 @@ export interface RigOptions {
 	captions: [string, string];
 	/** Where the marker starts (a pair entered from the previous pair's Now starts at "now"). */
 	state?: RigState;
+	/** The rig is not on screen yet: it builds in with enter() (the first pair, after the title). */
+	entering?: boolean;
 }
 
 export interface Rig {
@@ -35,22 +37,17 @@ export interface Rig {
 	/** The footage layers (fill the window). */
 	thenLayer: HTMLElement;
 	nowLayer: HTMLElement;
+	/** Builds the rig in (window, rail, caption). Returns its end (ms). */
+	enter(): number;
 	/** Moves the marker back from NOW to THEN (the next pair's start). Returns its end (ms). */
 	rewind(duration?: number): number;
 	/** The Then → Now sweep. Returns its end (ms from now). */
 	sweep(duration?: number): number;
-	/** The rail's parts, for the title card, which introduces the rail before any footage. */
-	parts: {
-		labelThen: HTMLElement;
-		labelNow: HTMLElement;
-		fill: HTMLElement;
-		marker: HTMLElement;
-		caption: HTMLElement;
-	};
 }
 
 export function createRig(host: HTMLElement, opts: RigOptions): Rig {
-	const { window: w, rail } = RIG;
+	const { window: w } = RIG;
+	const railBox = RIG.rail;
 	const root = document.createElement("div");
 	root.className = "fm-rig";
 	const ticks = Array.from(
@@ -65,7 +62,7 @@ export function createRig(host: HTMLElement, opts: RigOptions): Rig {
 			<div class="fm-border"></div>
 			<div class="fm-border" data-ref="border-now"></div>
 		</div>
-		<div class="fm-rail" style="left:${w.x}px; top:${rail.y}px; width:${w.w}px; height:${rail.h}px">
+		<div class="fm-rail" style="left:${w.x}px; top:${railBox.y}px; width:${w.w}px; height:${railBox.h}px">
 			<span class="fm-label" data-ref="label-then">THEN</span>
 			<div class="fm-ruler" data-ref="ruler">
 				<div class="fm-ruler-line"></div>
@@ -93,6 +90,22 @@ export function createRig(host: HTMLElement, opts: RigOptions): Rig {
 	const captionThen = q("caption-then");
 	const captionNow = q("caption-now");
 	[captionThen.textContent, captionNow.textContent] = opts.captions;
+	// One line, always: a caption wider than the row steps down in size (fonts are loaded first).
+	const row = captionThen.parentElement as HTMLElement;
+	for (
+		let size = 60;
+		size > 40 && Math.max(captionThen.scrollWidth, captionNow.scrollWidth) > w.w;
+		size -= 2
+	) {
+		row.style.fontSize = `${size - 2}px`;
+	}
+	const line = root.querySelector(".fm-ruler-line") as HTMLElement;
+	const tickEls = Array.from(root.querySelectorAll(".fm-tick")) as HTMLElement[];
+	if (opts.entering) {
+		win.style.opacity = "0";
+		for (const el of [labelThen, labelNow, marker, row, ...tickEls]) el.style.opacity = "0";
+		line.style.transform = "scaleX(0)";
+	}
 
 	const easing = () => css("--ease-sweep");
 	const markerAt = (p: number) => `translateX(${(p * ruler.offsetWidth).toFixed(2)}px)`;
@@ -156,7 +169,50 @@ export function createRig(host: HTMLElement, opts: RigOptions): Rig {
 		window: win,
 		thenLayer: then,
 		nowLayer: now,
-		parts: { labelThen, labelNow, fill, marker, caption: captionThen.parentElement as HTMLElement },
+		enter() {
+			const settle = css("--ease-settle");
+			const both = "both" as const;
+			win.animate(
+				[
+					{ opacity: 0, transform: "scale(0.97)" },
+					{ opacity: 1, transform: "none" },
+				],
+				{ duration: 520, easing: settle, fill: both },
+			);
+			line.style.transformOrigin = "0 50%";
+			line.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
+				duration: 560,
+				delay: 80,
+				easing: css("--ease-draw"),
+				fill: both,
+			});
+			tickEls.forEach((t, i) =>
+				t.animate([{ opacity: 0 }, { opacity: 1 }], {
+					duration: 160,
+					delay: 120 + i * 60,
+					fill: both,
+				}),
+			);
+			const rise = (el: HTMLElement, delay: number, to = 1) =>
+				el.animate(
+					[
+						{ opacity: 0, transform: "translateY(24px)" },
+						{ opacity: to, transform: "none" },
+					],
+					{ duration: 480, delay, easing: settle, fill: both },
+				);
+			rise(labelThen, 60);
+			rise(labelNow, 140, 0.26);
+			marker.animate(
+				[
+					{ opacity: 0, transform: `${markerAt(0)} scale(0.4)` },
+					{ opacity: 1, transform: `${markerAt(0)} scale(1)` },
+				],
+				{ duration: 360, delay: 200, easing: settle, fill: both },
+			);
+			rise(row, 260);
+			return 740;
+		},
 		rewind(duration = 300) {
 			travel("now", "then", duration);
 			return duration;
