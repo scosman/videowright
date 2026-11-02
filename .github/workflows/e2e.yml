@@ -7,7 +7,10 @@ on:
 
 jobs:
   playwright:
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: `playwright install --with-deps` fails on
+    # Ubuntu releases newer than the installed Playwright supports. Bump this
+    # together with @playwright/test (ubuntu-26.04 needs Playwright >= 1.61).
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4

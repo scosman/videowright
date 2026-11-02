@@ -25,9 +25,13 @@ function loadWorkflow(name: string): Record<string, unknown> {
 	return parse(raw) as Record<string, unknown>;
 }
 
-function getSteps(doc: Record<string, unknown>): Step[] {
+function getJob(doc: Record<string, unknown>): Job {
 	const jobs = doc.jobs as Record<string, Job>;
-	return Object.values(jobs)[0].steps;
+	return Object.values(jobs)[0];
+}
+
+function getSteps(doc: Record<string, unknown>): Step[] {
+	return getJob(doc).steps;
 }
 
 function getRunCommands(steps: Step[]): string[] {
@@ -85,6 +89,11 @@ describe("CI workflow files", () => {
 			expect(on).toHaveProperty("pull_request");
 			const push = on.push as Record<string, unknown>;
 			expect(push.branches).toContain("main");
+		});
+
+		it("pins the runner to an explicit Ubuntu release, not the moving ubuntu-latest alias", () => {
+			const doc = loadWorkflow("e2e.yml");
+			expect(getJob(doc)["runs-on"]).toMatch(/^ubuntu-\d{2}\.\d{2}$/);
 		});
 
 		it("installs Playwright Chromium with system deps", () => {
