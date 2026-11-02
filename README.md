@@ -1,7 +1,8 @@
-
-<img width="193" height="159" alt="Videowright Logo" src="https://github.com/user-attachments/assets/ec1a826f-3f44-465b-bc72-14660271db4f" />
-
-### Create a video with a prompt
+<h3 align="center">
+  <img width="193" height="159" alt="Videowright Logo" src="https://github.com/user-attachments/assets/ec1a826f-3f44-465b-bc72-14660271db4f" />
+  
+  Create a video with a prompt
+</h3>
 
 Videowright creates demo videos, explainer videos, and product walkthroughs from your coding agent. Just describe what you want and it generates your video (including audio). Iterate in chat until it's perfect.
 
@@ -9,7 +10,7 @@ Videowright is like `rails new` for video projects. It sets up all the scaffoldi
 
 ## Demo - Sound on!
 
-<video src="https://github.com/user-attachments/assets/ba106686-3ff5-4d57-8fbb-141ad40c8c86" width="600" controls></video>
+https://github.com/user-attachments/assets/b2e5aa08-5d4c-46aa-b650-d329553d5748
 
 Or check out the [blooper reel](https://github.com/user-attachments/assets/a1c86e90-8e15-491e-9b05-4e35cf2faa37), directed by my son!
 
