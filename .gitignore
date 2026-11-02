@@ -31,3 +31,8 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Final renders (demo_v2 project)
+/renders/
+# Throwaway review timelines (specs/projects/demo_v2/tools/render_review.sh)
+examples/videowright_demo/videos/_review_*/

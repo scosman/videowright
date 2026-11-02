@@ -50,6 +50,7 @@ export class Player {
 	private timeline: Timeline | null = null;
 	private segmentLoaders: SegmentLoaderMap | null = null;
 	private transitionLoaders: TransitionLoaderMap | null = null;
+	private transitions = new Map<string, Transition>();
 
 	private slotA: SlotEntry;
 	private slotB: SlotEntry;
@@ -131,6 +132,7 @@ export class Player {
 		this.timeline = timeline;
 		this.segmentLoaders = segmentLoaders;
 		this.transitionLoaders = transitionLoaders ?? new Map();
+		this.transitions.clear();
 
 		// Validate all segment ids exist in the loader map
 		for (const entry of timeline.segments) {
@@ -143,6 +145,24 @@ export class Player {
 				throw err;
 			}
 		}
+
+		await this.preloadTransitions(timeline);
+	}
+
+	/**
+	 * Load the transition modules the timeline uses, plus `cut` (the default and backward
+	 * transition), before playback starts. Loaded lazily on first use, a transition module is a
+	 * real fetch: in a render it races the frame clock, so the first use of each transition,
+	 * and the incoming segment with it, would land a frame or more off depending on the run.
+	 * A module that fails here is left to the lazy path, which reports the error on use.
+	 */
+	private async preloadTransitions(timeline: Timeline): Promise<void> {
+		const names = new Set(["cut"]);
+		for (const entry of timeline.segments) {
+			if (!entry.transition) continue;
+			names.add(typeof entry.transition === "string" ? entry.transition : entry.transition.type);
+		}
+		await Promise.all([...names].map((name) => this.loadTransition(name).catch(() => null)));
 	}
 
 	async start(): Promise<void> {
@@ -660,6 +680,12 @@ export class Player {
 			const mod = await loader();
 			const segment = mod.default;
 
+			// Resolve the transition (normally preloaded by load()) before mounting: the incoming
+			// slot is visible from mount on, so a transition module still loading would leave the
+			// incoming segment on screen, unclipped, until the transition starts. Same-segment
+			// restarts run no transition.
+			const transitionFn = isSameSegment ? null : await this.resolveTransition(entry, direction);
+
 			const outgoingRunner = outgoingSlot.runner;
 
 			// For same-segment transitions, unmount outgoing FIRST to avoid
@@ -699,16 +725,11 @@ export class Player {
 				}
 			}
 
-			// Run transition (skip for same-segment restarts -- no visual
-			// transition needed when restarting the current segment)
-			if (!isSameSegment) {
-				const transitionFn = await this.resolveTransition(entry, direction);
-				if (transitionFn && outgoingRunner) {
-					await transitionFn(outgoingSlot.el, incomingSlot.el, {
-						direction,
-						duration: this.getTransitionDuration(entry),
-					});
-				}
+			if (transitionFn && outgoingRunner) {
+				await transitionFn(outgoingSlot.el, incomingSlot.el, {
+					direction,
+					duration: this.getTransitionDuration(entry),
+				});
 			}
 
 			// Clear transition animations on both slots after transition completes.
@@ -779,40 +800,26 @@ export class Player {
 	): Promise<Transition | null> {
 		if (!this.transitionLoaders) return null;
 
-		// Backward always uses cut
-		if (direction === "backward") {
-			const cutLoader = this.transitionLoaders.get("cut");
-			if (cutLoader) {
-				const mod = await cutLoader();
-				return mod.default;
-			}
-			return null;
-		}
-
-		if (!entry.transition) {
-			// Default: cut
-			const cutLoader = this.transitionLoaders.get("cut");
-			if (cutLoader) {
-				const mod = await cutLoader();
-				return mod.default;
-			}
-			return null;
-		}
+		// Backward always uses cut, as does an entry without a transition.
+		if (direction === "backward" || !entry.transition) return this.loadTransition("cut");
 
 		const name = typeof entry.transition === "string" ? entry.transition : entry.transition.type;
-		const loader = this.transitionLoaders.get(name);
-		if (!loader) {
+		if (!this.transitionLoaders.has(name)) {
 			console.warn(`Transition "${name}" not found, falling back to cut`);
-			const cutLoader = this.transitionLoaders.get("cut");
-			if (cutLoader) {
-				const mod = await cutLoader();
-				return mod.default;
-			}
-			return null;
+			return this.loadTransition("cut");
 		}
+		return this.loadTransition(name);
+	}
 
-		const mod = await loader();
-		return mod.default;
+	/** The transition registered under `name`, from the preload cache or loaded now. */
+	private async loadTransition(name: string): Promise<Transition | null> {
+		const cached = this.transitions.get(name);
+		if (cached) return cached;
+		const loader = this.transitionLoaders?.get(name);
+		if (!loader) return null;
+		const transition = (await loader()).default;
+		this.transitions.set(name, transition);
+		return transition;
 	}
 
 	private getTransitionDuration(entry: TimelineEntry): number | undefined {

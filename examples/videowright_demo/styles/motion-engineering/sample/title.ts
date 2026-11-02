@@ -1,219 +1,531 @@
-import { defineSegment } from "videowright";
+import { type PlayerContext, defineSegment } from "videowright";
+// ── Motion Engineering kit ──────────────────────────────────────────────────────────────
+// Inlined so this file can be copied into any project and still import only "videowright".
+// The stage DOM uses the me-* classes from tokens.css. Everything time-based reads
+// ctx.clock() (one rAF loop) or runs on WAAPI, so renders are deterministic.
+
+type Tick = (t: number) => boolean;
+type Attrs = Record<string, string | number>;
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const GRID_OVERSCAN = 160;
+const css = (name: string) =>
+	getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const ms = (name: string) => Number.parseFloat(css(name)) || 0;
+const clamp01 = (p: number) => Math.min(Math.max(p, 0), 1);
+// Clock arithmetic carries float noise (a frame due at 2300ms can read 2299.9999999). Round
+// before quantizing, so stepped values (timecode, ticks, decodes) land on the same frame in
+// every render.
+const tidy = (t: number) => Math.round(t * 1000) / 1000;
+const expoOut = (p: number) => (p >= 1 ? 1 : 1 - 2 ** (-10 * clamp01(p)));
+const sineInOut = (p: number) => (1 - Math.cos(Math.PI * clamp01(p))) / 2;
+// JS twin of --ease-draw, for geometry driven from the rAF loop (bars, riding readouts).
+const drawEase = (p: number) => {
+	const q = clamp01(p);
+	return q < 0.5 ? 4 * q ** 3 : 1 - (-2 * q + 2) ** 3 / 2;
+};
+
+const FACES: Array<[font: string, text?: string]> = [
+	['600 64px "Archivo"'],
+	['500 64px "JetBrains Mono"'],
+	['400 64px "ME Symbols"', "✓"],
+];
+
+// Waits only when a face is still loading. Awaiting document.fonts.load() always resumes on a
+// later task; in a render that task can land inside a frame, so play() would start mid-frame
+// and frames would differ from run to run.
+function fontsReady(): Promise<unknown> | undefined {
+	if (FACES.every(([font, text]) => document.fonts.check(font, text))) return undefined;
+	return Promise.all(FACES.map(([font, text]) => document.fonts.load(font, text)));
+}
+
+function svg<K extends keyof SVGElementTagNameMap>(
+	parent: Element,
+	tag: K,
+	attrs: Attrs,
+): SVGElementTagNameMap[K] {
+	const node = document.createElementNS(SVG_NS, tag);
+	for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+	parent.appendChild(node);
+	return node;
+}
+
+interface StageOptions {
+	index: string;
+	scene: string;
+	/** Focal point for the key light, in stage px. */
+	key?: { x: number; y: number };
+	/** Offset into the 7s grid scan, so consecutive scenes don't scan in step. */
+	scanPhase?: number;
+}
+
+interface Stage {
+	grid: HTMLElement;
+	world: HTMLElement;
+	content: HTMLElement;
+	svg: SVGSVGElement;
+	scan: HTMLElement;
+	flare: HTMLElement;
+	scanPhase: number;
+	ref(name: string): HTMLElement;
+	/** Camera pivot in stage px (default: frame centre). */
+	setOrigin(x: number, y: number): void;
+}
+
+function buildStage(el: HTMLElement, opts: StageOptions): Stage {
+	const key = opts.key ?? { x: 960, y: 500 };
+	el.innerHTML = `
+		<div class="me-stage" style="--key-x: ${key.x}px; --key-y: ${key.y}px">
+			<div class="me-grid"><div class="me-scan"></div><div class="me-flare"></div></div>
+			<div class="me-key"></div>
+			<div class="me-light"></div>
+			<div class="me-world">
+				<div class="me-content"></div>
+				<svg class="me-svg" viewBox="0 0 1920 1080"></svg>
+			</div>
+			<div class="me-grain"></div>
+			<div class="me-hud">
+				<div class="me-frame"></div>
+				<div class="me-hud-slot" data-at="tl">
+					<span class="me-label">${opts.index}</span>
+					<span class="me-label" style="color: var(--fg-2)">${opts.scene}</span>
+				</div>
+				<div class="me-hud-slot" data-at="tr"><span class="me-readout" data-ref="clock"></span></div>
+				<div class="me-hud-slot" data-at="bl">
+					<span class="me-readout" data-ref="probe" style="color: var(--color-muted)"></span>
+				</div>
+				<div class="me-hud-slot" data-at="br">
+					<span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span>
+				</div>
+			</div>
+		</div>`;
+	const q = (s: string) => el.querySelector(s) as HTMLElement;
+	const grid = q(".me-grid");
+	const world = q(".me-world");
+	return {
+		grid,
+		world,
+		content: q(".me-content"),
+		svg: el.querySelector(".me-svg") as SVGSVGElement,
+		scan: q(".me-scan"),
+		flare: q(".me-flare"),
+		scanPhase: opts.scanPhase ?? 0,
+		ref: (name) => q(`[data-ref="${name}"]`),
+		setOrigin: (x, y) => {
+			world.style.transformOrigin = `${x}px ${y}px`;
+			grid.style.transformOrigin = `${x + GRID_OVERSCAN}px ${y + GRID_OVERSCAN}px`;
+		},
+	};
+}
+
+interface Ambient {
+	/** ctx.clock(), rounded (see tidy). Use it for every start time. */
+	now(): number;
+	add(tick: Tick): void;
+	nudge(by: number, duration: number): void;
+	rest(duration: number): void;
+}
+
+// The breathe layer: a slow camera push (the grid follows at 60% for parallax), the scene
+// timecode, the grid scan, and any tickers (decodes, counting numbers). rest() eases the
+// camera back to identity for the exit.
+function startAmbient(ctx: PlayerContext, stage: Stage): Ambient {
+	let ticks: Tick[] = [];
+	const nudges: Array<{ at: number; by: number; duration: number }> = [];
+	let restAt = Number.POSITIVE_INFINITY;
+	let restFor = 1;
+	const clock = stage.ref("clock");
+	const driftMs = ms("--dur-ambient") || 16000;
+	stage.scan.animate([{ maskPosition: "0 -320px" }, { maskPosition: "0 1720px" }], {
+		duration: 7000,
+		delay: -stage.scanPhase,
+		iterations: Number.POSITIVE_INFINITY,
+	});
+	const frame = () => {
+		if (ctx.signal.aborted) return;
+		const t = tidy(ctx.clock());
+		const settle = 1 - sineInOut((t - restAt) / restFor);
+		const pan = sineInOut(t / driftMs) * settle;
+		let zoom = 0.024 * sineInOut(t / driftMs);
+		for (const n of nudges) zoom += n.by * expoOut((t - n.at) / n.duration);
+		zoom *= settle;
+		const f = (v: number, d = 2) => v.toFixed(d);
+		stage.world.style.transform = `translate(${f(-10 * pan)}px, ${f(-4 * pan)}px) scale(${f(1 + zoom, 5)})`;
+		stage.grid.style.transform = `translate(${f(-6 * pan)}px, ${f(-2.4 * pan)}px) scale(${f(1 + 0.6 * zoom, 5)})`;
+		const cs = Math.floor(t / 10);
+		const mm = String(Math.floor(cs / 6000)).padStart(2, "0");
+		const ss = ((cs % 6000) / 100).toFixed(2).padStart(5, "0");
+		clock.textContent = `T+${mm}:${ss}`;
+		// Oldest first, so when two tickers write the same element the newest one wins.
+		ticks = ticks.filter((tick) => tick(t));
+		requestAnimationFrame(frame);
+	};
+	frame();
+	const now = () => tidy(ctx.clock());
+	return {
+		now,
+		add: (tick) => {
+			if (tick(now())) ticks.push(tick);
+		},
+		nudge: (by, duration) => nudges.push({ at: now(), by, duration }),
+		rest: (duration) => {
+			restAt = now();
+			restFor = duration;
+		},
+	};
+}
+
+// Mono "decode": characters resolve left to right through seeded noise. No Math.random.
+const NOISE = "#%&*+=<>/0123456789ABCDEFHKMNPRTUVXYZ";
+function decode(amb: Ambient, el: Element, text: string, start: number, perChar = 26): void {
+	const settle = 170;
+	el.textContent = "";
+	amb.add((t) => {
+		const local = tidy(t - start);
+		let out = "";
+		for (let i = 0; i < text.length && local >= i * perChar; i++) {
+			const ch = text[i];
+			const resolved = local >= i * perChar + settle || ch === " ";
+			out += resolved ? ch : NOISE[(i * 7 + Math.floor(local / 45) * 11) % NOISE.length];
+		}
+		el.textContent = out;
+		return local < (text.length - 1) * perChar + settle;
+	});
+}
+
+// Numbers tick: discrete steps on the --dur-tick grid, decelerating into the value.
+function tickTo(
+	amb: Ambient,
+	el: Element,
+	to: number,
+	start: number,
+	duration: number,
+	format: (v: number) => string,
+	from = 0,
+): void {
+	const step = ms("--dur-tick") || 50;
+	amb.add((t) => {
+		const p = Math.min((Math.floor(tidy(Math.max(0, t - start)) / step) * step) / duration, 1);
+		el.textContent = format(from + (to - from) * expoOut(p));
+		return p < 1;
+	});
+}
+
+// Eased stroke draw. reverse retracts the stroke back toward its start.
+function draw(path: SVGGeometryElement, delay: number, duration: number, reverse = false) {
+	path.setAttribute("pathLength", "1");
+	path.style.strokeDasharray = "1 1";
+	const frames = reverse
+		? [{ strokeDashoffset: 0 }, { strokeDashoffset: 1 }]
+		: [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }];
+	return path.animate(frames, {
+		duration,
+		delay,
+		easing: reverse ? css("--ease-exit") : css("--ease-draw"),
+		fill: "both",
+	});
+}
+
+// Masked line reveal: each element rises out of its .me-line mask.
+function riseIn(els: Element[], delay: number, duration = ms("--dur-slow")): void {
+	els.forEach((node, i) => {
+		(node as HTMLElement).animate([{ transform: "translateY(112%)" }, { transform: "none" }], {
+			duration,
+			delay: delay + i * ms("--stagger"),
+			easing: css("--ease-settle"),
+			fill: "both",
+		});
+	});
+}
+
+// A dotted leader that runs out from x0 to x1 at y, carrying a value to the right edge.
+function dottedLeader(stage: Stage, x0: number, x1: number, y: number, delay: number) {
+	const dots = document.createElement("div");
+	dots.style.cssText = `position:absolute; left:${x0}px; top:${y - 1}px; width:${x1 - x0}px; height:2px; background:repeating-linear-gradient(to right, color-mix(in srgb, var(--cyan) 60%, transparent) 0 4px, transparent 4px 12px)`;
+	stage.content.appendChild(dots);
+	dots.animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }], {
+		duration: ms("--dur-draw"),
+		delay,
+		easing: css("--ease-draw"),
+		fill: "both",
+	});
+	return dots;
+}
+
+// The grid answers a lock: registration crosses within ~320px of (x, y) brighten, then decay.
+function flare(stage: Stage, x: number, y: number, delay: number): void {
+	stage.flare.style.setProperty("--flare-x", `${x + GRID_OVERSCAN}px`);
+	stage.flare.style.setProperty("--flare-y", `${y + GRID_OVERSCAN}px`);
+	stage.flare.animate([{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0 }], {
+		duration: 700,
+		delay,
+		fill: "both",
+	});
+}
+
+// Crosshair lock: the reticle drops in oversized and rotated, settles on target, blinks
+// twice. Each shape is drawn twice, a canvas-colored knockout under the amber stroke, so the
+// reticle reads on top of amber bars.
+function lockOn(parent: Element, cx: number, cy: number, delay: number, r = 34): SVGGElement {
+	const g = svg(parent, "g", { fill: "none", style: "filter: var(--glow-amber-filter)" });
+	const o = r + 22;
+	const ticks = `M${cx - o} ${cy}h18M${cx + o - 18} ${cy}h18M${cx} ${cy - o}v18M${cx} ${cy + o - 18}v18`;
+	for (const [stroke, width] of [
+		["var(--color-bg)", 7],
+		["var(--amber)", 3],
+	] as const) {
+		svg(g, "circle", { cx, cy, r, stroke, "stroke-width": width });
+		svg(g, "path", { d: ticks, stroke, "stroke-width": width });
+	}
+	svg(g, "circle", { cx, cy, r: 4, fill: "var(--amber)" });
+	g.style.transformOrigin = `${cx}px ${cy}px`;
+	g.animate([{ transform: "scale(2.4) rotate(45deg)" }, { transform: "none" }], {
+		duration: 620,
+		delay,
+		easing: css("--ease-settle"),
+		fill: "both",
+	});
+	g.animate(
+		[
+			{ opacity: 0, easing: "linear" },
+			{ opacity: 1, offset: 0.3, easing: "steps(1, end)" },
+			{ opacity: 0.25, offset: 0.62, easing: "steps(1, end)" },
+			{ opacity: 1, offset: 0.7, easing: "steps(1, end)" },
+			{ opacity: 0.25, offset: 0.8, easing: "steps(1, end)" },
+			{ opacity: 1, offset: 0.88 },
+			{ opacity: 1 },
+		],
+		{ duration: 900, delay, fill: "both" },
+	);
+	return g;
+}
+
+// Release: the HUD lets go before the cut. Strokes retract, marks fade, the camera rests;
+// the content stays for the transition to carry out. Returns how long to hold.
+function release(amb: Ambient, strokes: SVGGeometryElement[], marks: Element[]): number {
+	const out = ms("--dur-exit");
+	for (const p of strokes) draw(p, 0, out * 0.8, true);
+	for (const m of marks) {
+		m.animate([{ opacity: 1 }, { opacity: 0 }], {
+			duration: out * 0.6,
+			easing: css("--ease-exit"),
+			fill: "forwards",
+		});
+	}
+	amb.rest(out * 1.4);
+	return out;
+}
+
+interface Box {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+}
+
+// An element's layout box in stage px, from the offset chain up to .me-content. Offsets
+// ignore the camera and the dev player's scaling.
+function boxOf(el: HTMLElement): Box {
+	let x = 0;
+	let y = 0;
+	let node: HTMLElement | null = el;
+	while (node && !node.classList.contains("me-content")) {
+		x += node.offsetLeft;
+		y += node.offsetTop;
+		const parent = node.offsetParent as HTMLElement | null;
+		if (parent && !parent.classList.contains("me-content")) {
+			x += parent.clientLeft;
+			y += parent.clientTop;
+		}
+		node = parent;
+	}
+	return { x, y, w: el.offsetWidth, h: el.offsetHeight };
+}
+
+// Registration corners: four amber L-brackets close in on a box from outside, settle, and
+// blink twice, like autofocus locking on. Release them as marks.
+function registerOn(parent: Element, box: Box, delay: number, pad = 14): SVGPathElement[] {
+	const { x, y, w, h } = box;
+	const amber = { stroke: "var(--amber)", "stroke-width": 3, fill: "none" };
+	const arm = 34;
+	return [
+		[x - pad, y - pad, 1, 1],
+		[x + w + pad, y - pad, -1, 1],
+		[x - pad, y + h + pad, 1, -1],
+		[x + w + pad, y + h + pad, -1, -1],
+	].map(([px, py, dx, dy]) => {
+		const c = svg(parent, "path", {
+			...amber,
+			d: `M${px} ${py + dy * arm}V${py}H${px + dx * arm}`,
+		});
+		c.animate([{ transform: `translate(${-dx * 72}px, ${-dy * 56}px)` }, { transform: "none" }], {
+			duration: 640,
+			delay,
+			easing: css("--ease-settle"),
+			fill: "both",
+		});
+		c.animate(
+			[
+				{ opacity: 0, easing: "linear" },
+				{ opacity: 1, offset: 0.25, easing: "steps(1, end)" },
+				{ opacity: 0.2, offset: 0.62, easing: "steps(1, end)" },
+				{ opacity: 1, offset: 0.7, easing: "steps(1, end)" },
+				{ opacity: 0.2, offset: 0.8, easing: "steps(1, end)" },
+				{ opacity: 1, offset: 0.88 },
+				{ opacity: 1 },
+			],
+			{ duration: 900, delay, fill: "both" },
+		);
+		return c;
+	});
+}
+
+// A panel measures itself in: its outline draws, the surface fills top-down behind it (the
+// clip bleeds past the box so the shadow survives), then the drawn outline hands over to the
+// panel's own hairline border. Returns the outline.
+function panelIn(stage: Stage, panel: HTMLElement, delay: number, duration = ms("--dur-draw")) {
+	const { x, y, w, h } = boxOf(panel);
+	const r = Number.parseFloat(getComputedStyle(panel).borderTopLeftRadius) || 0;
+	const [l, t, rt, b] = [x + 0.5, y + 0.5, x + w - 0.5, y + h - 0.5];
+	const outline = svg(stage.svg, "path", {
+		d: `M${l + r} ${t}H${rt - r}A${r} ${r} 0 0 1 ${rt} ${t + r}V${b - r}A${r} ${r} 0 0 1 ${rt - r} ${b}H${l + r}A${r} ${r} 0 0 1 ${l} ${b - r}V${t + r}A${r} ${r} 0 0 1 ${l + r} ${t}Z`,
+		fill: "none",
+		stroke: "var(--hairline-strong)",
+		"stroke-width": 1.5,
+	});
+	draw(outline, delay, duration);
+	panel.animate(
+		[
+			{ clipPath: "inset(-160px -160px 100% -160px)", opacity: 0.3 },
+			{ clipPath: "inset(-160px)", opacity: 1 },
+		],
+		{
+			duration: ms("--dur-slow"),
+			delay: delay + duration * 0.35,
+			easing: css("--ease-settle"),
+			fill: "both",
+		},
+	);
+	outline.animate([{ opacity: 1 }, { opacity: 0 }], {
+		duration: ms("--dur-normal"),
+		delay: delay + duration,
+		fill: "forwards",
+	});
+	return outline;
+}
+// ── Scene ───────────────────────────────────────────────────────────────────────────────
+// Title. The title rises on frame 1 (a title is often entered by a hard cut). Four amber
+// registration corners lock onto it like an autofocus box, the grid answers the lock, and a
+// dimension line measures the title's real width.
 
 let host: HTMLElement | null = null;
-
-function cornerTicks() {
-	return `
-    <div style="position: absolute; left: -1px; top: -1px; width: 24px; height: 24px;">
-      <div style="position: absolute; left: 0; top: 0; width: 24px; height: 1.5px; background: var(--color-accent);"></div>
-      <div style="position: absolute; left: 0; top: 0; width: 1.5px; height: 24px; background: var(--color-accent);"></div>
-    </div>
-    <div style="position: absolute; right: -1px; top: -1px; width: 24px; height: 24px;">
-      <div style="position: absolute; right: 0; top: 0; width: 24px; height: 1.5px; background: var(--color-accent);"></div>
-      <div style="position: absolute; right: 0; top: 0; width: 1.5px; height: 24px; background: var(--color-accent);"></div>
-    </div>
-    <div style="position: absolute; left: -1px; bottom: -1px; width: 24px; height: 24px;">
-      <div style="position: absolute; left: 0; bottom: 0; width: 24px; height: 1.5px; background: var(--color-accent);"></div>
-      <div style="position: absolute; left: 0; bottom: 0; width: 1.5px; height: 24px; background: var(--color-accent);"></div>
-    </div>
-    <div style="position: absolute; right: -1px; bottom: -1px; width: 24px; height: 24px;">
-      <div style="position: absolute; right: 0; bottom: 0; width: 24px; height: 1.5px; background: var(--color-accent);"></div>
-      <div style="position: absolute; right: 0; bottom: 0; width: 1.5px; height: 24px; background: var(--color-accent);"></div>
-    </div>`;
-}
+let stage: Stage;
+let box: Box = { x: 0, y: 0, w: 0, h: 0 };
 
 export default defineSegment({
 	id: "motion-engineering-sample-title",
-	advances: [2.5, 5.0],
-	voiceover:
-		"Title cards in Motion Engineering. A crosshair tracks to center, dimension lines bracket the title, and a coordinate label appears below.",
+	advances: [1.8, 4.6, 5.2],
+	voiceover: "Apogee two point oh. The build pipeline, engineered for zero drag.",
 
-	mount(el) {
+	async mount(el) {
+		await fontsReady();
 		host = el;
-		el.innerHTML = `
-      <div style="
-        position: relative;
-        height: 100%;
-        background: var(--color-bg);
-        color: var(--color-fg);
-        font-family: var(--font-body);
-        overflow: hidden;
-      ">
-        <div style="
-          position: absolute; inset: 0; pointer-events: none;
-          background:
-            linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px,
-            linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px;
-        "></div>
-
-        <div data-ref="frame" style="
-          position: absolute;
-          inset: var(--safe-y) var(--safe-x);
-          border: 1px solid var(--color-border);
-          opacity: 0;
-        ">
-          ${cornerTicks()}
-
-          <div data-ref="tag" style="
-            position: absolute; left: 80px; top: 100px;
-            font-family: var(--font-mono);
-            font-size: 14px;
-            letter-spacing: 0.25em;
-            color: var(--color-accent);
-            opacity: 0;
-          ">&#9698; DOCUMENT 01 &middot; TITLE</div>
-
-          <div data-ref="headline" style="
-            position: absolute; left: 80px; top: 220px;
-            font-family: var(--font-display);
-            font-weight: 500;
-            font-size: 200px;
-            line-height: 0.98;
-            letter-spacing: -0.02em;
-            opacity: 0;
-          ">Beacon</div>
-
-          <div data-ref="subtitle" style="
-            position: absolute; left: 80px; top: 480px;
-            font-family: var(--font-display);
-            font-size: 56px;
-            font-weight: 400;
-            color: var(--color-muted);
-            opacity: 0;
-          ">Memory &middot; Reasoning &middot; Recovery</div>
-
-          <svg data-ref="dimline" style="position: absolute; left: 80px; top: 580px; overflow: visible;" width="1500" height="60">
-            <line x1="0" y1="20" x2="1500" y2="20" stroke="var(--cyan)" stroke-width="1.5" style="transform-origin: 0 20px; transform: scaleX(0);" />
-            <line x1="0" y1="10" x2="0" y2="30" stroke="var(--cyan)" stroke-width="1.5" style="opacity: 0;" />
-            <line x1="1500" y1="10" x2="1500" y2="30" stroke="var(--cyan)" stroke-width="1.5" style="opacity: 0;" />
-            <text x="750" y="48" fill="var(--cyan)" font-family="var(--font-mono)" font-size="14" text-anchor="middle" style="opacity: 0;">1500.00 PX</text>
-          </svg>
-        </div>
-
-        <svg data-ref="crosshair" style="position: absolute; left: 50%; top: 38%; width: 60px; height: 60px; transform: translate(-50%, -50%); overflow: visible;">
-          <line x1="0" y1="30" x2="60" y2="30" stroke="var(--color-accent)" stroke-width="1.5" style="transform-origin: 30px 30px; transform: scaleX(0);" />
-          <line x1="30" y1="0" x2="30" y2="60" stroke="var(--color-accent)" stroke-width="1.5" style="transform-origin: 30px 30px; transform: scaleY(0);" />
-          <circle cx="30" cy="30" r="6" fill="none" stroke="var(--color-accent)" stroke-width="1.5" style="transform-origin: 30px 30px; transform: scale(0);" />
-        </svg>
-
-        <div data-ref="coord" style="
-          position: absolute; left: var(--safe-x); right: var(--safe-x); bottom: 28px;
-          display: flex; gap: 32px;
-          font-family: var(--font-mono);
-          font-size: 12px;
-          color: var(--color-muted);
-          letter-spacing: 0.1em;
-          opacity: 0;
-        ">
-          <span>X 1240.00</span><span>Y 360.00</span><span>T 0.00s</span>
-          <span style="margin-left: auto;">UNIT: PX &middot; SCALE 1:1</span>
-        </div>
-      </div>
-    `;
+		stage = buildStage(el, { index: "S01 / 10", scene: "Title", key: { x: 900, y: 500 } });
+		stage.content.innerHTML = `
+			<div class="me-label" data-ref="kicker" style="position:absolute; left:160px; top:318px; color:var(--fg-2)"></div>
+			<div class="me-hero" style="position:absolute; left:150px; top:360px">
+				<span class="me-line"><span data-ref="title">Apogee 2.0</span></span>
+			</div>
+			<div class="me-body-lg" style="position:absolute; left:160px; top:736px; width:1400px">
+				<span class="me-line"><span data-ref="subtitle">The build pipeline, engineered for zero drag.</span></span>
+			</div>`;
+		const title = stage.ref("title");
+		const frame = title.parentElement?.parentElement as HTMLElement;
+		// Layout boxes (offset*, unaffected by the dev player's scale or the camera).
+		box = {
+			x: frame.offsetLeft + 10,
+			y: frame.offsetTop + title.offsetHeight * 0.12,
+			w: title.offsetWidth - 14,
+			h: title.offsetHeight * 0.86,
+		};
+		for (const name of ["title", "subtitle"]) stage.ref(name).style.transform = "translateY(112%)";
 	},
 
 	async play(ctx) {
-		const frame = host?.querySelector('[data-ref="frame"]') as HTMLElement;
-		const tag = host?.querySelector('[data-ref="tag"]') as HTMLElement;
-		const headline = host?.querySelector('[data-ref="headline"]') as HTMLElement;
-		const subtitle = host?.querySelector('[data-ref="subtitle"]') as HTMLElement;
-		const coord = host?.querySelector('[data-ref="coord"]') as HTMLElement;
+		if (!host) return;
+		const amb = startAmbient(ctx, stage);
+		const { x, y, w, h } = box;
+		const cx = x + w / 2;
+		const s = stage.svg;
 
-		const crosshairSvg = host?.querySelector('[data-ref="crosshair"]') as SVGElement;
-		const chLineH = crosshairSvg?.querySelector("line:nth-child(1)") as SVGLineElement;
-		const chLineV = crosshairSvg?.querySelector("line:nth-child(2)") as SVGLineElement;
-		const chCircle = crosshairSvg?.querySelector("circle") as SVGCircleElement;
+		// fill (from frame 1): the title rises, the kicker decodes.
+		riseIn([stage.ref("title")], 0, ms("--dur-slow") * 1.1);
+		decode(amb, stage.ref("kicker"), "Launch brief · 2026.11", amb.now() + 60);
 
-		const dimSvg = host?.querySelector('[data-ref="dimline"]') as SVGElement;
-		const dimMain = dimSvg?.querySelector("line:nth-child(1)") as SVGLineElement;
-		const dimTickL = dimSvg?.querySelector("line:nth-child(2)") as SVGLineElement;
-		const dimTickR = dimSvg?.querySelector("line:nth-child(3)") as SVGLineElement;
-		const dimLabel = dimSvg?.querySelector("text") as SVGTextElement;
+		// draw: witness lines drop from the title's edges, below the corner brackets.
+		const dimY = y + h + 48;
+		const measure = svg(s, "g", { stroke: "var(--cyan)", "stroke-width": 2, fill: "none" });
+		const witnessL = svg(measure, "path", { d: `M${x} ${y + h + 26} V${dimY + 14}` });
+		const witnessR = svg(measure, "path", { d: `M${x + w} ${y + h + 26} V${dimY + 14}` });
+		const dimL = svg(measure, "path", { d: `M${cx} ${dimY} H${x}` });
+		const dimR = svg(measure, "path", { d: `M${cx} ${dimY} H${x + w}` });
+		draw(witnessL, 150, 420);
+		draw(witnessR, 150, 420);
 
-		const ease = "cubic-bezier(0.2, 0.8, 0.2, 1)";
-		const opts = { fill: "forwards" as const, easing: ease };
+		// annotate: the corners close in from outside, settle and blink; the grid answers.
+		const lockAt = 760;
+		const corners = registerOn(s, box, lockAt);
+		flare(stage, cx, y + h / 2, lockAt + 420);
 
-		frame.animate([{ opacity: 0 }, { opacity: 1 }], {
-			...opts,
-			duration: 360,
+		// annotate: the dimension line draws out from the centre; its value ticks to the width.
+		const measureAt = lockAt + 700;
+		draw(dimL, measureAt, 640);
+		draw(dimR, measureAt, 640);
+		const chip = svg(s, "rect", {
+			x: cx - 110,
+			y: dimY - 22,
+			width: 220,
+			height: 44,
+			fill: "var(--color-bg)",
 		});
-
-		coord.animate([{ opacity: 0 }, { opacity: 1 }], {
-			...opts,
-			duration: 360,
-			delay: 100,
+		const value = svg(s, "text", {
+			x: cx,
+			y: dimY + 10,
+			"text-anchor": "middle",
+			fill: "var(--cyan)",
+			class: "me-readout",
+			style: "font-size: var(--type-mono)",
 		});
-
-		chLineH.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
-			...opts,
-			duration: 400,
-			delay: 300,
-		});
-
-		chLineV.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], {
-			...opts,
-			duration: 400,
-			delay: 350,
-		});
-
-		chCircle.animate([{ transform: "scale(0)" }, { transform: "scale(1)" }], {
-			...opts,
-			duration: 300,
-			delay: 500,
-		});
-
-		tag.animate(
-			[
-				{ opacity: 0, transform: "translateY(8px)" },
-				{ opacity: 1, transform: "translateY(0)" },
-			],
-			{ ...opts, duration: 360, delay: 500 },
+		for (const node of [chip, value]) {
+			node.animate([{ opacity: 0 }, { opacity: 1 }], {
+				duration: 1,
+				delay: measureAt + 200,
+				fill: "both",
+			});
+		}
+		tickTo(
+			amb,
+			value,
+			w,
+			amb.now() + measureAt + 200,
+			700,
+			(v) => `${Math.round(v).toLocaleString("en-US")} PX`,
 		);
-
-		headline.animate(
-			[
-				{ opacity: 0, transform: "translateY(12px)" },
-				{ opacity: 1, transform: "translateY(0)" },
-			],
-			{ ...opts, duration: 400, delay: 700 },
-		);
-
-		subtitle.animate(
-			[
-				{ opacity: 0, transform: "translateY(8px)" },
-				{ opacity: 1, transform: "translateY(0)" },
-			],
-			{ ...opts, duration: 360, delay: 1000 },
-		);
-
-		dimMain.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
-			...opts,
-			duration: 600,
-			delay: 1300,
-		});
-
-		dimTickL.animate([{ opacity: 0 }, { opacity: 1 }], {
-			...opts,
-			duration: 200,
-			delay: 1300,
-		});
-
-		dimTickR.animate([{ opacity: 0 }, { opacity: 1 }], {
-			...opts,
-			duration: 200,
-			delay: 1700,
-		});
-
-		dimLabel.animate([{ opacity: 0 }, { opacity: 1 }], {
-			...opts,
-			duration: 300,
-			delay: 1900,
-		});
+		const pad = (v: number) => String(Math.round(v)).padStart(4, "0");
+		decode(amb, stage.ref("probe"), `LOCK X ${pad(x)} Y ${pad(y)}`, amb.now() + measureAt);
 
 		await ctx.waitForNext();
+		// Beat 1 ("The build pipeline…"): the subtitle rises in.
+		riseIn([stage.ref("subtitle")], 0);
+
+		await ctx.waitForNext();
+		// Release cue: the HUD lets go; the transition carries the type out.
+		const out = release(amb, [dimL, dimR, witnessL, witnessR], [...corners, chip, value]);
+		await ctx.hold(out);
 	},
 
 	unmount() {
+		// Only the rAF loop stops (via ctx.signal); the last frame stays for the transition.
 		host = null;
 	},
 });

@@ -1,4 +1,4 @@
-import "../../styles/motion-engineering/tokens.css";
+import "../../styles/motion-engineering-legacy/tokens.css";
 import type { Timeline } from "videowright";
 import defaultAudioTrack from "./audio/tracks/v1/track.js";
 
@@ -11,6 +11,9 @@ import defaultAudioTrack from "./audio/tracks/v1/track.js";
 const timeline: Timeline = {
 	meta: {
 		title: "Videowright — The Bloopers",
+		// Pinned to the frozen pre-upgrade snapshot so this video looks as it did before
+		// motion-engineering was rebuilt for demo_v2.
+		style: "motion-engineering-legacy",
 	},
 	default_audio_track: defaultAudioTrack,
 	segments: [

@@ -1,0 +1,434 @@
+/*
+ * demo_v2 kit styles, on top of styles/motion-engineering/tokens.css. Sizes are px at
+ * 1920x1080 and respect the style's legibility floor (labels 22px, mono 28px, body 36px).
+ */
+
+/* The Videowright wordmark face. Bundled, OFL (assets/fonts/OFL.txt). */
+@font-face {
+	font-family: "Outfit";
+	src: url("./assets/fonts/outfit-semibold.woff2") format("woff2");
+	font-weight: 600;
+	font-style: normal;
+	font-display: block;
+}
+
+/* Real screens' UI face, not the instrument's: the Acme product UI (v2-web-tech-gallery) and
+   the browser chrome (.v2-browser). Bundled, OFL (assets/fonts/INTER-OFL.txt). */
+@font-face {
+	font-family: "Inter";
+	src: url("./assets/fonts/inter-variable.woff2") format("woff2");
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: block;
+}
+
+/* ── Logo ───────────────────────────────────────────────────────────────────────────── */
+
+.v2-wordmark {
+	font-family: "Outfit", sans-serif;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	line-height: 1;
+	white-space: nowrap;
+	/* Near-white on dark (the brand's dark-background wordmark), not the HUD's cyan-white. */
+	color: #f4f6fc;
+}
+
+.v2-mark {
+	position: absolute;
+	overflow: visible;
+}
+
+/* ── Terminal ───────────────────────────────────────────────────────────────────────── */
+/* A real screen, not an instrument: neutral greys with no cyan cast. Claude orange appears
+   only on Claude's own marks (.v2-claude). */
+
+.v2-term,
+.v2-pane {
+	--term-bg: #0d0e10;
+	--term-fg: #dcdde0;
+	--term-bright: #f4f4f6;
+	--term-dim: #8d9198;
+	--term-faint: #5c6067;
+	--term-line: #4a4e55;
+	--claude: #d97757;
+}
+
+.v2-term {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	background: var(--term-bg);
+	color: var(--term-fg);
+	font-family: var(--font-mono);
+	font-size: 32px;
+	font-weight: 440;
+	line-height: 46px;
+	font-variant-ligatures: none;
+	-webkit-font-smoothing: antialiased;
+}
+
+.v2-term-world {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 1920px;
+	height: 1080px;
+	transform-origin: 0 0;
+}
+
+.v2-term-bar {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 1920px;
+	height: 56px;
+	background: #18191c;
+	border-bottom: 1px solid #26282c;
+}
+
+.v2-term-dot {
+	position: absolute;
+	top: 21px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #3a3d43;
+}
+
+.v2-term-title {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	line-height: 56px;
+	text-align: center;
+	font-size: 22px;
+	font-weight: 500;
+	color: #7d8188;
+}
+
+.v2-term-row {
+	position: absolute;
+	left: 0;
+	height: 46px;
+	white-space: pre;
+}
+
+.v2-term-input {
+	position: absolute;
+	left: 40px;
+	width: 1840px;
+	height: 92px;
+	box-sizing: border-box;
+	border: 2px solid var(--term-line);
+	border-radius: 14px;
+}
+
+.v2-caret {
+	display: inline-block;
+	width: 19px;
+	height: 40px;
+	vertical-align: -9px;
+	background: var(--term-fg);
+}
+
+.v2-chip {
+	display: inline-block;
+	line-height: 40px;
+	padding: 0 10px;
+	border-radius: 6px;
+	background: #2a2c31;
+	color: #c3c6cc;
+}
+
+.v2-code {
+	color: var(--term-bright);
+	background: #222428;
+	border-radius: 6px;
+	padding: 0 8px;
+}
+
+.v2-claude {
+	color: var(--claude);
+}
+.v2-dim {
+	color: var(--term-dim);
+}
+.v2-faint {
+	color: var(--term-faint);
+}
+.v2-bold {
+	color: var(--term-bright);
+	font-weight: 700;
+}
+
+/* ── Agent pane (agent.ts): the terminal, windowed for split screens ─────────────────── */
+
+.v2-pane {
+	position: absolute;
+	overflow: hidden;
+	box-sizing: border-box;
+	border: 1px solid #2a2c31;
+	border-radius: 14px;
+	background: var(--term-bg);
+	color: var(--term-fg);
+	box-shadow: var(--elev-2);
+	font-family: var(--font-mono);
+	font-size: 30px;
+	font-weight: 440;
+	line-height: 42px;
+	font-variant-ligatures: none;
+	-webkit-font-smoothing: antialiased;
+}
+
+.v2-pane-bar {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 48px;
+	background: #18191c;
+	border-bottom: 1px solid #26282c;
+}
+
+.v2-pane-row {
+	position: absolute;
+	height: 42px;
+	white-space: pre;
+}
+
+.v2-pane-input {
+	position: absolute;
+	box-sizing: border-box;
+	border: 2px solid var(--term-line);
+	border-radius: 12px;
+}
+
+/* ── Browser (browser.ts) ─────────────────────────────────────────────────────────── */
+
+.v2-browser {
+	position: absolute;
+	overflow: hidden;
+	box-sizing: border-box;
+	border-radius: 14px;
+	font-family: "Inter", sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+.v2-browser-dark {
+	--browser-bar: #1c1d21;
+	--browser-pill: #2b2d32;
+	--browser-text: #c3c6cc;
+	--browser-icon: #8d9198;
+	--browser-dot: #3a3d43;
+	--browser-edge: #2a2c31;
+	--browser-view: #000;
+	border: 1px solid var(--browser-edge);
+	box-shadow: var(--elev-2);
+}
+
+.v2-browser-light {
+	--browser-bar: #f4f4f5;
+	--browser-pill: #ffffff;
+	--browser-text: #3f3f46;
+	--browser-icon: #71717a;
+	--browser-dot: #d4d4d8;
+	--browser-edge: #d4d4d8;
+	--browser-view: #ffffff;
+	border: 1px solid var(--browser-edge);
+	box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35), 0 40px 110px rgba(0, 0, 0, 0.55);
+}
+
+.v2-browser-bar {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 64px;
+	box-sizing: border-box;
+	background: var(--browser-bar);
+	border-bottom: 1px solid var(--browser-edge);
+	color: var(--browser-icon);
+}
+
+.v2-browser-dot {
+	position: absolute;
+	top: 25px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: var(--browser-dot);
+}
+
+.v2-browser-icons {
+	position: absolute;
+	left: 112px;
+	top: 18px;
+	height: 28px;
+}
+
+.v2-browser-url {
+	position: absolute;
+	left: 268px;
+	right: 24px;
+	top: 11px;
+	height: 42px;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 0 18px;
+	border: 1px solid var(--browser-edge);
+	border-radius: 21px;
+	background: var(--browser-pill);
+	color: var(--browser-text);
+	font-size: 24px;
+	font-weight: 450;
+	white-space: nowrap;
+}
+
+.v2-browser-url svg {
+	flex: none;
+	color: var(--browser-icon);
+}
+
+.v2-browser-view {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 64px;
+	bottom: 0;
+	overflow: hidden;
+	background: var(--browser-view);
+}
+
+/* ── Gallery (v2-web-tech-gallery) ────────────────────────────────────────────────── */
+
+/* A demo layer: fills the gallery's viewport; one is visible at a time. */
+.v2-demo {
+	position: absolute;
+	inset: 0;
+}
+
+/* ── Dev server preview (v2-interactive-dev) ─────────────────────────────────────── */
+
+.v2-ok {
+	color: var(--ok);
+}
+
+.v2-dev-bar {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 52px;
+	box-sizing: border-box;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0 18px;
+	background: #131316;
+	border-bottom: 1px solid #26282c;
+	font-family: var(--font-mono);
+	font-size: 22px;
+	color: #8d9198;
+	white-space: nowrap;
+}
+
+.v2-dev-hmr {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.v2-dev-hmr i {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--ok);
+}
+
+.v2-dev-controls {
+	position: absolute;
+	left: 16px;
+	right: 16px;
+	top: 628px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	font-family: var(--font-mono);
+	font-size: 22px;
+	white-space: nowrap;
+}
+
+.v2-dev-track {
+	flex: 1 0 100%;
+	height: 4px;
+	margin-bottom: 14px;
+	border-radius: 2px;
+	background: #2a2c31;
+}
+
+.v2-dev-track > div {
+	height: 100%;
+	border-radius: 2px;
+	background: #c3c6cc;
+}
+
+.v2-dev-chip {
+	padding: 6px 12px;
+	border-radius: 8px;
+	background: #1c1d21;
+	color: #8d9198;
+}
+
+.v2-dev-chip.on {
+	background: #2b2d32;
+	color: #f4f4f6;
+}
+
+/* The first draft's title card: deliberately plain and off-brand, in a generic system sans.
+   Sizes are on the 1920 x 1080 canvas; the preview shows it at half scale. */
+.v2-draft {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background: #ffffff;
+	color: #111111;
+	font-family: Arial, "Liberation Sans", Helvetica, sans-serif;
+}
+
+.v2-draft-logo {
+	position: relative;
+	width: 150px;
+	height: 150px;
+	margin-bottom: 44px;
+	border-radius: 50%;
+	background: #2f6fde;
+}
+
+.v2-draft-logo::after {
+	content: "";
+	position: absolute;
+	left: 58px;
+	top: 42px;
+	border-left: 56px solid #ffffff;
+	border-top: 33px solid transparent;
+	border-bottom: 33px solid transparent;
+}
+
+.v2-draft-name {
+	font-size: 150px;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.v2-draft-tag {
+	margin-top: 22px;
+	font-size: 72px;
+	color: #666666;
+}

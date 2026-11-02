@@ -668,6 +668,116 @@ describe("Player integration", () => {
 		player.destroy();
 	});
 
+	it("load_preloads_the_timelines_transitions_and_cut", async () => {
+		// Loaded lazily, a transition module is a real fetch that races the render clock on its
+		// first use, shifting that transition and the incoming segment between runs.
+		const loads: string[] = [];
+		const events: string[] = [];
+		const run: Transition = async () => {
+			events.push("transition-run");
+		};
+		const transitions = makeTransitionLoaders();
+		const cut = transitions.get("cut");
+		transitions.set("cut", () => {
+			loads.push("cut");
+			return cut ? cut() : Promise.reject(new Error("no cut"));
+		});
+		transitions.set("sweep", () => {
+			loads.push("sweep");
+			return Promise.resolve({ default: run });
+		});
+		transitions.set("unused", () => {
+			loads.push("unused");
+			return Promise.resolve({ default: run });
+		});
+		const seg0 = makeSegment({ id: "seg-0" });
+		const seg1 = makeSegment({
+			id: "seg-1",
+			mount() {
+				events.push("seg-1-mount");
+			},
+		});
+
+		const player = new Player(host);
+		await player.load(
+			{ meta: { title: "T" }, segments: [{ id: "seg-0" }, { id: "seg-1", transition: "sweep" }] },
+			makeLoader([seg0, seg1]),
+			transitions,
+		);
+		expect([...loads].sort()).toEqual(["cut", "sweep"]);
+
+		await player.start();
+		await flush();
+		pressKey("ArrowRight");
+		await flush(20);
+		// The transition comes from the preload: no second fetch, mount then run.
+		expect([...loads].sort()).toEqual(["cut", "sweep"]);
+		expect(events).toEqual(["seg-1-mount", "transition-run"]);
+		expect(player.currentSegmentId).toBe("seg-1");
+
+		player.destroy();
+	});
+
+	it("load_resolves_only_after_transition_modules_load", async () => {
+		// render_entry awaits load() before it reports ready, so capture cannot start while a
+		// transition module is still loading.
+		let release = () => {};
+		const transitions = makeTransitionLoaders();
+		transitions.set(
+			"slow",
+			() =>
+				new Promise((resolve) => {
+					release = () => resolve({ default: async () => {} });
+				}),
+		);
+		const player = new Player(host);
+		let loaded = false;
+		const loading = player
+			.load(
+				{ meta: { title: "T" }, segments: [{ id: "seg-0" }, { id: "seg-1", transition: "slow" }] },
+				makeLoader([makeSegment({ id: "seg-0" }), makeSegment({ id: "seg-1" })]),
+				transitions,
+			)
+			.then(() => {
+				loaded = true;
+			});
+		await flush(20);
+		expect(loaded).toBe(false);
+		release();
+		await loading;
+		expect(loaded).toBe(true);
+
+		player.destroy();
+	});
+
+	it("load_tolerates_a_failing_transition_module_and_reports_it_on_use", async () => {
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const transitions = makeTransitionLoaders();
+		let attempts = 0;
+		transitions.set("broken", () => {
+			attempts++;
+			return Promise.reject(new Error("transition module boom"));
+		});
+		const player = new Player(host);
+		await player.load(
+			{ meta: { title: "T" }, segments: [{ id: "seg-0" }, { id: "seg-1", transition: "broken" }] },
+			makeLoader([makeSegment({ id: "seg-0" }), makeSegment({ id: "seg-1" })]),
+			transitions,
+		);
+		expect(attempts).toBe(1);
+		await player.start();
+		await flush();
+		pressKey("ArrowRight");
+		await flush(20);
+		expect(attempts).toBe(2);
+		expect(player.currentState).toBe("errored");
+		expect(host.querySelector(".vw-hud-error-overlay")?.textContent).toContain(
+			"transition module boom",
+		);
+		player.destroy();
+		consoleSpy.mockRestore();
+	});
+
 	it("destroy cleans up HUD style element", async () => {
 		const seg = makeSegment({ id: "seg-0", async play() {} });
 		const player = new Player(host);
