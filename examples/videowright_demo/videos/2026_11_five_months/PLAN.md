@@ -92,3 +92,9 @@ See `voiceover_script/script.md` (one section per segment). Provider scripts: `a
 - Timing: every cued advance is 9 frames (0.150s) before its word's frame; exits are 0.15s before the next segment's first word, except the narration-sync pair's (41.75s: its Now clip holds 4.05s before the Asher line at 42.60s). The voice beat's words and the CTA's feature chips follow `timing.json` directly (they are captions of the words).
 - Departure: the 3D pair's Now clip comes from a render with the beat held longer (see Footage).
 
+
+### 2026-11-02 — First full render (v1)
+- `npx videowright render 2026_11_five_months`: 73.38s, 4,403 frames at 1920×1080/60, audio track v1 muxed (-14.0 LUFS, -1.5 dBTP in the MP4). 23 min on this 4-core, GPU-less box.
+- Checked: stills across every beat; the voice beat and CTA fixes are in; the first sweep's beam is ~58% across the window at the whoosh's peak (11.0s), so the sound lands mid-gesture; the dev player plays the clips (no console errors).
+- Also from review: the Then title clip starts at 9.35s (its first 0.25s was an almost empty frame), and the shim tests' browser is closed at file level (the deferred-frame block had been running on a closed browser when the whole file ran).
+- Waiting on the owner: sign-off on the rig, a listen to the mix.
