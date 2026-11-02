@@ -66,7 +66,7 @@ One fixed layout for every Then/Now pair. Nothing moves between Then and Now exc
 | Title card | 9.10 + 4.25s (the reveal) | 0.00 + 4.90s (from the hard cut: bloom, strokes, wordmark) |
 | 3D + Lottie | 19.25 + 3.55s | 12.10 + 6.70s (planet, satellite, Lottie launch) |
 | Product UI | 23.20 + 4.30s (KPIs, the tab switching itself) | 20.20 + 6.30s (cursor → Customers → note → toast) |
-| Narration sync | 46.50 + 3.95s (the line highlighted) | 32.25 + 4.13s (the edit, words lit, block 06 re-times) |
+| Narration sync | 46.50 + 3.95s (the line highlighted) | 30.10 + 4.15s (line 2 lit word by word on its real times, then the edit begins) |
 
 ## Script
 See `voiceover_script/script.md` (one section per segment). Provider scripts: `audio/originals/voiceovers/v1/provider_script.md` (Cosman-1, v4) and `audio/originals/voiceovers/then_asher_v2/provider_script.md` (Asher, v2).
