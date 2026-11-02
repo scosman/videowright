@@ -46,16 +46,34 @@ interface Typing {
 		cues: Record<string, { at: number; from: number; to: number }>;
 		pasteAt: number;
 		enterAt: number;
+		afterEnter: { say: number; tool2: number; resultLag: number; pullBack: number };
+		reply: { text: string; words: number; every: number };
+		settledAt: number;
 	};
 	spreadOver(chars: number, onsets: readonly number[]): number[];
-	typeSchedule(text: string, start: number, end: number, seed?: number): number[];
+	typeSchedule(
+		text: string,
+		start: number,
+		end: number,
+		seed?: number,
+		rhythm?: { jitter?: number; beat?: number; beatAfter?: RegExp },
+	): number[];
 	charsAt(times: readonly number[], t: number): number;
 	cueOnsets(cues: Array<{ at: number; from: number; to: number }>): number[];
 	coldOpenCharTimes(): number[];
 }
 
+interface WrappedLine {
+	text: string;
+	start: number;
+}
 interface Agent {
 	wrapColumns(text: string, cols: number): string[];
+	wrapSpans(text: string, cols: number): WrappedLine[];
+	typedLines(
+		lines: readonly WrappedLine[],
+		chars: number,
+	): { shown: number[]; caretLine: number; caretCol: number };
 }
 interface Gear {
 	cx: number;
@@ -151,12 +169,12 @@ describe("HUD decode", () => {
 		expect(el.textContent).toBe("LOCK X 0320");
 	});
 
-	it("keeps an earlier-scheduled decode until a later one starts (the title card's probe)", () => {
+	it("keeps an earlier-scheduled decode until a later one starts", () => {
 		const ticker = manualTicker();
 		const el = { textContent: "" };
 		hud.decode(ticker, el, "LOCK X 0320 Y 0526", 640);
 		ticker.run(0, 470);
-		// Scheduled at the wordmark cue, due well after LOCK has resolved.
+		// Scheduled while the first is still pending, due well after it has resolved.
 		hud.decode(ticker, el, "TARGET LOCKED", 1790);
 		ticker.run(486, 1700);
 		expect(el.textContent).toBe("LOCK X 0320 Y 0526");
@@ -175,7 +193,7 @@ describe("HUD decode", () => {
 	});
 
 	it("lets the decode scheduled last win, even when an older one starts later", () => {
-		// The title card opened at a later beat (dev deep link): every probe is scheduled at once.
+		// Three decodes scheduled together, the last one due first: it still owns the readout.
 		const ticker = manualTicker();
 		const el = { textContent: "" };
 		hud.decode(ticker, el, "LOCK X 0320 Y 0526", 640);
@@ -196,8 +214,8 @@ describe("HUD decode", () => {
 	});
 
 	it("finishes a decode whose segment's signal aborts mid-way (no scrambled readout)", () => {
-		// The persistent HUD outlives segments: a segment unmounting while its probe decodes
-		// must not freeze the shared readout on noise.
+		// The persistent HUD outlives segments: a segment unmounting while one of its readouts
+		// decodes must not freeze the shared readout on noise.
 		const ticker = manualTicker();
 		const el = { textContent: "" };
 		const segment = new AbortController();
@@ -286,6 +304,15 @@ describe("cold open typing", () => {
 		expect(typing.spreadOver(0, [0.2])).toEqual([]);
 	});
 
+	it("has played out (reply streamed, tools in, camera at rest) by settledAt", () => {
+		const { enterAt, afterEnter, reply, settledAt } = typing.COLD_OPEN;
+		const chunks = Math.ceil(reply.text.split(" ").length / reply.words);
+		const replyEnd = enterAt + afterEnter.say + (chunks - 1) * reply.every;
+		expect(settledAt).toBeGreaterThanOrEqual(replyEnd);
+		expect(settledAt).toBeGreaterThanOrEqual(enterAt + afterEnter.tool2 + afterEnter.resultLag);
+		expect(settledAt).toBeGreaterThanOrEqual(enterAt + afterEnter.pullBack);
+	});
+
 	it("knows the SFX's keystrokes in order and inside the file", () => {
 		const onsets = typing.LAPTOP_TYPING_ONSETS;
 		for (let i = 1; i < onsets.length; i++) expect(onsets[i]).toBeGreaterThan(onsets[i - 1]);
@@ -325,6 +352,21 @@ describe("typing on a seeded rhythm", () => {
 		expect(afterSpaces.reduce((a, b) => a + b, 0) / afterSpaces.length).toBeGreaterThan(mean);
 	});
 
+	it("takes a rhythm: the jitter's bound and a longer beat after chosen characters", () => {
+		const request = "update the title card (name, tagline), and add some motion";
+		const times = typing.typeSchedule(request, 0, 1000, 3, {
+			jitter: 0.3,
+			beat: 5,
+			beatAfter: /[,)]/,
+		});
+		const gaps = times.slice(1).map((t, i) => t - times[i]);
+		const plain = gaps.filter((_, i) => !/[,)]/.test(request[i]));
+		const beats = gaps.filter((_, i) => /[,)]/.test(request[i]));
+		// ±30%: no plain gap is more than 1.3/0.7 of another.
+		expect(Math.max(...plain) / Math.min(...plain)).toBeLessThanOrEqual(1.3 / 0.7 + 1e-9);
+		expect(Math.min(...beats)).toBeGreaterThan(Math.max(...plain));
+	});
+
 	it("handles empty and one-character text", () => {
 		expect(typing.typeSchedule("", 0, 100)).toEqual([]);
 		expect(typing.typeSchedule("x", 40, 100)).toEqual([40]);
@@ -362,6 +404,25 @@ describe("agent pane wrapping", () => {
 			"ts",
 		]);
 		expect(agent.wrapColumns("", 10)).toEqual([""]);
+	});
+
+	it("knows where each wrapped line starts in the text", () => {
+		const text = "ab segments/title-card.ts ok";
+		const spans = agent.wrapSpans(text, 10);
+		expect(spans.map((l) => l.text)).toEqual(["ab", "segments/t", "itle-card.", "ts ok"]);
+		for (const line of spans)
+			expect(text.slice(line.start, line.start + line.text.length)).toBe(line.text);
+	});
+
+	it("types through a split word without charging a separator", () => {
+		const spans = agent.wrapSpans("ab segments/title-card.ts", 10);
+		// "ab " typed, then "segments/t" and 3 more: the caret is 3 into the split's second line.
+		const typed = agent.typedLines(spans, 3 + 10 + 3);
+		expect(typed.shown).toEqual([2, 10, 3, 0]);
+		expect([typed.caretLine, typed.caretCol]).toEqual([2, 3]);
+		// A typed break space leaves the caret at the end of its line.
+		expect(agent.typedLines(spans, 3)).toMatchObject({ caretLine: 0, caretCol: 2 });
+		expect(agent.typedLines(spans, 0)).toMatchObject({ caretLine: 0, caretCol: 0 });
 	});
 });
 

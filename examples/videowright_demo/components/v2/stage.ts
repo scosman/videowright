@@ -8,11 +8,13 @@ import { type Ticker, createTicker, css, draw, expoOut, ms, sineInOut, svg } fro
 // is the persistent overlay in hud.ts, shared by every segment.
 
 const GRID_OVERSCAN = 160;
+/** The grid scan's period (ms): one sweep down the plane. */
+export const SCAN_PERIOD = 7000;
 
 export interface StageOptions {
 	/** Focal point for the key light, in stage px. */
 	key?: { x: number; y: number };
-	/** Offset into the 7s grid scan (ms), so consecutive scenes don't scan in step. */
+	/** Offset into the grid scan (ms, SCAN_PERIOD), so consecutive scenes don't scan in step. */
 	scanPhase?: number;
 }
 
@@ -76,24 +78,25 @@ export interface Ambient extends Ticker {
 export function startAmbient(
 	ctx: PlayerContext,
 	stage: Stage,
-	opts: { driftMs?: number } = {},
+	opts: { driftMs?: number; push?: number } = {},
 ): Ambient {
 	const ticker = createTicker(() => ctx.clock(), ctx.signal);
 	const nudges: Array<{ at: number; by: number; duration: number }> = [];
 	let restAt = Number.POSITIVE_INFINITY;
 	let restFor = 1;
-	// One push over --dur-ambient by default; a scene that holds still for seconds (the title
-	// card's hero hold) passes a shorter drift so the push reads.
+	// One push (2.4% by default) over --dur-ambient; a scene that holds still for seconds (the
+	// title card's hero hold) passes a shorter drift and a stronger push so it reads.
 	const driftMs = opts.driftMs ?? (ms("--dur-ambient") || 16000);
+	const push = opts.push ?? 0.024;
 	stage.scan.animate([{ maskPosition: "0 -320px" }, { maskPosition: "0 1720px" }], {
-		duration: 7000,
+		duration: SCAN_PERIOD,
 		delay: -stage.scanPhase,
 		iterations: Number.POSITIVE_INFINITY,
 	});
 	const camera = (t: number) => {
 		const settle = 1 - sineInOut((t - restAt) / restFor);
 		const pan = sineInOut(t / driftMs) * settle;
-		let zoom = 0.024 * sineInOut(t / driftMs);
+		let zoom = push * sineInOut(t / driftMs);
 		for (const n of nudges) zoom += n.by * expoOut((t - n.at) / n.duration);
 		zoom *= settle;
 		const f = (v: number, d = 2) => v.toFixed(d);
@@ -167,12 +170,14 @@ export function flare(
  * The style's panel entrance (the samples' panelIn): a hairline outline draws around the
  * panel, the surface fills top-down behind it, and the outline hands over to the panel's own
  * border. The outline is drawn in the stage's annotation layer, at the panel's layout box.
+ * `fillLag` is how far into the outline's draw (a fraction of `duration`) the surface starts.
  */
 export function panelIn(
 	stage: Stage,
 	panel: HTMLElement,
 	delay: number,
 	duration = ms("--dur-draw"),
+	fillLag = 0.35,
 ): SVGPathElement {
 	const { x, y, w, h } = boxOf(panel);
 	const r = Number.parseFloat(getComputedStyle(panel).borderTopLeftRadius) || 0;
@@ -191,7 +196,7 @@ export function panelIn(
 		],
 		{
 			duration: ms("--dur-slow"),
-			delay: delay + duration * 0.35,
+			delay: delay + duration * fillLag,
 			easing: css("--ease-settle"),
 			fill: "both",
 		},

@@ -1,11 +1,9 @@
-import { lockOn } from "../../components/v2/hud.js";
 import { type Ticker, css, draw, ms, svg, tidy } from "../../components/v2/motion.js";
 
 // Demo 1, animated SVG: a gear train drawn like a blueprint. Every gear is generated (teeth,
 // hub, bore and keyway, lightening holes), drawn in stroke by stroke, filled, then turned:
 // meshed, each at the speed its tooth ratio says. Construction lines (pitch circles, centre
-// marks) and the tooth counts are the HUD's cyan; the drive gear takes the amber lock.
-// The geometry is pure (no DOM), so the mesh is unit-tested.
+// marks) are the HUD's cyan. The geometry is pure (no DOM), so the mesh is unit-tested.
 
 export interface GearSpec {
 	teeth: number;
@@ -102,15 +100,6 @@ export const TRAIN: readonly GearSpec[] = [
 	{ teeth: 22, from: 2, angle: 60 },
 ];
 
-/** Where each gear's tooth count sits (demo px, anchor), clear of every outline. */
-const TRAIN_LABELS: ReadonlyArray<[number, number, "start" | "middle" | "end"]> = [
-	[300, 694, "middle"],
-	[543, 134, "middle"],
-	[640, 562, "middle"],
-	[1012, 188, "start"],
-	[772, 682, "end"],
-];
-
 /** The drive gear's speed (deg/s) once spun up, and how long the spin-up takes (ms). */
 const DRIVE = 34;
 const SPIN_UP = 900;
@@ -142,7 +131,6 @@ export function createGears(parent: HTMLElement): GearsDemo {
 		opacity: 0.7,
 	});
 	const bodies = svg(root, "g", {});
-	const labels = svg(root, "g", {});
 
 	interface Built {
 		gear: Gear;
@@ -151,9 +139,8 @@ export function createGears(parent: HTMLElement): GearsDemo {
 		details: SVGGeometryElement[];
 		pitch: SVGCircleElement;
 		cross: SVGPathElement;
-		label: SVGTextElement;
 	}
-	const built: Built[] = gears.map((gear, i) => {
+	const built: Built[] = gears.map((gear) => {
 		const pitch = svg(construction, "circle", {
 			cx: gear.cx,
 			cy: gear.cy,
@@ -202,17 +189,7 @@ export function createGears(parent: HTMLElement): GearsDemo {
 				);
 			}
 		}
-		// Tooth count, set in the free space beside each gear (TRAIN_LABELS).
-		const [lx, ly, anchor] = TRAIN_LABELS[i];
-		const label = svg(labels, "text", {
-			x: lx,
-			y: ly,
-			"text-anchor": anchor,
-			fill: "var(--cyan)",
-			class: "me-readout",
-		});
-		label.textContent = `Z${gear.teeth}${i === 0 ? " · DRIVE" : ""}`;
-		return { gear, spin, outline, details, pitch, cross, label };
+		return { gear, spin, outline, details, pitch, cross };
 	});
 
 	let stopped = false;
@@ -241,16 +218,7 @@ export function createGears(parent: HTMLElement): GearsDemo {
 				delay: at + 640,
 				fill: "both",
 			});
-			b.label.animate(
-				[
-					{ opacity: 0, transform: "translateY(14px)" },
-					{ opacity: 1, transform: "none" },
-				],
-				{ duration: ms("--dur-normal"), delay: at + 700, easing: settle, fill: "both" },
-			);
 		});
-		const lead = built[0].gear;
-		lockOn(root, lead.cx, lead.cy, delay + 980, 30);
 		// Turn: one clock for the whole train, so the mesh holds on every frame. The drive spins
 		// up over SPIN_UP (quadratic ease-in), then turns at DRIVE deg/s.
 		const startAt = ticker.now() + delay + 520;

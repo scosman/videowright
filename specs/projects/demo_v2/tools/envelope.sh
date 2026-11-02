@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Write the voiceover beat's waveform: segments/v2-voiceover-sync/envelope.ts, the loudness of
-# demo_v2's default track every 0.1s. Re-run after rebuilding the track (Phase 6 re-tune); a
-# test fails while the envelope's length doesn't match the track's.
+# demo_v2's default track every 0.1s, and the SHA-256 of the track it read. Re-run after
+# rebuilding the track; a test fails while the hash doesn't match track.mp3.
 #
 # Usage: envelope.sh [track.mp3]
 set -euo pipefail
@@ -11,8 +11,10 @@ track="${1:-$DEMO_DIR/videos/demo_v2/audio/tracks/v1/track.mp3}"
 out="$DEMO_DIR/segments/v2-voiceover-sync/envelope.ts"
 
 ffmpeg -v error -i "$track" -ac 1 -ar 8000 -f s16le - | python3 -I -c '
-import math, struct, sys
+import hashlib, math, struct, sys
 data = sys.stdin.buffer.read()
+with open(sys.argv[1], "rb") as f:
+	sha = hashlib.sha256(f.read()).hexdigest()
 samples = struct.unpack("<%dh" % (len(data) // 2), data)
 rms = []
 for i in range(0, len(samples), 800):  # 0.1s at 8 kHz
@@ -35,5 +37,8 @@ for i, line in enumerate(lines):
 	print("\t\"%s\"%s" % (line, end))
 print("")
 print("export const ENVELOPE_STEP_S = 0.1;")
-' >"$out"
+print("")
+print("/** SHA-256 of the track this envelope was read from: a test fails once the track changes. */")
+print("export const TRACK_SHA256 = \"%s\";" % sha)
+' "$track" >"$out"
 echo "$out"

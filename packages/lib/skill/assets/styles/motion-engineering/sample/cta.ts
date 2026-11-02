@@ -450,7 +450,7 @@ export default defineSegment({
 				<span class="me-line"><span data-ref="title">Apogee 2.0</span></span>
 			</div>
 			<div class="me-panel" data-ref="input" style="position:absolute; left:${INPUT.x}px; top:${INPUT.y}px; width:${INPUT.w}px; height:${INPUT.h}px">
-				<div class="me-readout-lg me-signal" data-ref="prompt" style="position:absolute; left:40px; top:31px">❯</div>
+				<div class="me-readout-lg" data-ref="prompt" style="position:absolute; left:40px; top:31px; color:var(--color-muted)">❯</div>
 				<div class="me-readout-lg" style="position:absolute; left:112px; top:31px; color:var(--color-fg); text-transform:none; white-space:pre"><span data-ref="typed"></span><span data-ref="caret" style="display:inline-block; width:4px; height:60px; margin-left:4px; vertical-align:-10px; background:var(--color-fg)"></span></div>
 				<div class="me-chip" data-ref="key" style="position:absolute; right:32px; top:30px">
 					<span class="me-label" style="color:var(--fg-2)">⏎ Return</span>
@@ -510,6 +510,12 @@ export default defineSegment({
 				fill: "forwards",
 			});
 		});
+		// One signal at a time: the prompt turns amber as the corners hand the lockup over to it.
+		stage.ref("prompt").animate([{ color: "var(--color-muted)" }, { color: "var(--amber)" }], {
+			duration: ms("--dur-fast"),
+			delay: ms("--dur-slow") * 0.5,
+			fill: "both",
+		});
 		const typed = stage.ref("typed");
 		const typeAt = amb.now() + 360;
 		let elapsed = 0;
@@ -526,9 +532,12 @@ export default defineSegment({
 		decode(amb, stage.ref("probe"), `INPUT ${COMMAND.length} CHARS`, amb.now() + 360);
 
 		await ctx.waitForNext();
-		// Beat 2 ("Your first cached build…"): the key presses, READY decodes, the closing line
-		// rises.
+		// Beat 2 ("Your first cached build…"): the key presses, the line is submitted (the caret
+		// leaves it), READY decodes, the closing line rises.
 		const now = amb.now();
+		const caret = stage.ref("caret");
+		for (const a of caret.getAnimations()) a.cancel();
+		caret.animate([{ opacity: 0 }, { opacity: 0 }], { duration: 1, delay: 140, fill: "forwards" });
 		const key = stage.ref("key");
 		key.animate(
 			[
@@ -544,7 +553,7 @@ export default defineSegment({
 
 		await ctx.waitForNext();
 		// Release cue: the corners let go and the camera rests. Only the ambient layer (the
-		// timecode, the scan, the caret) keeps moving.
+		// timecode, the scan, the drift) keeps moving.
 		const out = release(amb, [], corners);
 		await ctx.hold(out);
 	},

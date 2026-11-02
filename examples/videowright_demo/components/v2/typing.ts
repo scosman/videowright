@@ -45,6 +45,16 @@ export function spreadOver(chars: number, onsets: readonly number[]): number[] {
 	});
 }
 
+/** The rhythm of typeSchedule: each key's gap is 1 ± `jitter`, × `beat` after `beatAfter`. */
+export interface TypingRhythm {
+	/** Per-key jitter, as a fraction of the average gap (default 0.4). */
+	jitter?: number;
+	/** How much longer the gap after a `beatAfter` character is (default 1.7×). */
+	beat?: number;
+	/** Characters that are followed by the longer beat (default spaces and punctuation). */
+	beatAfter?: RegExp;
+}
+
 /**
  * Times (ms) for typing `text` between `start` and `end` (ms) on a seeded, human rhythm: each
  * key's gap jitters, and the key after a space or punctuation waits longer. The first
@@ -52,16 +62,22 @@ export function spreadOver(chars: number, onsets: readonly number[]): number[] {
  * span from its advance window and a re-timed take re-paces the typing. No Math.random: the
  * same text and seed type the same in every render.
  */
-export function typeSchedule(text: string, start: number, end: number, seed = 1): number[] {
+export function typeSchedule(
+	text: string,
+	start: number,
+	end: number,
+	seed = 1,
+	rhythm: TypingRhythm = {},
+): number[] {
+	const { jitter = 0.4, beat = 1.7, beatAfter = /[\s,.:/]/ } = rhythm;
 	const n = text.length;
 	if (n === 0) return [];
 	if (n === 1) return [start];
 	const gaps: number[] = [];
 	for (let i = 1; i < n; i++) {
 		const h = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
-		const jitter = h - Math.floor(h);
-		const beat = /[\s,.:/]/.test(text[i - 1]) ? 1.7 : 1;
-		gaps.push((0.6 + 0.8 * jitter) * beat);
+		const r = h - Math.floor(h);
+		gaps.push((1 + jitter * (2 * r - 1)) * (beatAfter.test(text[i - 1]) ? beat : 1));
 	}
 	const total = gaps.reduce((a, b) => a + b, 0);
 	let acc = 0;
@@ -90,6 +106,14 @@ export function charsAt(times: readonly number[], t: number): number {
 const ENTER_AT = 4.1;
 /** After Enter (seconds): Claude's reply, the two tool calls, each result's lag, the pull-back. */
 const AFTER_ENTER = { say: 0.3, tool1: 0.65, tool2: 1.0, resultLag: 0.13, pullBack: 1.3 } as const;
+/** Claude's reply, streamed in chunks of `words` words every `every` seconds from `say`. */
+const REPLY = {
+	text: "I'll turn your script into a video with Videowright.",
+	words: 2,
+	every: 0.045,
+} as const;
+/** Seconds from the reply's first chunk to its last. */
+const replyStream = () => (Math.ceil(REPLY.text.split(" ").length / REPLY.words) - 1) * REPLY.every;
 
 export const COLD_OPEN = {
 	/** The prompt, split at the breath in the SFX. */
@@ -108,12 +132,20 @@ export const COLD_OPEN = {
 	pasteAt: 3.62,
 	enterAt: ENTER_AT,
 	afterEnter: AFTER_ENTER,
+	reply: REPLY,
 	/**
-	 * When the session has fully played out (seconds): every line in, the camera at rest. The
-	 * first advance ("Video is ready") must not come earlier in a render, or the script jumps
-	 * ahead to this state (the dev path for an early Next); a test checks the track.
+	 * When the session has fully played out (seconds): every line in (the reply streamed, both
+	 * tool results), the camera at rest. The first advance ("Video is ready") must not come
+	 * earlier in a render, or the script jumps ahead to this state (the dev path for an early
+	 * Next); a test checks the track.
 	 */
-	settledAt: ENTER_AT + Math.max(AFTER_ENTER.tool2 + AFTER_ENTER.resultLag, AFTER_ENTER.pullBack),
+	settledAt:
+		ENTER_AT +
+		Math.max(
+			AFTER_ENTER.say + replyStream(),
+			AFTER_ENTER.tool2 + AFTER_ENTER.resultLag,
+			AFTER_ENTER.pullBack,
+		),
 } as const;
 
 /** Time (ms) each prompt character appears: burst 1 types the first clause, burst 2 the rest. */

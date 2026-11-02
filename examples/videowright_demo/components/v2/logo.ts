@@ -7,7 +7,7 @@ import { draw } from "./motion.js";
 // recoloured into the HUD palette.
 
 /** The mark's visible extent in its own viewBox units: the strokes plus their round caps. */
-export const MARK_BOUNDS = { x: 41, y: 21, w: 486, h: 294 } as const;
+export const MARK_BOUNDS = { x: 75, y: 21, w: 452, h: 294 } as const;
 
 let instances = 0;
 

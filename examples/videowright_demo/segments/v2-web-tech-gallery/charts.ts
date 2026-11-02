@@ -1,11 +1,4 @@
-import {
-	BarChart,
-	type BarSeriesOption,
-	LineChart,
-	type LineSeriesOption,
-	PieChart,
-	type PieSeriesOption,
-} from "echarts/charts";
+import { LineChart, type LineSeriesOption, PieChart, type PieSeriesOption } from "echarts/charts";
 import { GridComponent, type GridComponentOption } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
@@ -14,15 +7,14 @@ import { tickTo } from "../../components/v2/hud.js";
 import { type Ticker, css, ms, tidy } from "../../components/v2/motion.js";
 
 // Demo 2, a real charting library: ECharts on its canvas renderer, styled in the instrument's
-// palette (cyan is measurement; the type is the style's own). Three charts animate in with
-// ECharts' own entrance, then stream live data. ECharts animates on requestAnimationFrame and
-// the page clock, both virtualised in a render; the data updates fire from ctx.clock() on a
-// fixed schedule, and the data is seeded, so every render is the same.
+// palette (cyan is measurement; the type is the style's own). Two charts, side by side, animate
+// in with ECharts' own entrance: a streaming throughput chart and a cache-hit donut. ECharts
+// animates on requestAnimationFrame and the page clock, both virtualised in a render; the data
+// updates fire from ctx.clock() on a fixed schedule, and the data is seeded, so every render is
+// the same.
 
-echarts.use([LineChart, BarChart, PieChart, GridComponent, CanvasRenderer]);
-type Option = echarts.ComposeOption<
-	LineSeriesOption | BarSeriesOption | PieSeriesOption | GridComponentOption
->;
+echarts.use([LineChart, PieChart, GridComponent, CanvasRenderer]);
+type Option = echarts.ComposeOption<LineSeriesOption | PieSeriesOption | GridComponentOption>;
 
 const MONO = "JetBrains Mono";
 const POINTS = 36;
@@ -46,9 +38,6 @@ const AXIS = Array.from({ length: POINTS }, (_, i) => {
 	if ((POINTS - 1 - i) % 10 !== 0) return "";
 	return ago === 0 ? "NOW" : `-${ago} S`;
 });
-
-const SEGMENTS = ["01", "02", "03", "04", "05", "06", "07", "08"];
-const barValue = (i: number, tick: number) => 18 + ((i * 37 + tick * 11) % 23) + (i === 2 ? 14 : 0);
 
 export interface ChartsDemo {
 	layer: HTMLElement;
@@ -80,12 +69,11 @@ export function createCharts(parent: HTMLElement): ChartsDemo {
 	layer.className = "v2-demo";
 	parent.appendChild(layer);
 	const cyan = css("--cyan");
-	const fg2 = css("--fg-2");
 	const muted = css("--color-muted");
 	const border = css("--color-border");
 
-	// Throughput: a streaming area chart with its live value.
-	const top = panel(layer, 0, 0, 1100, 472, "Throughput · frames / s");
+	// Throughput: a streaming area chart with its live value, the wide column.
+	const top = panel(layer, 0, 0, 700, 800, "Throughput · frames / s");
 	const value = document.createElement("div");
 	value.className = "me-readout-lg";
 	value.style.cssText = "position:absolute; left:30px; top:64px; color:var(--color-fg)";
@@ -97,17 +85,15 @@ export function createCharts(parent: HTMLElement): ChartsDemo {
 		"position:absolute; right:32px; top:30px; display:flex; gap:12px; align-items:center";
 	live.innerHTML = `<span data-ref="dot" style="width:12px; height:12px; border-radius:50%; background:var(--ok)"></span>LIVE`;
 	top.appendChild(live);
-	const line = chartHost(top, 16, 136, 1068, 320);
+	const line = chartHost(top, 16, 152, 668, 632);
 
-	// Render time per segment, and the cache hit rate.
-	const left = panel(layer, 0, 504, 668, 296, "Render ms · by segment");
-	const bars = chartHost(left, 16, 64, 636, 224);
-	const right = panel(layer, 700, 504, 400, 296, "Cache hit");
-	const donut = chartHost(right, 0, 40, 400, 256);
+	// The cache hit rate: a donut with its value at the centre, the narrow column.
+	const right = panel(layer, 732, 0, 368, 800, "Cache hit");
+	const donut = chartHost(right, 0, 40, 368, 760);
 	const rate = document.createElement("div");
 	rate.className = "me-readout-lg";
 	rate.style.cssText =
-		"position:absolute; left:0; right:0; top:146px; text-align:center; color:var(--color-fg)";
+		"position:absolute; left:0; right:0; top:392px; text-align:center; color:var(--color-fg)";
 	rate.textContent = "0%";
 	right.appendChild(rate);
 
@@ -152,35 +138,6 @@ export function createCharts(parent: HTMLElement): ChartsDemo {
 			},
 		],
 	});
-	const barOption = (tick: number): Option => ({
-		animationDuration: 900,
-		animationEasing: "cubicOut",
-		animationDelay: (i: number) => i * 60,
-		animationDurationUpdate: 420,
-		grid: { left: 64, right: 16, top: 16, bottom: 40 },
-		xAxis: {
-			type: "category",
-			data: SEGMENTS,
-			axisLine: { lineStyle: { color: border } },
-			axisTick: { show: false },
-			axisLabel,
-		},
-		yAxis: {
-			type: "value",
-			max: 60,
-			interval: 20,
-			splitLine: { lineStyle: { color: border } },
-			axisLabel,
-		},
-		series: [
-			{
-				type: "bar",
-				barWidth: 34,
-				data: SEGMENTS.map((_, i) => barValue(i, tick)),
-				itemStyle: { color: fg2, borderRadius: [3, 3, 0, 0] },
-			},
-		],
-	});
 	const donutOption = (hit: number): Option => ({
 		animationDuration: 1100,
 		animationEasing: "cubicOut",
@@ -189,7 +146,7 @@ export function createCharts(parent: HTMLElement): ChartsDemo {
 			{
 				type: "pie",
 				radius: ["62%", "76%"],
-				center: ["50%", "52%"],
+				center: ["50%", "50%"],
 				startAngle: 90,
 				silent: true,
 				label: { show: false },
@@ -212,9 +169,8 @@ export function createCharts(parent: HTMLElement): ChartsDemo {
 				const local = tidy(t - at);
 				if (local < 0) return true;
 				if (streamed < 0) {
-					// ECharts' own entrance: the line draws left to right, bars grow, the ring sweeps.
+					// ECharts' own entrance: the line draws left to right, the ring sweeps.
 					line.setOption(lineOption(0));
-					bars.setOption(barOption(0));
 					donut.setOption(donutOption(94));
 					streamed = 0;
 				}
@@ -223,7 +179,6 @@ export function createCharts(parent: HTMLElement): ChartsDemo {
 				if (step > streamed) {
 					streamed = step;
 					line.setOption(lineOption(step));
-					if (step % 2 === 0) bars.setOption(barOption(step / 2));
 					value.textContent = throughput(step + POINTS - 1).toLocaleString("en-US");
 				}
 				return !stopped && layer.isConnected;
@@ -243,7 +198,7 @@ export function createCharts(parent: HTMLElement): ChartsDemo {
 					easing: "steps(1, end)",
 				},
 			);
-			for (const [i, el] of [top, left, right].entries()) {
+			for (const [i, el] of [top, right].entries()) {
 				el.animate(
 					[
 						{ opacity: 0, transform: "translateY(24px)" },
@@ -267,7 +222,7 @@ export function createCharts(parent: HTMLElement): ChartsDemo {
 			if (disposed) return;
 			disposed = true;
 			disposeWhenDetached(layer, () => {
-				for (const chart of [line, bars, donut]) chart.dispose();
+				for (const chart of [line, donut]) chart.dispose();
 			});
 		},
 	};

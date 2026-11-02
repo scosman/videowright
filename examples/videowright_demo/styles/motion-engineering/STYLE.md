@@ -119,7 +119,7 @@ Surfaces (`.me-panel`): `--surface-1` with a faint top-lit gradient, a 1px `--co
 
 - **Fixed grid origin.** The grid has a major and a minor line through the frame centre on both axes and is overscanned by one major cell. At camera identity every scene's grid lands on the same pixels, so a wipe or cut reads as one instrument changing readouts.
 - **Camera.** Transform `.me-world`, and `.me-grid` by 60% of the same move (the samples' `startAmbient` does both). A scene starts at identity and is back at identity (or masked by the transition) by its exit. Pivot on the left margin (`setOrigin(160, 540)`) when type is left-aligned, so a push never shoves it into the HUD band. With a left pivot, everything to the right swells toward the frame edge as the camera leans in (about 3.5% at peak): right-anchored content must end at x ≤ ~1700, or be anchored to the content it measures instead.
-- **Region framing.** To show a region of a window or app at legible scale, move the camera instead of shrinking the content. Animate the individual `translate` and `scale` properties of `.me-world` (and 60% of the same move on `.me-grid`): they compose with the ambient `transform` the rAF loop writes, so drift and framing never fight. Fit the region into the safe area (zoom ≤ 1.4). While framed, a focus mask covers all four bands outside the safe frame with `--color-bg`, fading in over ~52–64px (fixed, above the world and below the grain, so the bands keep their texture), so zoomed content never fights the HUD readouts, and the move is clamped so the window's own edges stay at or beyond the mask's inner edges: anything past the window falls under the mask. Rest to identity before the exit (the `ui-showcase` sample does all of this in its scene section).
+- **Region framing.** To show a region of a window or app at legible scale, move the camera instead of shrinking the content. Animate the individual `translate` and `scale` properties of `.me-world` (and 60% of the same move on `.me-grid`): they compose with the ambient `transform` the rAF loop writes, so drift and framing never fight. Fit the region inside the focus mask's inner edges, not just the safe frame (zoom ≤ 1.4). While framed, a focus mask covers all four bands outside the safe frame with `--color-bg`, fading in over ~52–64px (fixed, above the world and below the grain, so the bands keep their texture), so zoomed content never fights the HUD readouts, and the move is clamped so the window's own edges stay at or beyond the mask's inner edges: anything past the window falls under the mask. Window chrome the mask's fading edge would cut in half (a readout, a nav label) is hidden with the mask, so no ghost of it shows in the band. Rest to identity before the exit (the `ui-showcase` sample does all of this in its scene section).
 - Measure layout with `offsetLeft/Top/Width/Height`, not `getBoundingClientRect()`: offsets ignore the camera and the dev player's scaling. The samples' `boxOf(el)` walks the offset chain up to `.me-content` and returns the box in stage px.
 
 ## HUD vocabulary
@@ -192,7 +192,7 @@ Choose every cut for its cut. No default fades. Vary the rhythm across a video: 
 | Transition | When | Feel |
 |---|---|---|
 | `me-sweep` (signature) | Between scenes of the same story: the instrument redraws its readout. | A cyan scanline with a bright core crosses left to right (right to left going back); the new scene is revealed behind it while the old one dims slightly. 640ms. Cyan, not amber: the sweep is the instrument measuring, and amber stays free for the content's signal. |
-| `me-push` | Into a deeper level: a detail, a zoom into a section, out of a section divider. | The camera drives forward through the content: the old content accelerates past the lens and clears, the new content arrives from further down the axis and settles, while the grid, vignette and grain stay put (the grid leans in slightly). The key light glides to the new focal point, and the HUD readouts switch at the moment the new content arrives. 700ms. |
+| `me-push` | Into a deeper level: a detail, a zoom into a section, out of a section divider. | The camera drives forward through the content: the old content accelerates past the lens and clears, the new content arrives from further down the axis and settles, while the grid, vignette and grain stay put (the grid leans in slightly). The key light glides to the new focal point on `--ease-sweep`, and the incoming HUD takes over on the first frame (same chrome, its readouts and running timecode). 700ms. |
 | `cut` (built-in) | Hooks, resets, a reveal that should hit. | Instant. Land it on a breath or a beat. |
 | Match cut | Continuity of an object across scenes. | End the outgoing scene with a shape (a reticle, a frame, a bar) exactly where the incoming scene's first element appears, then hard `cut`. |
 
@@ -288,14 +288,16 @@ import type { Transition } from "videowright";
 // at camera identity, so the outgoing copies are hidden at once and the incoming ones carry
 // straight through: one instrument, the camera moving. The outgoing content grows past the
 // lens and clears; the incoming content arrives from further down the axis and settles. The
-// key light glides to the new focal point, and the HUD readouts switch when the new content
-// arrives. Falls back to moving whole slots for scenes without a .me-stage. Reverses (pulls
-// back) for backward navigation.
+// key light glides to the new focal point, and the HUD hands over to the incoming scene's as
+// the push starts (the outgoing scene has stopped: its timecode would freeze). Falls back to
+// moving whole slots for scenes without a .me-stage. Reverses (pulls back) for backward
+// navigation.
 const mePush: Transition = async (outgoing, incoming, ctx) => {
 	const root = getComputedStyle(document.documentElement);
 	const token = (name: string, fallback: string) => root.getPropertyValue(name).trim() || fallback;
 	const duration = ctx.duration ?? 700;
 	const settle = token("--ease-settle", "cubic-bezier(0.16, 1, 0.3, 1)");
+	const sweep = token("--ease-sweep", "cubic-bezier(0.45, 0, 0.55, 1)");
 	// Ease-in cubic: the content accelerates toward the lens while it is still visible.
 	const accelerate = "cubic-bezier(0.32, 0, 0.67, 0)";
 	const forward = ctx.direction !== "backward";
@@ -309,11 +311,15 @@ const mePush: Transition = async (outgoing, incoming, ctx) => {
 	const contentOf = (stage: HTMLElement | null) => [
 		...(stage?.querySelectorAll<HTMLElement>(".me-world > *") ?? []),
 	];
+	// The outgoing scene's fixed layers (grid, light, grain and its HUD) are hidden at once: the
+	// incoming scene's carry straight through. The HUD chrome is the same in every scene, so the
+	// incoming HUD takes over on the push's first frame with only its readouts changed and its
+	// timecode already running (the outgoing scene has stopped: its timecode would freeze).
 	const hiddenLayers: HTMLElement[] = [];
 	if (layered && outStage) {
 		outStage.style.background = "transparent";
 		for (const layer of outStage.children) {
-			const keep = ["me-world", "me-hud"].some((name) => layer.classList.contains(name));
+			const keep = layer.classList.contains("me-world");
 			if (layer instanceof HTMLElement && !keep) {
 				layer.style.opacity = "0";
 				hiddenLayers.push(layer);
@@ -359,7 +365,7 @@ const mePush: Transition = async (outgoing, incoming, ctx) => {
 	}
 	animations.push(...arriving);
 	if (layered && outStage && inStage) {
-		// The key light glides from the old focal point to the new one.
+		// The key light glides from the old focal point to the new one, on the sweep's ease.
 		const outKey = outStage.querySelector<HTMLElement>(".me-key");
 		const inKey = inStage.querySelector<HTMLElement>(".me-key");
 		if (outKey && inKey) {
@@ -368,19 +374,9 @@ const mePush: Transition = async (outgoing, incoming, ctx) => {
 			animations.push(
 				inKey.animate([{ backgroundPosition: from }, { backgroundPosition: to }], {
 					duration,
-					easing: settle,
+					easing: sweep,
 				}),
 			);
-		}
-		// The HUD readouts (scene label, timecode) switch when the new content arrives.
-		const swap = { duration: 1, delay: duration * 0.4, fill: "both" as const };
-		const outHud = outStage.querySelector(".me-hud");
-		const inHud = inStage.querySelector(".me-hud");
-		if (outHud) animations.push(outHud.animate([{ opacity: 1 }, { opacity: 0 }], swap));
-		if (inHud) {
-			const show = inHud.animate([{ opacity: 0 }, { opacity: 1 }], swap);
-			animations.push(show);
-			arriving.push(show);
 		}
 	}
 	// Parallax: the grid plane leans in a little as the camera passes over it.
@@ -428,7 +424,7 @@ Each sample in `sample/` is a working, self-contained template. It imports only 
 - **grid** — Three to six peers in a grid of panels whose edges sit on the grid's own lines (480 × 240 cells, 80px column and 40px row gutters). The heading rises on frame 1 while the frames draw in reading order and name their targets; on the first cue each cell measures itself (the value ticks, a cyan bar grows on a shared scale where 1 cell = 1 unit, the status decodes); on the second, one cell becomes the signal: corners lock on, its measurement turns amber, a tag decodes, and its peers recede to 50%.
 - **ui-showcase** — A product window at legible scale (labels 22px, mono 28px, headings 72px), never shrunk to fit. It measures itself in and its data fills: chrome decodes, the header rises, waterfall bars grow in start order (cached work hatched cyan, executed work neutral), KPIs tick. On each cue the camera frames one region (see Region framing) and the crosshair pointer travels to the interaction and clicks: the critical bar turns amber and a popover rises; then the camera pans to the cache card and its meter and value tick in amber. The release rests the camera to identity.
 - **content** — A code sample (or short paragraph) in a panel with a title bar and a line-number gutter, revealed line by line out of masks at `--stagger-tight`; restrained syntax tones (keywords and punctuation muted, keys fg, values fg-2). Its headline sits beside it. On each cue one line becomes the subject: an amber gutter mark and band, its value turns amber, a node locks at the line's end, an elbowed leader carries it across the panel edge, and a margin note (22px label, 36px body) rises at the end. The previous line, leader and note recede to cyan at ~50%.
-- **cta** — The title's lockup returns at the title's exact position (a match with the title scene) and registration corners lock onto it. On the first cue the corners travel to an input-style panel (amber `❯` prompt, 56px mono, a `⏎ RETURN` key chip) and the one command types in on a seeded rhythm while the caret blinks on a `steps()` loop. On the second the key presses, `✓ READY` decodes and the closing line rises. The release lets the corners go; only the ambient layer (timecode, scan, caret) keeps moving: the calm final state.
+- **cta** — The title's lockup returns at the title's exact position (a match with the title scene) and registration corners lock onto it. On the first cue the corners travel to an input-style panel (a `❯` prompt that turns amber as they arrive — one signal at a time — 56px mono, a `⏎ RETURN` key chip) and the one command types in on a seeded rhythm while the caret blinks on a `steps()` loop. On the second the key presses and the line is submitted (the caret leaves), `✓ READY` decodes and the closing line rises. The release lets the corners go; only the ambient layer (timecode, scan, drift) keeps moving: the calm final state.
 
 ## Reference files
 

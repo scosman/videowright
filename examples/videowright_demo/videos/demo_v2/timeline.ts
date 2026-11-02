@@ -20,8 +20,9 @@ const timeline: Timeline = {
 		{ id: "v2-voiceover-sync", transition: "me-push" },
 		// The same story, a new readout: the agents it runs in.
 		{ id: "v2-any-coding-agent", transition: "me-sweep" },
-		// The close: the camera pushes in to the end card.
-		{ id: "v2-install-cta", transition: "me-push" },
+		// The close, on the video's one match cut: the agents' outline settles onto the end
+		// card's prompt box, and the end card cuts in on it (any agent → your agent's input box).
+		{ id: "v2-install-cta", transition: "cut" },
 	],
 	default_audio_track: defaultAudioTrack,
 };

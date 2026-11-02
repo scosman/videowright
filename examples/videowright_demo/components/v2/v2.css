@@ -311,16 +311,6 @@
 	inset: 0;
 }
 
-/* The beat's claim: a statement in the rail, between body-lg and h2. */
-.v2-claim {
-	font-family: var(--font-display);
-	font-size: 52px;
-	font-weight: 600;
-	line-height: 1.12;
-	letter-spacing: -0.015em;
-	white-space: nowrap;
-}
-
 /* ── Dev server preview (v2-interactive-dev) ─────────────────────────────────────── */
 
 .v2-ok {

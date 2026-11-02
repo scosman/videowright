@@ -144,35 +144,85 @@ describe("motion-engineering pack", () => {
 
 	// font-display: block hides a missing glyph only until the browser falls back to a system
 	// face, which then differs from machine to machine. Every character the pack can put on
-	// screen must be in a bundled font.
-	it("every non-ASCII character in the samples and references is in a bundled font", () => {
-		const allowlist = read(resolve(__dirname, "fixtures/motion_engineering_codepoints.txt"))
-			.split("\n")
-			.filter((line) => line.trim() && !line.startsWith("#"))
-			.map((line) =>
-				line
-					.trim()
-					.split("-")
-					.map((hex) => Number.parseInt(hex, 16)),
-			);
-		const drawable = (cp: number) => allowlist.some(([lo, hi = lo]) => cp >= lo && cp <= hi);
-		expect(drawable(0x2713), "the allowlist lost ✓").toBe(true);
+	// screen must be drawable by the font stack that sets it: display/body (Archivo, then the ME
+	// Symbols supplement) or mono (JetBrains Mono, then ME Symbols). A character set inside an
+	// element with a mono class (me-mono, me-readout, me-code) on its line needs the mono stack;
+	// any other must be drawable by both, since the test can't tell which one sets it. Comments
+	// never reach the screen; entities do, numeric and named.
+	it("every on-screen character in the samples and references is drawable by its font stack", () => {
+		const cmaps: Record<string, Array<[number, number]>> = {};
+		let font = "";
+		for (const raw of read(resolve(__dirname, "fixtures/motion_engineering_codepoints.txt")).split(
+			"\n",
+		)) {
+			const line = raw.trim();
+			if (!line || line.startsWith("#")) continue;
+			const section = line.match(/^\[(.+)\]$/);
+			if (section) {
+				font = section[1];
+				cmaps[font] = [];
+				continue;
+			}
+			const [lo, hi = lo] = line.split("-").map((hex) => Number.parseInt(hex, 16));
+			cmaps[font].push([lo, hi]);
+		}
+		const has = (name: string, cp: number) =>
+			(cmaps[name] ?? []).some(([lo, hi]) => cp >= lo && cp <= hi);
+		const display = (cp: number) => has("archivo", cp) || has("me-symbols", cp);
+		const mono = (cp: number) => has("jetbrains-mono", cp) || has("me-symbols", cp);
+		expect(display(0x2713) && mono(0x2713), "a stack lost ✓").toBe(true);
+		const NAMED: Record<string, number> = {
+			amp: 0x26,
+			lt: 0x3c,
+			gt: 0x3e,
+			quot: 0x22,
+			apos: 0x27,
+			nbsp: 0xa0,
+			middot: 0xb7,
+			times: 0xd7,
+			minus: 0x2212,
+			ndash: 0x2013,
+			mdash: 0x2014,
+			hellip: 0x2026,
+			bull: 0x2022,
+			rarr: 0x2192,
+			larr: 0x2190,
+			check: 0x2713,
+			copy: 0xa9,
+		};
 		const sources: Record<string, string> = {
 			"reference/scenes.html": scenesHtml,
 			"reference/animations.jsx": animationsJsx,
 		};
 		for (const scene of SAMPLES) sources[`sample/${scene}.ts`] = sampleSource(scene);
+		const glyph = /&#x([0-9a-f]+);|&#(\d+);|&([a-z][a-z0-9]*);|[\u{7f}-\u{10ffff}]/giu;
 		for (const [name, source] of Object.entries(sources)) {
-			const literal = [...source].map((ch) => ch.codePointAt(0) ?? 0).filter((cp) => cp > 0x7e);
-			const entities = [...source.matchAll(/&#(x[0-9a-f]+|\d+);/gi)].map((m) =>
-				m[1][0].toLowerCase() === "x" ? Number.parseInt(m[1].slice(1), 16) : Number(m[1]),
-			);
-			const missing = [...new Set([...literal, ...entities])]
-				.filter((cp) => !drawable(cp))
-				.map(
-					(cp) => `U+${cp.toString(16).toUpperCase().padStart(4, "0")} ${String.fromCodePoint(cp)}`,
-				);
-			expect(missing, `${name} uses characters no bundled font draws`).toEqual([]);
+			const onScreen = source
+				.replace(/<!--[\s\S]*?-->/g, "")
+				.replace(/\/\*[\s\S]*?\*\//g, "")
+				.replace(/(^|\s)\/\/[^\n]*/g, "$1");
+			const missing = new Set<string>();
+			for (const line of onScreen.split("\n")) {
+				for (const m of line.matchAll(glyph)) {
+					const cp = m[1]
+						? Number.parseInt(m[1], 16)
+						: m[2]
+							? Number(m[2])
+							: m[3]
+								? NAMED[m[3]]
+								: (m[0].codePointAt(0) ?? 0);
+					expect(cp, `${name}: unknown entity ${m[0]} (add it to NAMED)`).toBeDefined();
+					if (cp <= 0x7e) continue;
+					const classes = [...line.slice(0, m.index).matchAll(/class="([^"]*)"/g)].at(-1)?.[1];
+					const inMono = /\bme-(mono|readout|code)\b/.test(classes ?? "");
+					const ok = inMono ? mono(cp) : display(cp) && mono(cp);
+					if (!ok) {
+						const hex = cp.toString(16).toUpperCase().padStart(4, "0");
+						missing.add(`U+${hex} ${String.fromCodePoint(cp)}${inMono ? " (mono)" : ""}`);
+					}
+				}
+			}
+			expect([...missing], `${name} uses characters its font stack can't draw`).toEqual([]);
 		}
 	});
 

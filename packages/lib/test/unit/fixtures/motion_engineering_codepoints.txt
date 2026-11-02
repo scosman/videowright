@@ -1,7 +1,9 @@
-# Codepoints the motion-engineering pack's bundled fonts can draw: the union of the Archivo
-# and JetBrains Mono cmaps, plus the ME Symbols cmap within its @font-face unicode-range.
-# Generated once from packages/lib/skill/assets/styles/motion-engineering/fonts/ with fontTools
-# (TTFont(path).getBestCmap()). Regenerate it whenever the bundled fonts change.
+# Codepoints each of the motion-engineering pack's bundled fonts can draw, per font (ME Symbols
+# within its @font-face unicode-range). Generated from packages/lib/skill/assets/styles/
+# motion-engineering/fonts/ with fontTools (TTFont(path).getBestCmap()). Regenerate it whenever
+# the bundled fonts change. Font stacks: display/body = archivo + me-symbols; mono =
+# jetbrains-mono + me-symbols.
+[archivo]
 0020-007E
 00A0-00FF
 0131
@@ -22,7 +24,6 @@
 2017-201A
 201C-201E
 2020-2022
-2024
 2026
 2030
 2032-2033
@@ -31,16 +32,14 @@
 2044
 2052
 2070
-2074-207A
+2074-2079
 207F-2089
 2099
 20AC
-20BF
 2116
 2122
-2190-2199
+2190-2195
 21A8
-21E7
 2202
 2206
 2212
@@ -50,23 +49,82 @@
 2248
 2260-2261
 2264-2265
-2302-2305
+2302
 2310
-2318
 2320-2321
+[jetbrains-mono]
+0020-007E
+00A0-00FF
+0131
+0152-0153
+02BC
+02C6
+02DA
+02DC
+0304
+0308
+0394
+03A9
+03BC
+03C0
+2010
+2013-2014
+2018-201A
+201C-201E
+2020-2022
+2024
+2026
+2030
+2032-2033
+2039-203A
+2044
+2070
+2074-207A
+2080-2089
+20AC
+20BF
+2116
+2122
+2190-2199
+21E7
+2202
+2212
+2215
+2219
+221E
+2248
+2260-2261
+2264-2265
+2302-2305
+2318
 2325
 2374
+23FB-23FE
+2500-25A1
+25AA-25AB
+25B2-25C7
+25CA
+25CC
+25CE-25CF
+25D4-25D5
+25E7-25EB
+25EF
+26A0-26A1
+2715
+276E-2771
+E0A0-E0A2
+E0B0-E0B3
+[me-symbols]
 238B
 23BF
 23CE
-23F5-23FE
-2500-25FF
+23F5-23FA
+25A0-25FF
 2605-2606
-26A0-26A1
 2713-2718
 2722-2727
 2731-273F
-276E-2771
+276E-276F
 2807
 280B
 280F
@@ -75,5 +133,3 @@
 2834
 2838-2839
 283C
-E0A0-E0A2
-E0B0-E0B3

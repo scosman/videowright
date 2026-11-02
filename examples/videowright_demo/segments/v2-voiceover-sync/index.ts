@@ -1,27 +1,21 @@
 import { defineSegment } from "videowright";
 import { fontsReady } from "../../components/v2/fonts.js";
-import { decode, hudProbe, registerOn, release, showHud, tickTo } from "../../components/v2/hud.js";
+import { decode, release, showHud, tickTo } from "../../components/v2/hud.js";
 import { css, ms, svg } from "../../components/v2/motion.js";
 import { PROGRAM, startOf } from "../../components/v2/program.js";
-import {
-	type Stage,
-	createStage,
-	flare,
-	panelIn,
-	startAmbient,
-} from "../../components/v2/stage.js";
+import { type Stage, createStage, panelIn, startAmbient } from "../../components/v2/stage.js";
 import { charsAt } from "../../components/v2/typing.js";
 import { ENVELOPE, ENVELOPE_STEP_S } from "./envelope.js";
 
 // Beat 6: the meta-moment. This video's own voiceover_script/script.md, with the line you are
 // hearing highlighted and swept word by word; under it, the video's timeline: its segment
-// blocks on the grid's scale (1 cell = 0.5 s) over the waveform of the narration you are
+// blocks on the grid's scale (two cells a second) over the waveform of the narration you are
 // listening to, and a playhead at the video's real time. Then a cursor rewrites line 3 as the
 // voice speaks it, and on "re-syncs" the narration is regenerated: its block grows, the blocks
 // after it shift, and the timeline reads SYNCED again.
 
 /** This segment's advances (s). Timing inside a window that must fit it derives from these. */
-const ADV = [2.54, 5.44, 6.92, 8.922];
+const ADV = [2.533, 5.433, 6.917, 8.917];
 const CUE = { pace: 0, edit: 1, resync: 2, exit: 3 } as const;
 const span = (i: number) => (ADV[i] - (i > 0 ? ADV[i - 1] : 0)) * 1000;
 
@@ -76,10 +70,12 @@ const ROW_Y = [EDITOR.y + 76, EDITOR.y + 150, EDITOR.y + 230, EDITOR.y + 310];
 const ROW_H = 72;
 
 /**
- * The timeline lane: x 160–1760 shows 0:42–1:02 of the video, 80 px (two cells) a second: the
- * beats around this one, at a scale where the re-sync's 1.2 s growth reads at phone size.
+ * The timeline lane: x 160–1760 shows 20 s of the video from 2 s before this beat's whole
+ * second (t0), 80 px (two cells) a second: the beats around this one, at a scale where the
+ * re-sync's 1.2 s growth reads at phone size. t0 follows START, so a re-timed take keeps the
+ * beat in view.
  */
-const LANE = { x: 160, w: 1600, t0: 42, pxPerS: 80 } as const;
+const LANE = { x: 160, w: 1600, t0: Math.floor(START) - 2, pxPerS: 80 } as const;
 const TL = {
 	header: 618,
 	labels: 666,
@@ -95,7 +91,6 @@ const GROW_PX = GROWTH_S * LANE.pxPerS;
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const pad2 = (n: number) => String(n).padStart(2, "0");
-const clockLabel = (t: number) => `${Math.floor(t / 60)}:${pad2(Math.floor(t % 60))}`;
 
 let host: HTMLElement | null = null;
 let stage: Stage;
@@ -127,9 +122,8 @@ function buildEditor(content: HTMLElement): void {
 	content.appendChild(panel);
 	const rel = (y: number) => y - EDITOR.y;
 	panel.innerHTML = `
-		<div style="position:absolute; left:0; right:0; top:0; height:${EDITOR.bar}px; border-bottom:1px solid var(--color-border); display:flex; align-items:center; justify-content:space-between; padding:0 28px; font-family:var(--font-mono); font-size:22px; color:var(--fg-2); white-space:nowrap">
+		<div style="position:absolute; left:0; right:0; top:0; height:${EDITOR.bar}px; border-bottom:1px solid var(--color-border); display:flex; align-items:center; padding:0 28px; font-family:var(--font-mono); font-size:22px; color:var(--fg-2); white-space:nowrap">
 			<span>videos/demo_v2/voiceover_script/script.md</span>
-			<span class="me-readout" style="color:var(--color-muted)">Markdown · soft wrap</span>
 		</div>
 		<div data-ref="band" style="position:absolute; left:${EDITOR.gutter - EDITOR.x - 12}px; right:20px; top:${rel(ROW_Y[1])}px; height:${ROW_H}px; background:color-mix(in srgb, var(--amber) 9%, transparent); border-radius:4px; opacity:0"></div>
 		<div data-ref="mark" style="position:absolute; left:${EDITOR.gutter - EDITOR.x - 12}px; width:4px; top:${rel(ROW_Y[1])}px; height:${ROW_H}px; background:var(--amber); opacity:0"></div>
@@ -153,22 +147,13 @@ function buildTimeline(content: HTMLElement): void {
 	const box = document.createElement("div");
 	box.style.cssText = "position:absolute; inset:0";
 	box.innerHTML = `
-		<div class="me-label" style="position:absolute; left:${LANE.x}px; top:${TL.header + 6}px">Timeline · demo_v2 · 1 cell = 0.5 s</div>
+		<div class="me-label" style="position:absolute; left:${LANE.x}px; top:${TL.header + 6}px">Timeline · demo_v2</div>
 		<div class="me-mono" data-ref="status" style="position:absolute; right:${1920 - LANE.x - LANE.w}px; top:${TL.header - 6}px; color:var(--ok); white-space:pre">SYNCED ✓</div>
 		<div data-ref="lane" style="position:absolute; left:${LANE.x}px; top:${TL.labels}px; width:${LANE.w}px; height:${TL.dim + 30 - TL.labels}px; overflow:hidden"></div>`;
 	content.appendChild(box);
 	const lane = box.querySelector('[data-ref="lane"]') as HTMLElement;
 	refs.status = box.querySelector('[data-ref="status"]') as HTMLElement;
 	const top = (y: number) => y - TL.labels;
-
-	// Time labels every 4 s, on the grid's major lines.
-	for (let t = LANE.t0 + 4; t < LANE.t0 + LANE.w / LANE.pxPerS; t += 4) {
-		lane.insertAdjacentHTML(
-			"beforeend",
-			`<span class="me-readout" style="position:absolute; left:${laneX(t) + 6}px; top:0; color:var(--color-muted)">${clockLabel(t)}</span>
-			<span style="position:absolute; left:${laneX(t)}px; top:0; width:1px; height:${top(TL.blocks)}px; background:var(--hairline)"></span>`,
-		);
-	}
 
 	// The blocks, as the timing stood before the edit: the voiceover beat 1.2 s shorter, the
 	// blocks after it 1.2 s earlier.
@@ -234,7 +219,9 @@ function buildTimeline(content: HTMLElement): void {
 		});
 	};
 	const levelAt = (b: number) => Number.parseInt(ENVELOPE[b] ?? "0", 36);
-	const bins = Math.ceil((LANE.t0 + LANE.w / LANE.pxPerS) / ENVELOPE_STEP_S);
+	// Through the lane's right edge plus the growth: the bars after the edit start GROWTH_S
+	// to the left and shift right on "re-syncs", so none may be missing at the edge.
+	const bins = Math.ceil((LANE.t0 + LANE.w / LANE.pxPerS + GROWTH_S) / ENVELOPE_STEP_S);
 	for (let b = Math.floor(LANE.t0 / ENVELOPE_STEP_S); b < bins; b++) {
 		const t = b * ENVELOPE_STEP_S;
 		const g = t < LINE3.from ? pre : t < LINE3.to ? edit : post;
@@ -264,7 +251,7 @@ function buildTimeline(content: HTMLElement): void {
 
 export default defineSegment({
 	id: ID,
-	advances: [2.54, 5.44, 6.92, 8.922],
+	advances: [2.533, 5.433, 6.917, 8.917],
 	voiceover:
 		"Your script generates an AI narration. The pace of the narration drives the video timing. Edit a line and the video re-syncs.",
 	notes:
@@ -283,7 +270,6 @@ export default defineSegment({
 			beat: 6,
 			total: 8,
 			section: "Voiceover",
-			probe: "VOICE · COSMAN-1 · ELEVENLABS V4",
 			// Lands with the push's arrival (it brings the new content in at 40%).
 			delay: 280,
 			signal: ctx.signal,
@@ -372,7 +358,6 @@ export default defineSegment({
 		await ctx.waitForNext();
 		// ── "The pace of the narration…": line 2 ──
 		moveFocus(1);
-		hudProbe("PACE · 137 WORDS / MIN", 200, signal);
 		// The cursor comes in late in the window and rests at the end of line 3, ready.
 		const w2 = span(CUE.edit);
 		const rest = { x: EDITOR.text + DRAFT.length * COL + 34, y: ROW_Y[3] + ROW_H / 2 + 2 };
@@ -420,14 +405,10 @@ export default defineSegment({
 			{ duration: 480, easing: css("--ease-settle"), fill: "forwards" },
 		);
 		const line3 = refs.lines[2];
+		// The triple-click selects the draft on the cue's frame; it shows until the first key.
 		const selection = document.createElement("div");
-		selection.style.cssText = `position:absolute; left:${EDITOR.text - EDITOR.x - 4}px; top:${ROW_Y[3] - EDITOR.y + 12}px; width:${DRAFT.length * COL + 8}px; height:${ROW_H - 24}px; background:color-mix(in srgb, var(--cyan) 30%, transparent); visibility:hidden`;
+		selection.style.cssText = `position:absolute; left:${EDITOR.text - EDITOR.x - 4}px; top:${ROW_Y[3] - EDITOR.y + 12}px; width:${DRAFT.length * COL + 8}px; height:${ROW_H - 24}px; background:color-mix(in srgb, var(--cyan) 30%, transparent)`;
 		refs.panel.insertBefore(selection, line3);
-		selection.animate([{ visibility: "visible" }, { visibility: "visible" }], {
-			duration: 1,
-			delay: 60,
-			fill: "forwards",
-		});
 		moveFocus(2);
 		decode(amb, refs.status, "EDITED · LINE 19", amb.now() + 60, { signal });
 		refs.status.animate([{ color: "var(--amber)" }, { color: "var(--amber)" }], {
@@ -435,7 +416,6 @@ export default defineSegment({
 			delay: 60,
 			fill: "forwards",
 		});
-		hudProbe("PLAYBACK PAUSED · EDITING", 120, signal);
 		// The cursor drifts off the line while the keys go in, and is gone before the re-sync.
 		const w3 = span(CUE.resync);
 		cursor.animate(
@@ -467,9 +447,9 @@ export default defineSegment({
 
 		await ctx.waitForNext();
 		// ── "…re-syncs": the narration is regenerated. The signal moves from the line to its
-		// block: the line's band goes cyan, the HUD locks onto the block's new size, a ghost of
-		// its old edge stays, the draft's bars drop, the block grows into the lock, everything
-		// after it shifts, the new bars rise, and the timeline reads SYNCED. ──
+		// block: the line's band goes cyan, the draft's bars drop, the block grows (its
+		// dimension ticks 7.72 → 8.92 S), everything after it shifts, the new bars rise, and the
+		// timeline reads SYNCED. ──
 		const w4 = span(CUE.exit);
 		const toCyan = { duration: ms("--dur-fast"), fill: "forwards" as const };
 		refs.band.animate(
@@ -553,40 +533,12 @@ export default defineSegment({
 			playing = true;
 			play(pausedAt, amb.now());
 		}, syncedAt - amb.now());
-		const blockX = LANE.x + laneX(START);
-		const blockLock = registerOn(
-			s,
-			{ x: blockX, y: TL.blocks, w: seconds * LANE.pxPerS, h: TL.blockH },
-			140,
-			10,
-			24,
-		);
-		// A dashed ghost of the block's old edge: the +1.20 s gap, and 07-08 moving off it.
-		const oldEdge = blockX + (seconds - GROWTH_S) * LANE.pxPerS;
-		const ghost = svg(s, "path", {
-			d: `M${oldEdge} 690 V876`,
-			stroke: "var(--cyan)",
-			"stroke-width": 2,
-			"stroke-dasharray": "6 6",
-			fill: "none",
-			opacity: 0.7,
-		});
-		ghost.style.transformBox = "fill-box";
-		ghost.style.transformOrigin = "50% 0";
-		ghost.animate([{ transform: "scaleY(0)" }, { transform: "none" }], {
-			duration: ms("--dur-normal"),
-			delay: 140,
-			easing: css("--ease-draw"),
-			fill: "both",
-		});
 		amb.nudge(0.015, 1200);
-		flare(stage, blockX + (seconds * LANE.pxPerS) / 2, TL.blocks + TL.blockH / 2, 300);
-		hudProbe(`RETIMED 06 · +${GROWTH_S.toFixed(2)} S · 07–08 SHIFTED`, 240, signal);
 
-		// Release before the exit: the band, the lock and the ghost let go; the camera rests.
+		// Release before the exit: the band lets go; the camera rests.
 		const out = ms("--dur-exit");
 		await ctx.hold(Math.max(0, w4 - out * 1.6));
-		release([], [refs.band, refs.mark, ...blockLock, ghost]);
+		release([], [refs.band, refs.mark]);
 		amb.rest(out * 1.4);
 		await ctx.hold(out * 1.4);
 	},

@@ -1,16 +1,17 @@
 import lottie from "lottie-web/build/player/lottie_light";
 import * as THREE from "three";
-import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { disposeWhenDetached } from "../../components/v2/dispose.js";
 import { type Ticker, clamp01, css, expoOut, ms, tidy } from "../../components/v2/motion.js";
-import type { Box } from "../../components/v2/stage.js";
 import rocket from "./rocket-launch.json";
 
 // Demo 3, advanced 3D and motion: a real Three.js scene and a real Lottie side by side. The
-// planet is a glossy ocean sphere with smooth-shaded continents risen out of it from seeded
-// noise and a cloud shell, lit by a cool key and a cyan rim, with a Fresnel atmosphere and an
-// outer halo. It is scanned in, a clipping plane revealing the solid behind its cyan
-// wireframe, while the orbit ring draws and a satellite flies it. The rocket is LottieFiles'
+// planet's continents, shelves and clouds are computed per pixel on the GPU from seeded,
+// domain-warped value noise (sharp coastlines at any size, nothing to precompute at mount):
+// glossy water that alone takes the sun's glint, bump-lit land shaded from shore to snow, and
+// a cloud shell. A cool key and a cyan rim light it; the Fresnel atmosphere and outer halo
+// follow the light, bright on the day side and thin on the night side. It is scanned in, a
+// clipping plane revealing the solid behind its cyan wireframe, while the orbit ring draws
+// and a satellite (gold-foil bus, celled wings, dish) flies it. The rocket is LottieFiles'
 // rocket-launch.json, unmodified, on the light SVG player.
 //
 // Render safety: one rAF loop (the scene's ticker) renders every frame from ctx.clock(); the
@@ -27,92 +28,161 @@ export const CARD = { x: 690, y: 112, w: 410, h: 576 } as const;
 const PLAYER = 410;
 /** The rocket leaves the pad on this frame of rocket-launch.json (25 fps). */
 export const LAUNCH_FRAME = 56;
+/** By this frame the rocket has left the player: the card shows only the clearing smoke. */
+export const CLEAR_FRAME = 58;
 
-// Seeded value noise (no Math.random): the planet is the same in every render.
-const hash = (x: number, y: number, z: number) => {
-	const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453;
-	return h - Math.floor(h);
-};
-function noise(x: number, y: number, z: number): number {
-	const [xi, yi, zi] = [Math.floor(x), Math.floor(y), Math.floor(z)];
-	const s = (f: number) => f * f * (3 - 2 * f);
-	const [u, v, w] = [s(x - xi), s(y - yi), s(z - zi)];
-	let out = 0;
-	for (let dx = 0; dx < 2; dx++)
-		for (let dy = 0; dy < 2; dy++)
-			for (let dz = 0; dz < 2; dz++) {
-				const weight = (dx ? u : 1 - u) * (dy ? v : 1 - v) * (dz ? w : 1 - w);
-				out += hash(xi + dx, yi + dy, zi + dz) * weight;
-			}
-	return out;
-}
-const fbm = (x: number, y: number, z: number, octaves = 5) => {
-	let sum = 0;
-	let amp = 0.5;
-	let f = 1;
-	for (let i = 0; i < octaves; i++) {
-		sum += amp * noise(x * f, y * f, z * f);
-		f *= 2.03;
-		amp *= 0.5;
+// Seeded value noise in GLSL (a sine-free hash, stable in float32): the planet is the same in
+// every render. Continents are domain-warped fbm on the unit sphere, so coastlines meander.
+const NOISE_GLSL = `
+	float vwHash(vec3 p) {
+		p = fract(p * 0.1031);
+		p += dot(p, p.zyx + 31.32);
+		return fract((p.x + p.y) * p.z);
 	}
-	return sum;
-};
+	float vwNoise(vec3 x) {
+		vec3 i = floor(x);
+		vec3 f = fract(x);
+		vec3 u = f * f * (3.0 - 2.0 * f);
+		return mix(
+			mix(mix(vwHash(i), vwHash(i + vec3(1.0, 0.0, 0.0)), u.x),
+				mix(vwHash(i + vec3(0.0, 1.0, 0.0)), vwHash(i + vec3(1.0, 1.0, 0.0)), u.x), u.y),
+			mix(mix(vwHash(i + vec3(0.0, 0.0, 1.0)), vwHash(i + vec3(1.0, 0.0, 1.0)), u.x),
+				mix(vwHash(i + vec3(0.0, 1.0, 1.0)), vwHash(i + vec3(1.0, 1.0, 1.0)), u.x), u.y),
+			u.z);
+	}
+	float vwFbm(vec3 p, int octaves) {
+		float sum = 0.0;
+		float amp = 0.5;
+		for (int i = 0; i < 6; i++) {
+			if (i >= octaves) break;
+			sum += amp * vwNoise(p);
+			p *= 2.03;
+			amp *= 0.5;
+		}
+		return sum;
+	}
+	float vwElevation(vec3 v) {
+		float wx = vwFbm(v * 1.2 + vec3(11.0, 3.0, 5.0), 3) - 0.5;
+		float wy = vwFbm(v * 1.2 + vec3(7.0, 13.0, 1.0), 3) - 0.5;
+		return vwFbm(vec3(v.x * 1.5 + 3.0 + wx * 0.9, v.y * 1.5 + 1.0 + wy * 0.9, v.z * 1.5 + 7.0), 6);
+	}
+	// Bump mapping from the height's screen-space derivatives (Mikkelsen's surface gradient).
+	vec3 vwPerturb(vec3 pos, vec3 n, vec2 dH) {
+		vec3 sx = dFdx(pos);
+		vec3 sy = dFdy(pos);
+		vec3 r1 = cross(sy, n);
+		vec3 r2 = cross(n, sx);
+		float det = dot(sx, r1);
+		vec3 grad = sign(det) * (dH.x * r1 + dH.y * r2);
+		return normalize(abs(det) * n - grad);
+	}
+`;
 
-/** Continents: domain-warped fbm on the unit sphere, so coastlines meander. */
-const elevation = (v: THREE.Vector3) => {
-	const wx = fbm(v.x * 1.2 + 11, v.y * 1.2 + 3, v.z * 1.2 + 5, 3) - 0.5;
-	const wy = fbm(v.x * 1.2 + 7, v.y * 1.2 + 13, v.z * 1.2 + 1, 3) - 0.5;
-	return fbm(v.x * 1.5 + 3 + wx * 0.9, v.y * 1.5 + 1 + wy * 0.9, v.z * 1.5 + 7);
-};
+/** Sea level in the elevation's 0..1 range, and the bump's height (world units per unit h). */
 const SEA = 0.5;
+const BUMP = 0.1;
+
+/** Sea, shelf and land colours (sRGB hex), shore to snow. */
+const PALETTE = {
+	deep: "#0d2e4b",
+	shelf: "#17506a",
+	shore: "#3b8f86",
+	low: "#2c7a63",
+	mid: "#5f9070",
+	high: "#9aa88a",
+	peak: "#eef4f2",
+};
 
 /**
- * The land: an icosphere (vertices merged, so the shading is smooth) whose continents rise out
- * of the ocean sphere and whose sea floor sinks under it, coloured by height from shore to
- * snow. The ocean is its own glossy sphere, so the sun glints on water and not on land.
+ * Hooks a MeshStandardMaterial's shader: the object-space direction of each fragment reaches
+ * the fragment stage, the noise is defined, and `fragment` runs after the base colour is set
+ * (so it can rewrite diffuseColor and later chunks see its variables).
  */
-function landGeometry(radius: number): THREE.BufferGeometry {
-	const geo = mergeVertices(new THREE.IcosahedronGeometry(radius, 64));
-	const pos = geo.attributes.position;
-	const [shore, low, mid, high, peak] = ["#3b8f86", "#2c7a63", "#5f9070", "#9aa88a", "#eef4f2"].map(
-		(c) => new THREE.Color(c),
+function withNoise(
+	material: THREE.MeshStandardMaterial,
+	uniforms: Record<string, THREE.IUniform>,
+	fragment: string,
+	afterNormal = "",
+): THREE.MeshStandardMaterial {
+	material.onBeforeCompile = (shader) => {
+		Object.assign(shader.uniforms, uniforms);
+		const declare = Object.entries(uniforms)
+			.map(([name, u]) => `uniform ${u.value instanceof THREE.Color ? "vec3" : "float"} ${name};`)
+			.join("\n");
+		shader.vertexShader = shader.vertexShader
+			.replace("#include <common>", "#include <common>\nvarying vec3 vObj;")
+			.replace("#include <begin_vertex>", "#include <begin_vertex>\nvObj = position;");
+		shader.fragmentShader = shader.fragmentShader
+			.replace(
+				"#include <common>",
+				`#include <common>\nvarying vec3 vObj;\n${declare}\n${NOISE_GLSL}`,
+			)
+			.replace("#include <color_fragment>", `#include <color_fragment>\n${fragment}`)
+			.replace(
+				"#include <normal_fragment_maps>",
+				`#include <normal_fragment_maps>\n${afterNormal}`,
+			);
+	};
+	// three.js caches programs by material type and parameters, not by onBeforeCompile's output:
+	// two hooked materials (the surface, the clouds) must never share a program.
+	material.customProgramCacheKey = () => `vw-noise:${fragment}${afterNormal}`;
+	return material;
+}
+
+/** The planet's surface: sea and land in one sphere, coloured, glossed and bumped per pixel. */
+function surfaceMaterial(scan: THREE.Plane): THREE.MeshStandardMaterial {
+	const colours = Object.fromEntries(
+		Object.entries(PALETTE).map(([k, hex]) => [`vw_${k}`, { value: new THREE.Color(hex) }]),
 	);
-	const colors: number[] = [];
-	const v = new THREE.Vector3();
-	const c = new THREE.Color();
-	for (let i = 0; i < pos.count; i++) {
-		v.fromBufferAttribute(pos, i).normalize();
-		const h = elevation(v) - SEA;
-		v.multiplyScalar(radius * (h > 0 ? 1 + h * 0.12 : 0.98));
-		pos.setXYZ(i, v.x, v.y, v.z);
-		const t = Math.max(0, h) / 0.25;
-		if (h < 0.015) c.copy(shore);
-		else if (t < 0.35) c.copy(low).lerp(mid, t / 0.35);
-		else if (t < 0.75) c.copy(mid).lerp(high, (t - 0.35) / 0.4);
-		else c.copy(high).lerp(peak, Math.min(1, (t - 0.75) / 0.25));
-		colors.push(c.r, c.g, c.b);
-	}
-	geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-	geo.computeVertexNormals();
-	return geo;
+	return withNoise(
+		new THREE.MeshStandardMaterial({ roughness: 0.85, clippingPlanes: [scan] }),
+		{ ...colours, vwSea: { value: SEA }, vwBump: { value: BUMP } },
+		`
+		float vwH = vwElevation(normalize(vObj)) - vwSea;
+		// The coastline is anti-aliased over about a pixel (the height's screen derivative).
+		float vwAA = max(fwidth(vwH), 1e-4);
+		float vwLand = smoothstep(-vwAA, vwAA, vwH);
+		vec3 vwSeaColour = mix(vw_deep, vw_shelf, smoothstep(-0.07, 0.0, vwH));
+		float vwT = max(vwH, 0.0) / 0.25;
+		vec3 vwGround = vwT < 0.035 ? vw_shore
+			: vwT < 0.35 ? mix(vw_low, vw_mid, vwT / 0.35)
+			: vwT < 0.75 ? mix(vw_mid, vw_high, (vwT - 0.35) / 0.4)
+			: mix(vw_high, vw_peak, min(1.0, (vwT - 0.75) / 0.25));
+		diffuseColor.rgb = mix(vwSeaColour, vwGround, vwLand);
+		`,
+		`
+		// Only water takes the glint; only land has relief.
+		roughnessFactor = mix(0.42, 0.88, vwLand);
+		metalnessFactor = mix(0.1, 0.0, vwLand);
+		vec2 vwDH = vec2(dFdx(max(vwH, 0.0)), dFdy(max(vwH, 0.0))) * vwBump;
+		normal = vwPerturb(-vViewPosition, normal, vwDH);
+		`,
+	);
 }
 
-/** Clouds: a shell just above the land, white with a seeded noise alpha. */
-function cloudGeometry(radius: number): THREE.BufferGeometry {
-	const geo = mergeVertices(new THREE.IcosahedronGeometry(radius, 32));
-	const pos = geo.attributes.position;
-	const rgba: number[] = [];
-	const v = new THREE.Vector3();
-	for (let i = 0; i < pos.count; i++) {
-		v.fromBufferAttribute(pos, i).normalize();
-		const n = fbm(v.x * 2.4 + 21, v.y * 3.2 + 4, v.z * 2.4 + 9);
-		rgba.push(1, 1, 1, 0.9 * Math.min(1, Math.max(0, (n - 0.5) * 5)));
-	}
-	geo.setAttribute("color", new THREE.Float32BufferAttribute(rgba, 4));
-	geo.computeVertexNormals();
-	return geo;
+/** The cloud shell: white, its alpha a sharper fbm of its own. */
+function cloudMaterial(scan: THREE.Plane): THREE.MeshStandardMaterial {
+	return withNoise(
+		new THREE.MeshStandardMaterial({
+			color: "#ffffff",
+			transparent: true,
+			roughness: 1,
+			depthWrite: false,
+			clippingPlanes: [scan],
+		}),
+		{},
+		`
+		vec3 vwC = normalize(vObj);
+		float vwN = vwFbm(vec3(vwC.x * 2.4 + 21.0, vwC.y * 3.2 + 4.0, vwC.z * 2.4 + 9.0), 6);
+		diffuseColor.a *= 0.92 * smoothstep(0.52, 0.66, vwN);
+		`,
+	);
 }
 
+/**
+ * The atmosphere: a Fresnel rim, brightest where the key light scatters through it (the day
+ * side) and where the cyan rim light grazes it, thin across the night side, so the limb varies.
+ */
 const ATMOSPHERE = {
 	vertexShader: `varying vec3 vN; varying vec3 vV;
 		void main() {
@@ -121,28 +191,52 @@ const ATMOSPHERE = {
 			vV = normalize(-mv.xyz);
 			gl_Position = projectionMatrix * mv;
 		}`,
-	fragmentShader: `uniform vec3 color; uniform float strength; varying vec3 vN; varying vec3 vV;
+	fragmentShader: `uniform vec3 color; uniform float strength; uniform vec3 sun; uniform vec3 rimLight;
+		varying vec3 vN; varying vec3 vV;
 		void main() {
+			float day = smoothstep(-0.45, 0.65, dot(vN, sun));
+			float graze = smoothstep(0.1, 0.95, dot(vN, rimLight));
 			float f = pow(1.0 - max(dot(vN, vV), 0.0), 3.0) * 1.1 * strength;
+			f *= 0.22 + 0.78 * day + 0.5 * graze;
 			gl_FragColor = vec4(color * f, f);
 		}`,
 };
 
-/** The outer halo: light scattered past the limb, brightest at the planet's edge. */
+/** The outer halo: light scattered past the limb, following the same light. */
 const HALO = {
 	vertexShader: ATMOSPHERE.vertexShader,
-	fragmentShader: `uniform vec3 color; uniform float strength; varying vec3 vN; varying vec3 vV;
+	fragmentShader: `uniform vec3 color; uniform float strength; uniform vec3 sun; uniform vec3 rimLight;
+		varying vec3 vN; varying vec3 vV;
 		void main() {
+			// vN is the halo shell's outward normal (its far side is drawn): it points the way of
+			// the limb it glows past.
+			float day = smoothstep(-0.5, 0.7, dot(vN, sun));
+			float graze = smoothstep(0.1, 0.95, dot(vN, rimLight));
 			float f = pow(clamp(-dot(vN, vV) * 1.9, 0.0, 1.0), 2.0) * strength;
+			f *= 0.3 + 0.7 * day + 0.45 * graze;
 			gl_FragColor = vec4(color * f, f);
 		}`,
 };
+
+/** The satellite's solar cells: dark blue cells on a silver grid (a small canvas texture). */
+function cellTexture(): THREE.CanvasTexture {
+	const canvas = document.createElement("canvas");
+	canvas.width = 128;
+	canvas.height = 32;
+	const g = canvas.getContext("2d") as CanvasRenderingContext2D;
+	g.fillStyle = "#c9d2da";
+	g.fillRect(0, 0, 128, 32);
+	g.fillStyle = "#1a3d6e";
+	for (let x = 0; x < 8; x++)
+		for (let y = 0; y < 2; y++) g.fillRect(x * 16 + 1.5, y * 16 + 1.5, 13, 13);
+	const texture = new THREE.CanvasTexture(canvas);
+	texture.colorSpace = THREE.SRGBColorSpace;
+	texture.anisotropy = 4;
+	return texture;
+}
 
 export interface SpaceDemo {
 	layer: HTMLElement;
-	/** The planet's and the Lottie card's boxes, in the demo's px (for the HUD's locks). */
-	planetBox: Box;
-	cardBox: Box;
 	/**
 	 * Starts the scene `delay` ms from now. The Lottie plays at its own rate from `lottieAt`
 	 * ms from now (it holds frame 0 until then).
@@ -180,29 +274,11 @@ export function createSpace(parent: HTMLElement): SpaceDemo {
 	const centre = new THREE.Vector3((PLANET.x - W / 2) / unit, -(PLANET.y - H / 2) / unit, 0);
 
 	const scan = new THREE.Plane(new THREE.Vector3(-1, 0, 0), centre.x - R * 1.4);
-	const land = new THREE.Mesh(
-		landGeometry(R),
-		new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, clippingPlanes: [scan] }),
+	const surface = new THREE.Mesh(
+		new THREE.SphereGeometry(R * 1.004, 160, 120),
+		surfaceMaterial(scan),
 	);
-	const ocean = new THREE.Mesh(
-		new THREE.SphereGeometry(R * 1.004, 128, 96),
-		new THREE.MeshStandardMaterial({
-			color: "#0f3352",
-			roughness: 0.42,
-			metalness: 0.1,
-			clippingPlanes: [scan],
-		}),
-	);
-	const clouds = new THREE.Mesh(
-		cloudGeometry(R * 1.025),
-		new THREE.MeshStandardMaterial({
-			vertexColors: true,
-			transparent: true,
-			roughness: 1,
-			depthWrite: false,
-			clippingPlanes: [scan],
-		}),
-	);
+	const clouds = new THREE.Mesh(new THREE.SphereGeometry(R * 1.025, 128, 96), cloudMaterial(scan));
 	const wireMaterial = new THREE.LineBasicMaterial({
 		color: css("--cyan"),
 		transparent: true,
@@ -214,14 +290,22 @@ export function createSpace(parent: HTMLElement): SpaceDemo {
 		wireMaterial,
 	);
 	const globe = new THREE.Group();
-	globe.add(ocean, land, clouds, wire);
+	globe.add(surface, clouds, wire);
 	globe.rotation.z = 0.35;
 	globe.position.copy(centre);
+	// The lights' directions in view space, for the atmosphere and halo (set every frame).
+	const sun = new THREE.Vector3();
+	const rimLight = new THREE.Vector3();
+	const lightUniforms = () => ({ sun: { value: sun }, rimLight: { value: rimLight } });
 	const atmosphere = new THREE.Mesh(
 		new THREE.SphereGeometry(R * 1.035, 64, 48),
 		new THREE.ShaderMaterial({
 			...ATMOSPHERE,
-			uniforms: { color: { value: new THREE.Color(css("--cyan")) }, strength: { value: 0 } },
+			uniforms: {
+				color: { value: new THREE.Color(css("--cyan")) },
+				strength: { value: 0 },
+				...lightUniforms(),
+			},
 			transparent: true,
 			blending: THREE.AdditiveBlending,
 			depthWrite: false,
@@ -232,7 +316,11 @@ export function createSpace(parent: HTMLElement): SpaceDemo {
 		new THREE.SphereGeometry(R * 1.16, 64, 48),
 		new THREE.ShaderMaterial({
 			...HALO,
-			uniforms: { color: { value: new THREE.Color(css("--cyan")) }, strength: { value: 0 } },
+			uniforms: {
+				color: { value: new THREE.Color(css("--cyan")) },
+				strength: { value: 0 },
+				...lightUniforms(),
+			},
 			side: THREE.BackSide,
 			transparent: true,
 			blending: THREE.AdditiveBlending,
@@ -253,23 +341,50 @@ export function createSpace(parent: HTMLElement): SpaceDemo {
 		new THREE.LineBasicMaterial({ color: css("--fg-2"), transparent: true, opacity: 0.85 }),
 	);
 	ring.geometry.setDrawRange(0, 0);
+	// The satellite: a gold-foil bus, two celled wings on a yoke, a dish facing the planet (it
+	// looks at the orbit's centre, +z) and an antenna boom out the back.
 	const satellite = new THREE.Group();
-	const metal = new THREE.MeshStandardMaterial({
-		color: "#d6dde2",
-		metalness: 0.6,
-		roughness: 0.35,
+	const foil = new THREE.MeshStandardMaterial({
+		color: "#c79a3e",
+		metalness: 0.85,
+		roughness: 0.32,
 	});
+	const white = new THREE.MeshStandardMaterial({
+		color: "#e8edf1",
+		metalness: 0.2,
+		roughness: 0.45,
+	});
+	const cellsMap = cellTexture();
 	const cells = new THREE.MeshStandardMaterial({
-		color: "#1b3c66",
-		metalness: 0.3,
-		roughness: 0.4,
+		map: cellsMap,
+		metalness: 0.35,
+		roughness: 0.38,
 		emissive: "#0a1a30",
 	});
-	const wing = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.16), cells);
+	const wing = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.014, 0.15), cells);
+	const yoke = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.72, 8), white);
+	yoke.rotation.z = Math.PI / 2;
+	const dish = new THREE.Mesh(
+		new THREE.CylinderGeometry(0.085, 0.018, 0.045, 24, 1, true),
+		new THREE.MeshStandardMaterial({
+			color: "#e8edf1",
+			metalness: 0.2,
+			roughness: 0.45,
+			side: THREE.DoubleSide,
+		}),
+	);
+	dish.rotation.x = Math.PI / 2;
+	dish.position.z = 0.14;
+	const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 6), white);
+	boom.rotation.x = Math.PI / 2;
+	boom.position.z = -0.19;
 	satellite.add(
-		new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.22), metal),
+		new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.22), foil),
+		yoke,
 		wing.clone().translateX(0.36),
 		wing.clone().translateX(-0.36),
+		dish,
+		boom,
 	);
 	satellite.scale.setScalar(0);
 	const orbit = new THREE.Group();
@@ -314,13 +429,6 @@ export function createSpace(parent: HTMLElement): SpaceDemo {
 	let disposed = false;
 	return {
 		layer,
-		planetBox: {
-			x: PLANET.x - PLANET.r - 18,
-			y: PLANET.y - PLANET.r - 18,
-			w: 2 * PLANET.r + 36,
-			h: 2 * PLANET.r + 36,
-		},
-		cardBox: { x: CARD.x, y: CARD.y, w: CARD.w, h: CARD.h },
 		play(ticker, delay, lottieAt) {
 			const start = ticker.now() + delay;
 			const lottieStart = ticker.now() + lottieAt;
@@ -330,6 +438,9 @@ export function createSpace(parent: HTMLElement): SpaceDemo {
 				// Settle: the camera arrives from slightly further out.
 				camera.position.set(0, 0.25, 9.5 + 1.1 * (1 - expoOut(clamp01(s / 1.4))));
 				camera.lookAt(0, 0, 0);
+				camera.updateMatrixWorld();
+				sun.copy(key.position).normalize().transformDirection(camera.matrixWorldInverse);
+				rimLight.copy(rim.position).normalize().transformDirection(camera.matrixWorldInverse);
 				// Scan: wireframe first, then the lit solid is revealed left to right behind it.
 				wireMaterial.opacity = 0.5 * clamp01(s / 0.25) - 0.4 * clamp01((s - 1.0) / 0.8);
 				const reveal = clamp01((s - 0.2) / 1.0);
@@ -380,6 +491,7 @@ export function createSpace(parent: HTMLElement): SpaceDemo {
 			stopped = true;
 			disposeWhenDetached(layer, () => {
 				anim.destroy();
+				cellsMap.dispose();
 				renderer.dispose();
 				renderer.forceContextLoss();
 			});

@@ -5,14 +5,16 @@ import type { Transition } from "videowright";
 // at camera identity, so the outgoing copies are hidden at once and the incoming ones carry
 // straight through: one instrument, the camera moving. The outgoing content grows past the
 // lens and clears; the incoming content arrives from further down the axis and settles. The
-// key light glides to the new focal point, and the HUD readouts switch when the new content
-// arrives. Falls back to moving whole slots for scenes without a .me-stage. Reverses (pulls
-// back) for backward navigation.
+// key light glides to the new focal point, and the HUD hands over to the incoming scene's as
+// the push starts (the outgoing scene has stopped: its timecode would freeze). Falls back to
+// moving whole slots for scenes without a .me-stage. Reverses (pulls back) for backward
+// navigation.
 const mePush: Transition = async (outgoing, incoming, ctx) => {
 	const root = getComputedStyle(document.documentElement);
 	const token = (name: string, fallback: string) => root.getPropertyValue(name).trim() || fallback;
 	const duration = ctx.duration ?? 700;
 	const settle = token("--ease-settle", "cubic-bezier(0.16, 1, 0.3, 1)");
+	const sweep = token("--ease-sweep", "cubic-bezier(0.45, 0, 0.55, 1)");
 	// Ease-in cubic: the content accelerates toward the lens while it is still visible.
 	const accelerate = "cubic-bezier(0.32, 0, 0.67, 0)";
 	const forward = ctx.direction !== "backward";
@@ -26,11 +28,15 @@ const mePush: Transition = async (outgoing, incoming, ctx) => {
 	const contentOf = (stage: HTMLElement | null) => [
 		...(stage?.querySelectorAll<HTMLElement>(".me-world > *") ?? []),
 	];
+	// The outgoing scene's fixed layers (grid, light, grain and its HUD) are hidden at once: the
+	// incoming scene's carry straight through. The HUD chrome is the same in every scene, so the
+	// incoming HUD takes over on the push's first frame with only its readouts changed and its
+	// timecode already running (the outgoing scene has stopped: its timecode would freeze).
 	const hiddenLayers: HTMLElement[] = [];
 	if (layered && outStage) {
 		outStage.style.background = "transparent";
 		for (const layer of outStage.children) {
-			const keep = ["me-world", "me-hud"].some((name) => layer.classList.contains(name));
+			const keep = layer.classList.contains("me-world");
 			if (layer instanceof HTMLElement && !keep) {
 				layer.style.opacity = "0";
 				hiddenLayers.push(layer);
@@ -76,7 +82,7 @@ const mePush: Transition = async (outgoing, incoming, ctx) => {
 	}
 	animations.push(...arriving);
 	if (layered && outStage && inStage) {
-		// The key light glides from the old focal point to the new one.
+		// The key light glides from the old focal point to the new one, on the sweep's ease.
 		const outKey = outStage.querySelector<HTMLElement>(".me-key");
 		const inKey = inStage.querySelector<HTMLElement>(".me-key");
 		if (outKey && inKey) {
@@ -85,19 +91,9 @@ const mePush: Transition = async (outgoing, incoming, ctx) => {
 			animations.push(
 				inKey.animate([{ backgroundPosition: from }, { backgroundPosition: to }], {
 					duration,
-					easing: settle,
+					easing: sweep,
 				}),
 			);
-		}
-		// The HUD readouts (scene label, timecode) switch when the new content arrives.
-		const swap = { duration: 1, delay: duration * 0.4, fill: "both" as const };
-		const outHud = outStage.querySelector(".me-hud");
-		const inHud = inStage.querySelector(".me-hud");
-		if (outHud) animations.push(outHud.animate([{ opacity: 1 }, { opacity: 0 }], swap));
-		if (inHud) {
-			const show = inHud.animate([{ opacity: 0 }, { opacity: 1 }], swap);
-			animations.push(show);
-			arriving.push(show);
 		}
 	}
 	// Parallax: the grid plane leans in a little as the camera passes over it.

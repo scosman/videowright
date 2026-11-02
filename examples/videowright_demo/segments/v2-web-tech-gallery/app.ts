@@ -62,6 +62,8 @@ const TARGET = 1;
 export const NOTE = "Renewal call booked for Friday.";
 /** customers()'s steps up to the open composer, at their natural pace (ms). */
 const LEAD_MS = 1480;
+/** The note's calm typing pace (ms a key), when the window allows it. */
+const NOTE_KEY_MS = 45;
 
 const REVENUE = [21, 24, 23, 27, 30, 29, 33, 36, 35, 40, 44, 48];
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
@@ -101,13 +103,13 @@ export interface AppDemo {
 	dashboard(ticker: Ticker, delay: number): void;
 	/**
 	 * Cue "rendered": open Customers, frame the table, open the note on a row and type it, paced
-	 * to fill `windowMs`, the time until the next cue ("If").
+	 * from `windowMs`, the time until the send cue ("Videowright").
 	 */
 	customers(ticker: Ticker, windowMs: number): void;
-	/** Cue "If": send the note; the toast confirms; the camera rests. */
+	/** Cue "Videowright": send the note; the toast confirms; the camera rests. */
 	send(): void;
-	/** The cursor leaves (the payoff is the claim, not the app). */
-	idle(): void;
+	/** The cursor leaves, `delay` ms from now. */
+	idle(delay?: number): void;
 }
 
 interface Camera {
@@ -270,20 +272,25 @@ export function createApp(parent: HTMLElement): AppDemo {
 		"stroke-linejoin": "round",
 	});
 
+	// The camera's target: where it is, or is headed. Cursor targets are mapped through it.
 	let cam: Camera = { tx: 0, ty: 0, s: 1 };
 	// Screen (demo px) of a point in the window, under the current camera.
 	const screen = (p: { x: number; y: number }, c = cam) => ({
 		x: c.tx + c.s * p.x,
 		y: c.ty + c.s * p.y,
 	});
+	const pose = (c: Camera) => `translate(${c.tx}px, ${c.ty}px) scale(${c.s})`;
+	// A move starts from the window's pose when it starts (mid-move if a cue came early), not
+	// from the last target, so a move never jumps.
 	const moveCamera = (to: Camera, delay: number, duration: number) => {
-		win.animate(
-			[
-				{ transform: `translate(${cam.tx}px, ${cam.ty}px) scale(${cam.s})` },
-				{ transform: `translate(${to.tx}px, ${to.ty}px) scale(${to.s})` },
-			],
-			{ duration, delay, easing: css("--ease-draw"), fill: "both" },
-		);
+		const start = () =>
+			win.animate([{ transform: getComputedStyle(win).transform }, { transform: pose(to) }], {
+				duration,
+				easing: css("--ease-draw"),
+				fill: "forwards",
+			});
+		if (delay > 0) setTimeout(start, delay);
+		else start();
 		cam = to;
 	};
 	// Centre region r (window px) at zoom s, clamped so the window always covers the viewport.
@@ -320,42 +327,37 @@ export function createApp(parent: HTMLElement): AppDemo {
 			opacity: 0,
 		});
 		ring.style.transformOrigin = `${p.x}px ${p.y}px`;
+		// Capped at 2.6x (a 26px radius), so the ring stays clear of the control's label.
 		ring.animate(
 			[
 				{ transform: "scale(1)", opacity: 0.95 },
-				{ transform: "scale(3.6)", opacity: 0 },
+				{ transform: "scale(2.6)", opacity: 0 },
 			],
 			{ duration: 520, delay, easing: css("--ease-settle"), fill: "forwards" },
 		);
 	};
+	// A popup (the composer, the toast) is opaque within 90ms, a short linear ramp; the settle
+	// rides on its transform alone, so what is under it never prints through for long.
 	const show = (el: HTMLElement, delay: number, from = "translateY(16px)") => {
 		el.animate([{ visibility: "hidden" }, { visibility: "visible" }], {
 			duration: 1,
 			delay,
 			fill: "both",
 		});
-		el.animate(
-			[
-				{ opacity: 0, transform: from },
-				{ opacity: 1, transform: "none" },
-			],
-			{
-				duration: ms("--dur-normal"),
-				delay,
-				easing: css("--ease-settle"),
-				fill: "both",
-			},
-		);
-	};
-	const hide = (el: HTMLElement, delay: number) => {
-		el.animate([{ opacity: 1 }, { opacity: 0 }], {
-			duration: ms("--dur-fast"),
+		el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 90, delay, fill: "both" });
+		el.animate([{ transform: from }, { transform: "none" }], {
+			duration: ms("--dur-normal"),
 			delay,
-			fill: "forwards",
+			easing: css("--ease-settle"),
+			fill: "both",
 		});
+	};
+	const HIDE_MS = 100;
+	const hide = (el: HTMLElement, delay: number) => {
+		el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: HIDE_MS, delay, fill: "forwards" });
 		el.animate([{ visibility: "visible" }, { visibility: "hidden" }], {
 			duration: 1,
-			delay: delay + ms("--dur-fast"),
+			delay: delay + HIDE_MS,
 			fill: "forwards",
 		});
 	};
@@ -425,11 +427,12 @@ export function createApp(parent: HTMLElement): AppDemo {
 			travel(screen(aim(q("nav-1"), -0.36)), delay + 1000, 800);
 		},
 		customers(ticker, windowMs) {
-			// The window from this cue ("rendered") to the next ("If") paces the whole sequence,
-			// so a re-timed take can't make send() snap the note in: the steps up to the open
-			// composer take 62% of it, the note types over the next 28%, and a short beat with the
-			// note complete is left before Send. Micro-animations keep their own durations.
-			const k = (0.62 * windowMs) / LEAD_MS;
+			// The window from this cue ("rendered") to the send cue paces the whole sequence, so a
+			// re-timed take can't make send() snap the note in: the steps up to the open composer
+			// take up to 62% of it (at most 1.2x their natural pace), the note types at a calm
+			// pace (at most 35% of it), and the rest is a beat with the note complete before Send.
+			// Micro-animations keep their own durations.
+			const k = Math.min(0.62 * windowMs, 1.2 * LEAD_MS) / LEAD_MS;
 			const paced = (natural: number) => natural * k;
 			const navTo = q("nav-1");
 			// Click Customers (the cursor is already on it; if the cue came early, it hurries).
@@ -476,11 +479,14 @@ export function createApp(parent: HTMLElement): AppDemo {
 			// Frame the table's top rows and the note composer that will open under the target.
 			const table = q("table");
 			const tableBox = { x: SIDE + table.offsetLeft, y: BROWSER_BAR + table.offsetTop };
-			const target = frameOn({ x: tableBox.x - 10, y: tableBox.y + 40, w: 790, h: 420 }, 1.26);
+			// The region starts inside the table's left edge, and the zoom (1.3) is enough for the
+			// window, which must cover the viewport, to pan the sidebar's edge (SIDE) out of frame:
+			// W · (s − 1) ≥ s · SIDE needs s ≥ 1.296. (The review's 1.26 left a 30px sliver.)
+			const target = frameOn({ x: tableBox.x + 18, y: tableBox.y + 40, w: 790, h: 420 }, 1.3);
 			moveCamera(target, paced(260), paced(900));
 			const button = q(`note-${TARGET}`);
 			// Aim right of the label, so the click ring never covers it.
-			const onButton = screen(aim(button, 0.36), target);
+			const onButton = screen(aim(button, 0.42), target);
 			travel(onButton, paced(720), paced(520));
 			click(onButton, paced(1260));
 			button.animate([{ background: "#fff" }, { background: "#f4f4f5" }], {
@@ -490,7 +496,7 @@ export function createApp(parent: HTMLElement): AppDemo {
 			});
 			show(q("composer"), paced(1320), "translateY(-10px) scale(0.98)");
 			const start = ticker.now() + paced(LEAD_MS);
-			const perChar = (0.28 * windowMs) / NOTE.length;
+			const perChar = Math.min(0.35 * windowMs, NOTE.length * NOTE_KEY_MS) / NOTE.length;
 			typing = { start, done: false };
 			const state = typing;
 			ticker.add((t) => {
@@ -508,7 +514,7 @@ export function createApp(parent: HTMLElement): AppDemo {
 			noteText.textContent = NOTE;
 			caret.style.opacity = "0";
 			const send = q("send");
-			const onSend = screen(aim(send, 0.36));
+			const onSend = screen(aim(send, 0.42));
 			travel(onSend, 0, 340);
 			click(onSend, 380);
 			send.animate(
@@ -530,9 +536,10 @@ export function createApp(parent: HTMLElement): AppDemo {
 			moveCamera({ tx: 0, ty: 0, s: 1 }, 540, 1000);
 			show(q("toast"), 620, "translateY(24px)");
 		},
-		idle() {
+		idle(delay = 0) {
 			cursor.animate([{ opacity: 1 }, { opacity: 0 }], {
 				duration: ms("--dur-normal"),
+				delay,
 				fill: "forwards",
 			});
 		},

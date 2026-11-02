@@ -1,5 +1,5 @@
-import { dimension, lockOn, registerOn } from "./hud.js";
 import {
+	MARK_BOUNDS,
 	MARK_VERTEX,
 	type Mark,
 	createMark,
@@ -8,22 +8,31 @@ import {
 	markPoint,
 	showMark,
 } from "./logo.js";
-import { type Ticker, css, ms, riseIn, svg } from "./motion.js";
-import type { Box } from "./stage.js";
+import { ms, riseIn } from "./motion.js";
 import "./v2.css";
 
 // The beat-2 title composition as a component, so the same title card appears three times:
 // full frame in v2-title-card, inside the browser on hot reload (v2-interactive-dev), and in
 // the export player (v2-pixel-perfect-export). Laid out on a 1920 x 1080 design canvas and
-// scaled as a whole. A horizontal lockup on the safe frame: the mark on the x = 160 major
-// line, the wordmark on the 500 grid line, the tagline under the wordmark.
+// scaled as a whole. A horizontal lockup, centred vertically on the grid: the mark on the
+// x = 160 major line, the wordmark beside it, the tagline under the wordmark. No HUD
+// annotations: the logo is the subject, and it holds still.
+
+/**
+ * Where the wordmark's letters wait before they rise: below a mask that is 1.3x their line box
+ * (0.3 x the size of descender room, for the "g").
+ */
+export const WORDMARK_HIDDEN = "translateY(135%)";
+
+/** The mark at 0.885 px per unit of its viewBox (the scale the lockup was drawn at). */
+const MARK_SCALE = 430 / 486;
 
 export const LOCKUP = {
-	mark: { left: 160, top: 300, width: 430 },
-	wordmark: { left: 670, top: 326, size: 200 },
-	tagline: { left: 680, top: 606 },
-	/** The dimension line's y, below the tagline. */
-	dimY: 800,
+	mark: { left: 160, top: 340, width: Math.round(MARK_BOUNDS.w * MARK_SCALE) },
+	/** 80px right of the mark's right edge (its slash's cap). */
+	wordmark: { left: 640, top: 366, size: 200 },
+	/** Under the wordmark's "v" (its left side bearing). */
+	tagline: { left: 650, top: 646 },
 } as const;
 
 /** Beat timings inside reveal(), in ms from its start. */
@@ -35,45 +44,29 @@ export const REVEAL = {
 	 */
 	strokes: [-140, 120, 350],
 	wordmark: 260,
-	lock: 640,
 	tagline: 760,
-	corners: 1000,
-	measure: 1380,
 } as const;
-
-export interface Annotations {
-	strokes: SVGGeometryElement[];
-	marks: Element[];
-}
 
 export interface TitleLockup {
 	root: HTMLElement;
 	mark: Mark;
-	/** The logo's box (mark + wordmark), design px. */
-	logoBox(): Box;
-	/** The whole lockup's box (logo + tagline), design px. */
-	lockupBox(): Box;
-	/** The V's vertex, design px: where the crosshair locks. */
+	/** The V's vertex, design px. */
 	vertex: { x: number; y: number };
-	/** Plays the whole reveal. Returns the HUD annotations, for release(). */
-	reveal(ticker: Ticker): Annotations;
-	/** The first half on its own: the strokes draw and the crosshair locks on the vertex. */
-	revealMark(): Element[];
-	/** The second half, `delay` ms from now: wordmark, tagline, corners, dimension. */
-	revealWords(ticker: Ticker, delay?: number): Annotations;
-	/** The settled lockup, no animation and no annotations. */
+	/** Plays the whole reveal: strokes, wordmark, tagline. */
+	reveal(): void;
+	/** The strokes draw. */
+	revealMark(): void;
+	/** The wordmark rises letter by letter, `delay` ms from now. */
+	revealWords(delay?: number): void;
+	/** The tagline rises, `delay` ms from now. */
+	revealTagline(delay?: number): void;
+	/** The settled lockup, no animation. */
 	showFinal(): void;
 }
 
 export interface LockupOptions {
 	/** Uniform scale of the 1920 x 1080 canvas (default 1). */
 	scale?: number;
-	/**
-	 * Draw the HUD's labels (the dimension's value). Default: at scale 1 and up only. A lockup
-	 * inside an already scaled-down stage (a browser preview) passes false: its labels would
-	 * land under the 22px floor on screen.
-	 */
-	labels?: boolean;
 }
 
 export function createTitleLockup(host: HTMLElement, opts: LockupOptions = {}): TitleLockup {
@@ -93,9 +86,10 @@ export function createTitleLockup(host: HTMLElement, opts: LockupOptions = {}): 
 	word.style.cssText = `position:absolute; left:${w.left}px; top:${w.top}px`;
 	const wordLine = document.createElement("span");
 	wordLine.className = "me-line";
-	// The mask's usual 0.12em of descender room is short of Outfit's g.
-	wordLine.style.paddingBottom = "0.3em";
-	wordLine.style.marginBottom = "-0.3em";
+	// The mask's usual 0.12em of descender room is short of Outfit's g. In px of the
+	// wordmark's own size: an em here would resolve against the wrapper's inherited size.
+	wordLine.style.paddingBottom = `${0.3 * w.size}px`;
+	wordLine.style.marginBottom = `${-0.3 * w.size}px`;
 	const wordmark = createWordmark(w.size);
 	// One span per letter, so the wordmark rises letter by letter out of its mask.
 	wordmark.innerHTML = [...(wordmark.textContent ?? "")].map((ch) => `<span>${ch}</span>`).join("");
@@ -112,65 +106,34 @@ export function createTitleLockup(host: HTMLElement, opts: LockupOptions = {}): 
 	root.appendChild(tagline);
 	const taglineInner = tagline.querySelector(".me-line > span") as HTMLElement;
 
-	const annot = svg(root, "svg", { class: "me-svg", viewBox: "0 0 1920 1080" });
-
 	const vertex = markPoint(m.width, m.left, m.top, MARK_VERTEX.x, MARK_VERTEX.y);
-	const logoBox = (): Box => {
-		const right = w.left + wordmark.offsetLeft + wordmark.offsetWidth;
-		return { x: m.left, y: m.top, w: right - m.left, h: mark.el.height.baseVal.value };
-	};
-	const lockupBox = (): Box => {
-		const logo = logoBox();
-		return { ...logo, h: tg.top + tagline.offsetHeight - logo.y };
-	};
-	// Labels at a reduced scale would fall below the 22px legibility floor: draw strokes only.
-	const labels = opts.labels ?? scale >= 1;
 
-	const hide = () => {
-		for (const el of [...letters, taglineInner]) el.style.transform = "translateY(112%)";
-	};
-	hide();
+	// The wordmark's mask is 1.3x its letters' line box (its descender room), so the letters wait
+	// further down than the usual 112%, or their tops would show under the mask before they rise.
+	for (const el of letters) el.style.transform = WORDMARK_HIDDEN;
+	taglineInner.style.transform = "translateY(112%)";
 
-	let lock: SVGGElement | null = null;
 	const revealMark = () => {
 		drawMark(mark, REVEAL.strokes);
-		lock = lockOn(annot, vertex.x, vertex.y, REVEAL.lock);
-		return [lock];
 	};
-	const revealWords = (ticker: Ticker, delay = 0): Annotations => {
-		const at = (beat: number) => delay + beat - REVEAL.wordmark;
-		riseIn(letters, at(REVEAL.wordmark), ms("--dur-slow"), 18);
-		riseIn([taglineInner], at(REVEAL.tagline));
-		const box = lockupBox();
-		const corners = registerOn(annot, box, at(REVEAL.corners), 26);
-		const dim = dimension(
-			annot,
-			ticker,
-			{ x0: box.x, x1: box.x + box.w, y: LOCKUP.dimY, from: box.y + box.h + 48 },
-			at(REVEAL.measure),
-			labels,
-		);
-		// The crosshair hands the subject to the corners: it lets go once they have locked.
-		lock?.animate([{ opacity: 1 }, { opacity: 0 }], {
-			duration: ms("--dur-normal"),
-			delay: at(REVEAL.corners) + 900,
-			easing: css("--ease-exit"),
-			fill: "forwards",
-		});
-		return { strokes: dim.strokes, marks: [...corners, ...dim.marks] };
+	const revealWords = (delay = 0) => {
+		riseIn(letters, delay, ms("--dur-slow"), 18, WORDMARK_HIDDEN);
+	};
+	const revealTagline = (delay = 0) => {
+		riseIn([taglineInner], delay);
 	};
 
 	return {
 		root,
 		mark,
-		logoBox,
-		lockupBox,
 		vertex,
 		revealMark,
 		revealWords,
-		reveal(ticker) {
+		revealTagline,
+		reveal() {
 			revealMark();
-			return revealWords(ticker, REVEAL.wordmark);
+			revealWords(REVEAL.wordmark);
+			revealTagline(REVEAL.tagline);
 		},
 		showFinal() {
 			showMark(mark);

@@ -1,20 +1,9 @@
 import "./v2.css";
-import {
-	type Tick,
-	type Ticker,
-	createTicker,
-	css,
-	draw,
-	expoOut,
-	ms,
-	svg,
-	tidy,
-} from "./motion.js";
-import type { Box } from "./stage.js";
+import { type Tick, type Ticker, createTicker, css, draw, expoOut, ms, tidy } from "./motion.js";
 
 // ── HUD vocabulary ──────────────────────────────────────────────────────────────────────
-// Lifted from the Motion Engineering samples' kit. Amber is the signal (one subject at a
-// time), cyan is measurement.
+// Lifted from the Motion Engineering samples' kit: decoding readouts, ticking numbers and the
+// release. demo_v2 keeps the HUD quiet: no lock-on reticles or registration corners.
 
 // Mono "decode": characters resolve left to right through seeded noise. No Math.random.
 const NOISE = "#%&*+=<>/0123456789ABCDEFHKMNPRTUVXYZ";
@@ -91,122 +80,6 @@ export function tickTo(
 	});
 }
 
-const BLINK_IN = [
-	{ opacity: 0, easing: "linear" },
-	{ opacity: 1, offset: 0.28, easing: "steps(1, end)" },
-	{ opacity: 0.22, offset: 0.62, easing: "steps(1, end)" },
-	{ opacity: 1, offset: 0.7, easing: "steps(1, end)" },
-	{ opacity: 0.22, offset: 0.8, easing: "steps(1, end)" },
-	{ opacity: 1, offset: 0.88 },
-	{ opacity: 1 },
-];
-
-// Crosshair lock: the reticle drops in oversized and rotated, settles on target, blinks twice.
-// Each shape is drawn twice, a canvas-colored knockout under the amber stroke.
-export function lockOn(parent: Element, cx: number, cy: number, delay: number, r = 34) {
-	const g = svg(parent, "g", { fill: "none", style: "filter: var(--glow-amber-filter)" });
-	const o = r + 22;
-	const ticks = `M${cx - o} ${cy}h18M${cx + o - 18} ${cy}h18M${cx} ${cy - o}v18M${cx} ${cy + o - 18}v18`;
-	for (const [stroke, width] of [
-		["var(--color-bg)", 7],
-		["var(--amber)", 3],
-	] as const) {
-		svg(g, "circle", { cx, cy, r, stroke, "stroke-width": width });
-		svg(g, "path", { d: ticks, stroke, "stroke-width": width });
-	}
-	svg(g, "circle", { cx, cy, r: 4, fill: "var(--amber)" });
-	g.style.transformOrigin = `${cx}px ${cy}px`;
-	g.animate([{ transform: "scale(2.4) rotate(45deg)" }, { transform: "none" }], {
-		duration: 620,
-		delay,
-		easing: css("--ease-settle"),
-		fill: "both",
-	});
-	g.animate(BLINK_IN, { duration: 900, delay, fill: "both" });
-	return g;
-}
-
-// Registration corners: four amber L-brackets close in on a box from outside, settle, and
-// blink twice, like autofocus locking on.
-export function registerOn(parent: Element, box: Box, delay: number, pad = 14, arm = 34) {
-	const { x, y, w, h } = box;
-	return [
-		[x - pad, y - pad, 1, 1],
-		[x + w + pad, y - pad, -1, 1],
-		[x - pad, y + h + pad, 1, -1],
-		[x + w + pad, y + h + pad, -1, -1],
-	].map(([px, py, dx, dy]) => {
-		const c = svg(parent, "path", {
-			d: `M${px} ${py + dy * arm}V${py}H${px + dx * arm}`,
-			stroke: "var(--amber)",
-			"stroke-width": 3,
-			fill: "none",
-		});
-		c.animate([{ transform: `translate(${-dx * 72}px, ${-dy * 56}px)` }, { transform: "none" }], {
-			duration: 640,
-			delay,
-			easing: css("--ease-settle"),
-			fill: "both",
-		});
-		c.animate(BLINK_IN, { duration: 900, delay, fill: "both" });
-		return c;
-	});
-}
-
-export interface Dimension {
-	strokes: SVGGeometryElement[];
-	marks: Element[];
-}
-
-/**
- * A dimension line under a subject spanning x0..x1: witness lines drop from `from` first, the
- * dimension draws from its centre outward, then a chip ticks to the measured width.
- */
-export function dimension(
-	parent: Element,
-	ticker: Ticker,
-	span: { x0: number; x1: number; y: number; from: number },
-	at: number,
-	labels = true,
-): Dimension {
-	const { x0, x1, y, from } = span;
-	const cx = (x0 + x1) / 2;
-	const g = svg(parent, "g", { stroke: "var(--cyan)", "stroke-width": 2, fill: "none" });
-	const witness = [x0, x1].map((x) => svg(g, "path", { d: `M${x} ${from} V${y + 14}` }));
-	const arms = [x0, x1].map((x) => svg(g, "path", { d: `M${cx} ${y} H${x}` }));
-	for (const w of witness) draw(w, at, 420);
-	for (const a of arms) draw(a, at + 300, 640);
-	const strokes = [...arms, ...witness];
-	if (!labels) return { strokes, marks: [] };
-	const chip = svg(parent, "rect", {
-		x: cx - 110,
-		y: y - 22,
-		width: 220,
-		height: 44,
-		fill: "var(--color-bg)",
-	});
-	const value = svg(parent, "text", {
-		x: cx,
-		y: y + 10,
-		"text-anchor": "middle",
-		fill: "var(--cyan)",
-		class: "me-readout",
-		style: "font-size: var(--type-mono)",
-	});
-	for (const node of [chip, value]) {
-		node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1, delay: at + 500, fill: "both" });
-	}
-	tickTo(
-		ticker,
-		value,
-		x1 - x0,
-		ticker.now() + at + 500,
-		700,
-		(v) => `${Math.round(v).toLocaleString("en-US")} PX`,
-	);
-	return { strokes, marks: [chip, value] };
-}
-
 /**
  * Release: the HUD lets go before the cut. Strokes retract toward their origin, marks fade;
  * the content stays for the transition to carry out. Returns how long it takes (ms).
@@ -226,8 +99,10 @@ export function release(strokes: SVGGeometryElement[], marks: Element[]): number
 
 // ── Persistent HUD chrome ───────────────────────────────────────────────────────────────
 // One overlay shared by every v2 segment, so the chrome is the same object across cuts and
-// wipes: the corner frame and slots never re-enter, only readouts whose value changed update
-// (a short decode), and the timecode runs on from the moment the HUD came online. It lives in
+// wipes: the four corner brackets and the top readouts (the beat index and section, top left;
+// the timecode, top right) never re-enter, only readouts whose value changed update (a short
+// decode), and the timecode runs on from the moment the HUD came online. The bottom corners
+// carry no readouts: the brackets alone frame the picture. It lives in
 // the player's .vw-host, above both slots and any transition layer (which use z-index ≤ 3)
 // and below the dev player's own HUD. It deliberately outlives segments: unmount() never
 // removes it; a segment without HUD chrome calls hideHud().
@@ -237,8 +112,6 @@ export interface HudState {
 	beat: number;
 	total: number;
 	section: string;
-	/** Initial bl readout for the scene (decodes in). */
-	probe?: string;
 	/** Delay (ms) before changed readouts update, e.g. to land with a push's arrival. */
 	delay?: number;
 	/**
@@ -259,7 +132,6 @@ interface Chrome {
 	index: HTMLElement;
 	section: HTMLElement;
 	clock: HTMLElement;
-	probe: HTMLElement;
 	online: AbortController | null;
 	ticker: Ticker | null;
 }
@@ -282,13 +154,7 @@ function chromeFor(anchor: HTMLElement): Chrome {
 			<span class="me-label" data-ref="index"></span>
 			<span class="me-label" data-ref="section" style="color: var(--fg-2)"></span>
 		</div>
-		<div class="me-hud-slot" data-at="tr"><span class="me-readout" data-ref="clock"></span></div>
-		<div class="me-hud-slot" data-at="bl">
-			<span class="me-readout" data-ref="probe" style="color: var(--color-muted)"></span>
-		</div>
-		<div class="me-hud-slot" data-at="br">
-			<span class="me-readout" style="color: var(--color-muted)">GRID 40 PX</span>
-		</div>`;
+		<div class="me-hud-slot" data-at="tr"><span class="me-readout" data-ref="clock"></span></div>`;
 	host.appendChild(el);
 	const q = (name: string) => el.querySelector(`[data-ref="${name}"]`) as HTMLElement;
 	chrome = {
@@ -296,7 +162,6 @@ function chromeFor(anchor: HTMLElement): Chrome {
 		index: q("index"),
 		section: q("section"),
 		clock: q("clock"),
-		probe: q("probe"),
 		online: null,
 		ticker: null,
 	};
@@ -331,10 +196,9 @@ export function showHud(anchor: HTMLElement, state: HudState): void {
 			clock.textContent = timecode(t);
 			return true;
 		});
-		for (const el of [c.index, c.section, c.probe]) claimedBy.delete(el);
+		for (const el of [c.index, c.section]) claimedBy.delete(el);
 		c.index.textContent = index;
 		c.section.textContent = section;
-		c.probe.textContent = state.probe ?? "";
 		c.el.style.display = "";
 		return;
 	}
@@ -342,17 +206,6 @@ export function showHud(anchor: HTMLElement, state: HudState): void {
 	const opts = { signal: state.signal };
 	if (c.index.textContent !== index) decode(c.ticker, c.index, index, at, opts);
 	if (c.section.textContent !== section) decode(c.ticker, c.section, section, at + 60, opts);
-	if (state.probe !== undefined) decode(c.ticker, c.probe, state.probe, at + 120, opts);
-}
-
-/**
- * Decodes a new bl readout `delay` ms from now: what the HUD is doing, or a fact the frame
- * doesn't show. `signal` is the segment's ctx.signal, so a pending update dies with its
- * segment.
- */
-export function hudProbe(text: string, delay: number, signal: AbortSignal): void {
-	if (!chrome?.ticker || signal.aborted) return;
-	decode(chrome.ticker, chrome.probe, text, chrome.ticker.now() + delay, { signal });
 }
 
 /** Takes the HUD offline (for segments that are a real screen, not the instrument). */

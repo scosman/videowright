@@ -15,7 +15,7 @@
 ## Style
 - Active style: `motion-engineering` (project default; upgraded in Phases 1–2).
 - Notes:
-  - One world: every instrument segment shares one grid plane at the same origin, and one persistent HUD (`components/v2/hud.ts`): the corner frame, beat index (`02 / 08`), section name, a running timecode and the probe readout stay put across cuts and wipes; only readouts that change update.
+  - One world: every instrument segment shares one grid plane at the same origin, and one persistent HUD (`components/v2/hud.ts`): the four corner brackets, the beat index (`02 / 08`) and section name (top left) and a running timecode (top right) stay put across cuts and wipes; only readouts that change update. The bottom corners carry no readouts.
   - The cold open is the exception: a real, neutral-dark terminal, full bleed, no grid and no HUD. The hard cut drops the viewer into the instrument world of the video Claude just made, and the HUD's clock starts there.
   - The demo kit lives in `components/v2/` (fonts, motion, stage, hud, logo, title-lockup, terminal, typing, sweep, browser, agent, dispose).
 
@@ -41,6 +41,27 @@ See `voiceover_script/script.md` (verbatim from demo v1; one section per segment
 ---
 
 ## Log
+
+### 2026-11-02 — Phase 6: whole-video polish, the re-timed take, the match cut, the final render
+- **Less, and calmer** (the owner's note after the first cut: "too much content, limited attention"). Every removal leaves a rebalanced frame, not a hole:
+  - No lock-on reticles, registration corners, dimension lines or blinking anywhere in the video; where a lock marked a state change the voice depends on, the plain change stays (the end card's URL turns amber; the voiceover beat's block keeps its amber outline and its 7.72 → 8.92 S dimension).
+  - The HUD keeps its four corner brackets, the beat index and section (top left) and the timecode (top right); its bottom readouts (the per-beat fact and `GRID 40 PX`) are gone.
+  - Title card: the strokes draw, the wordmark rises on "Videowright", the tagline on "video team", then the hero hold (a slightly stronger ambient push). The lockup is centred on the grid. The mark's V is now symmetric (stroke a mirrored onto b's angle about the vertex), and the wordmark's "g" is no longer clipped (its mask's descender room is in px of the wordmark's size).
+  - Gallery: the claim text is gone; the 4-step spine sits centred in the left rail and names each demo. The gears lose their tooth counts; the charts are a tall throughput chart beside the cache-hit donut (no bar panel); the 3D and Lottie lose their locks and tags. The note types at a calm pace and is sent on "Videowright supports it.", where the toast confirms and the spine completes.
+  - Live dev: one short request, `update to new logo and style`, typed at a human pace (~52ms a key), a one-line reply, then `✓ Done. Hot-reloaded.`
+  - Export: `npx videowright render` (the CLI's default `output.mp4`), the shell centred; the progress runs through "It's deterministic" and finishes just before the player opens on "pixel-perfect". No hash section.
+  - Voiceover sync: no PACE readout, file-type chip, ghost line or time-ruler labels; the lane, the waveform, the block and its dimension carry the re-sync.
+  - Agents: no statuses or rules; the panels, sized to their logos and names, arrive one after another on "every".
+  - End card: the logo (centred on the frame) over the prompt box, the group centred vertically; the closing line is the voice's alone.
+- **Pauses re-tuned to the animation as built**, then lengthened where the owner wanted breaths (`retime apply` on the same take, no new TTS). Against the original markers: the cut's breath after "…a single prompt." 1.0 → 1.5s; the title card's tail 1.2 → 0.8s; the gallery's tail 1.2 → 1.8s; the live-dev hold 2.2 → 1.9s; the export's tail 1.2 → 1.6s; the agents beat's tail 1.0 → 2.3s (the match cut releases into the cut from the window's end, so the panels hold first); and the end hold lives in the take itself (`[[pause 5.0s]]` tail), so the track runs to the video's last frame and nothing is padded. Each longer hold is the beat's settled last state: nothing was added to fill it. The video is 69.98s, 4,199 frames.
+- **Frame-exact sync**: every cued advance fires on the frame 9 frames (0.150s) before its word's frame (`specs/projects/demo_v2/tools/sync_advances.mjs`, pinned by a test). Guards landed before the retime: the voiceover beat's word table and lane origin are checked against `timing.json`, and `envelope.ts` carries the track's SHA-256.
+- **Two-pass master**: a true-peak guard, a loudnorm measurement, then one linear gain (the build fails if loudnorm falls back to dynamic): -14.0 LUFS integrated, -2.1 dBTP; the MP4's AAC stays under -1.5 dBTP.
+- **The match cut** (7 → 8, the video's only one): as the agents beat releases, its content rises out of its masks, one outline draws around the three targets and travels onto the end card's prompt box, landing on the cut; the end card opens on that box (grid scan and key light carried across). Any agent → your agent's input box.
+- **Also**: the gallery's planet is computed per pixel on the GPU (sharp coastlines and clouds, water-only glint, an atmosphere that follows the light), with a detailed satellite; the Acme camera frames the table clear of the sidebar (zoom 1.3).
+- **Departures, and why**:
+  - The review asked for a `[[pause 0.5s]]` after "agent," to give the live-dev request room. The take has 0.18s of natural silence there and `retime apply` refuses it (the skill forbids cutting elsewhere). Moot after the owner's shorter request, which types at a human pace in the window it has.
+  - The video ends on the track's last frame (5.03s after "cold."'s STT end, where the take's silence actually starts), not exactly 5.00s after it, so the audio always wins.
+  - Five of the functional spec's Musts changed at the owner's request, for less text on screen: the gallery's claim "If the browser can render it, Videowright can animate it." is removed (it was to stay on screen for the whole beat), the live-dev request is `update to new logo and style` (was `update the title card to our latest branding (name, tagline, design guide, colors), and add some motion`), its reply is one line, `Updating title-card.ts…` (was `Updating segments/title-card.ts, styles/tokens.css…`), the export command is `npx videowright render` (was `… --output explainer.mp4`), and its `✓ wrote` line names the CLI's default `output.mp4` (was `explainer.mp4`).
 
 ### 2026-11-01 — Phase 5: the remaining beats, the whole timeline
 - The timeline is complete: eight segments, 67.86s (4,071 frames at 60fps). It ends 5.0s after the last VO word ("cold."), so the track (63.40s) plays in full and the end hold is the only tail. Every cued advance sits 0.150s before its word.

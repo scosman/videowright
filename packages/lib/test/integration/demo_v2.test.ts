@@ -7,6 +7,7 @@
  * cold open types with. These catch a re-timed take or an edited plan drifting out of sync.
  */
 
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -89,12 +90,10 @@ const CUE_WORDS: Record<string, string[]> = {
 	"v2-web-tech-gallery": [
 		"any", // -> ECharts
 		"advanced", // -> Three.js + Lottie
-		"Three.js", // lock on the planet
-		"Lottie", // lock on the rocket
+		"Lottie", // the rocket launches on the word
 		"even", // -> the product UI
 		"rendered", // Customers, the note
-		"If", // send, the toast
-		"VideoWrite", // the claim lock ("Videowright supports it.")
+		"VideoWrite", // send, the toast, the spine completes ("Videowright supports it.")
 		"Request", // exit: live dev's first word
 	],
 	"v2-interactive-dev": [
@@ -104,9 +103,8 @@ const CUE_WORDS: Record<string, string[]> = {
 	],
 	"v2-pixel-perfect-export": [
 		"your", // Enter: the render runs
-		"It's", // run 2 hashes identically
 		"pixel-perfect", // the player opens on the title card
-		"not", // the HUD locks onto the frame
+		"not", // the camera leans in, the render reads out
 		"Your", // exit: the voiceover beat's first word
 	],
 	"v2-voiceover-sync": [
@@ -116,11 +114,11 @@ const CUE_WORDS: Record<string, string[]> = {
 		"And", // exit: the agents beat's first word
 	],
 	"v2-any-coding-agent": [
-		"every", // SUPPORTED, agent by agent
-		"Install", // exit: the end card's first word
+		"every", // the three agents arrive
+		"Install", // exit: the end card's first word (the match cut)
 	],
 	"v2-install-cta": [
-		"You'll", // the closing line, the lock on the URL
+		"You'll", // the destination turns amber
 	],
 };
 
@@ -153,7 +151,7 @@ describe("demo_v2 timeline", () => {
 			"me-sweep", // the instrument redraws: the preview to the shell that renders it
 			"me-push", // into the exported file's internals: its script
 			"me-sweep", // a new readout: the agents
-			"me-push", // in to the end card
+			"cut", // the match cut: the agents' outline arrives on the end card's prompt box
 		]);
 		expect(timeline.meta.style).toBeUndefined(); // the project default: motion-engineering
 		const source = readFileSync(join(VIDEO, "timeline.ts"), "utf-8");
@@ -251,12 +249,16 @@ describe("demo_v2 audio", () => {
 	it("track timing is the voiceover timing shifted by the VO's placement", () => {
 		const [first, ...rest] = SEGMENT_IDS;
 		const vo = voiceover.timing.perSegment;
-		const shifted = (vo[first] ?? []).map((t) => Math.round((t + voCue.placeAt) * 100) / 100);
+		const shifted = (vo[first] ?? []).map((t) => Number((t + voCue.placeAt).toFixed(3)));
 		expect(track.timing.perSegment[first]).toEqual(shifted);
 		for (const id of rest) expect(track.timing.perSegment[id], id).toEqual(vo[id]);
 	});
 
-	it("advances land on their VO cues", () => {
+	it("advances land on their VO cues, frame-exact", async () => {
+		const program = (await loadModule(
+			join(DEMO, "components/v2/program.ts"),
+		)) as unknown as ProgramModule;
+		const FPS = program.FPS;
 		const norm = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
 		// Track time of the first `word` starting at or after `after` (track seconds).
 		const at = (word: string, after = 0) => {
@@ -266,38 +268,41 @@ describe("demo_v2 audio", () => {
 			if (!hit) throw new Error(`no "${word}" after ${after}s`);
 			return { start: hit.start + voCue.placeAt, end: hit.end + voCue.placeAt };
 		};
-		const lead = (advance: number, cue: number) => cue - advance;
 		const timing = track.timing.perSegment;
-		const [ready, cut] = timing["v2-cold-open"] ?? [];
-		const [wordmark, web, release, exit] = (timing["v2-title-card"] ?? []).map((t) => t + cut);
-		// The architecture's anchor: an advance sits 0.15s before its cue word (to the frame).
-		const anchored = (advance: number, cue: number) =>
-			expect(lead(advance, cue)).toBeCloseTo(0.15, 2);
+		// The render fires advance a of a segment on frame startOf(id) × fps + round(a × fps).
+		const frameOf = (id: string, i: number) =>
+			Math.round(program.startOf(id) * FPS) + Math.round((timing[id] ?? [])[i] * FPS);
+		// The architecture's anchor, to the frame: the advance's frame sits 0.150 s before its
+		// cue word (within half a frame), and never further ahead than that (frame-rounded).
+		const anchored = (id: string, i: number, cue: { start: number }, label: string) => {
+			const frame = frameOf(id, i);
+			expect(Math.abs(cue.start - frame / FPS - 0.15), label).toBeLessThanOrEqual(1 / 120 + 1e-9);
+			expect((Math.round(cue.start * FPS) - frame) / FPS, label).toBeLessThanOrEqual(0.15 + 1e-9);
+		};
+		const seconds = (id: string, i: number) => frameOf(id, i) / FPS;
 
 		// "Video is ready" lands on "with a single prompt".
 		const code = at("Code");
 		const withCue = at("with", code.end);
-		expect(ready).toBeGreaterThan(code.end);
-		anchored(ready, withCue.start);
+		expect(seconds("v2-cold-open", 0)).toBeGreaterThan(code.end);
+		anchored("v2-cold-open", 0, withCue, 'cold open "with"');
 		// The hard cut falls in the breath between "prompt." and the title's "Videowright".
 		const prompt = at("prompt", withCue.end);
 		const title = at("VideoWrite", prompt.end);
+		const cut = seconds("v2-cold-open", 1);
 		expect(cut).toBeGreaterThan(prompt.end + 0.2);
 		expect(cut).toBeLessThan(title.start);
-		// The wordmark rises onto "Videowright"; the HUD reads ahead on "web".
-		anchored(wordmark, title.start);
-		anchored(web, at("web", title.start).start);
+		// The wordmark rises onto "Videowright"; the tagline onto "video team".
+		anchored("v2-title-card", 0, title, 'title "Videowright"');
+		anchored("v2-title-card", 1, at("video", title.start), 'title "video"');
 		// The release follows "technologies."; the exit is anchored on the gallery's "That".
 		const technologies = at("technologies", title.start);
-		expect(release).toBeGreaterThan(technologies.end);
-		const that = at("That", release);
-		expect(that.start).toBeGreaterThan(technologies.end);
-		expect(exit).toBeGreaterThan(release);
-		anchored(exit, that.start);
+		expect(seconds("v2-title-card", 2)).toBeGreaterThan(technologies.end);
+		const that = at("That", technologies.end);
+		anchored("v2-title-card", 3, that, 'title exit "That"');
 
 		// Every later segment: each advance 0.15s before its cue word, in order. The last
 		// segment's final advance is the end hold (its own test).
-		let start = exit;
 		let after = that.start;
 		const last = SEGMENT_IDS[SEGMENT_IDS.length - 1];
 		for (const [id, cues] of Object.entries(CUE_WORDS)) {
@@ -305,42 +310,89 @@ describe("demo_v2 audio", () => {
 			expect(advances, id).toHaveLength(cues.length + (id === last ? 1 : 0));
 			cues.forEach((word, i) => {
 				const cue = at(word, after);
-				expect(lead(start + advances[i], cue.start), `${id} [${i}] "${word}"`).toBeCloseTo(0.15, 2);
+				anchored(id, i, cue, `${id} [${i}] "${word}"`);
 				after = cue.start;
 			});
-			start += advances[advances.length - 1];
 		}
 	});
 
-	it("ends the video END_HOLD_S after the last VO word, covering the whole track", () => {
+	it("ends the video END_HOLD_S after the last VO word, at the end of the track", () => {
 		const timing = track.timing.perSegment;
-		const finals = SEGMENT_IDS.map((id) => (timing[id] ?? []).at(-1) ?? 0);
-		const end = finals.reduce((a, b) => a + b, 0);
+		const fps = timeline.meta.fps ?? 60;
+		const frames = SEGMENT_IDS.map((id) => Math.round(((timing[id] ?? []).at(-1) ?? 0) * fps));
+		const end = frames.reduce((a, b) => a + b, 0) / fps;
 		const lastWord = words[words.length - 1].end + voCue.placeAt;
-		// The full hold, and no dead tail after it.
-		expect(end - lastWord).toBeCloseTo(END_HOLD_S, 2);
-		// No VO is cut off: the video runs past the end of the track.
-		expect(end).toBeGreaterThanOrEqual(track.length_s);
-		// The end card's own constant is the same hold.
-		const cta = readFileSync(join(DEMO, "segments/v2-install-cta/index.ts"), "utf-8");
-		expect(cta).toContain(`const END_HOLD = ${END_HOLD_S};`);
+		// The track holds the end hold (the take's [[pause 5.0s]] tail, measured by retime from
+		// the take's real silence, a few ms past the STT word end), so the final advance lands on
+		// the end of the audio, as the sync rule asks: the render neither pads nor cuts.
+		expect(Math.abs(end - track.length_s)).toBeLessThanOrEqual(1 / (2 * fps) + 0.005);
+		// The full hold after the last word, and no dead tail after it.
+		expect(Math.abs(end - lastWord - END_HOLD_S)).toBeLessThan(0.1);
+		// The hold is the take's own tail marker.
+		const script = readFileSync(join(VO_DIR, "provider_script.md"), "utf-8");
+		expect(script.trimEnd().endsWith(`[[pause ${END_HOLD_S.toFixed(1)}s]]`)).toBe(true);
 	});
 
-	it("the voiceover beat's waveform is this track's: one level per 0.1s of track.mp3", async () => {
+	it("the voiceover beat's waveform is this track's", async () => {
 		const env = (await loadModule(
 			join(DEMO, "segments/v2-voiceover-sync/envelope.ts"),
-		)) as unknown as { ENVELOPE: string; ENVELOPE_STEP_S: number };
+		)) as unknown as {
+			ENVELOPE: string;
+			ENVELOPE_STEP_S: number;
+			TRACK_SHA256: string;
+		};
 		expect(env.ENVELOPE_STEP_S).toBe(0.1);
 		expect(env.ENVELOPE).toMatch(/^[0-9a-z]+$/);
+		const sha = createHash("sha256")
+			.update(readFileSync(resolve(VIDEO, track.audio_file)))
+			.digest("hex");
 		expect(
-			env.ENVELOPE.length,
+			env.TRACK_SHA256,
 			"envelope.ts is stale: re-run specs/projects/demo_v2/tools/envelope.sh",
-		).toBe(Math.round(track.length_s / env.ENVELOPE_STEP_S));
+		).toBe(sha);
+		// One level per 0.1s, covering the track.
+		expect(Math.abs(env.ENVELOPE.length - track.length_s / env.ENVELOPE_STEP_S)).toBeLessThan(1);
 		// Speech where the VO speaks: the bin under the export beat's "command" is loud.
 		const command = words.find((w) => w.word === "command");
 		if (!command) throw new Error('no "command" in timing.json');
 		const bin = Math.floor(((command.start + command.end) / 2 + voCue.placeAt) * 10);
 		expect(Number.parseInt(env.ENVELOPE[bin], 36)).toBeGreaterThan(20);
+	});
+
+	it("the voiceover beat's word times are timing.json's, from each line's window start", () => {
+		const source = readFileSync(join(DEMO, "segments/v2-voiceover-sync/index.ts"), "utf-8");
+		const table = (name: string) =>
+			JSON.parse(
+				(source.match(new RegExp(`const ${name} = (\\[[\\s\\S]*?\\]);`))?.[1] ?? "[]").replace(
+					/,\s*\]/g,
+					"]",
+				),
+			) as number[][];
+		const starts = table("WORD_MS");
+		const spans = table("LINE3_WORD_MS");
+		const lines = (source.match(/voiceover:\s*"([^"]+)"/)?.[1] ?? "")
+			.split(/(?<=\.) /)
+			.map((line) => line.split(" ").length);
+		expect(lines).toEqual([starts[0]?.length, starts[1]?.length, spans.length]);
+		let i = words.findIndex((w) => w.word === "Your");
+		expect(i, 'no "Your" in timing.json').toBeGreaterThan(-1);
+		const rel = lines.map((count) => {
+			const line = words.slice(i, i + count);
+			i += count;
+			const from = line[0].start - 0.15;
+			return line.map((w) => [
+				Math.round((w.start - from) * 1000),
+				Math.round((w.end - from) * 1000),
+			]);
+		});
+		expect(rel[0].map(([start]) => start)).toEqual(starts[0]);
+		expect(rel[1].map(([start]) => start)).toEqual(starts[1]);
+		expect(rel[2]).toEqual(spans);
+	});
+
+	it("the voiceover beat's lane follows the beat's start", () => {
+		const source = readFileSync(join(DEMO, "segments/v2-voiceover-sync/index.ts"), "utf-8");
+		expect(source).toMatch(/const LANE = \{[^}]*t0: Math\.floor\(START\) - 2,/);
 	});
 
 	it("the agent logos are the byte-identical allowed assets", () => {
@@ -406,6 +458,27 @@ describe("demo_v2 audio", () => {
 		}
 		expect(command).toContain("{TRACK_OUT}");
 		expect(command).toContain("loudnorm=I=-14");
+	});
+
+	it("masters in two passes: measure, then one linear gain with the measured values", () => {
+		const command = snapshot.split("### Final mix command")[1].split("```bash")[1] ?? "";
+		const measure = command.indexOf("print_format=json");
+		const apply = command.indexOf("linear=true");
+		expect(measure, "pass 1 measures").toBeGreaterThan(-1);
+		expect(apply, "pass 2 applies a linear gain after it").toBeGreaterThan(measure);
+		for (const value of [
+			"measured_I",
+			"measured_TP",
+			"measured_LRA",
+			"measured_thresh",
+			"offset",
+		]) {
+			expect(command.slice(apply), value).toContain(`${value}=$(m `);
+		}
+		// ...and the build fails unless pass 2 stayed linear (loudnorm silently falls back to dynamic mode).
+		expect(command.slice(apply)).toContain(`grep -q '"normalization_type" : "linear"'`);
+		// Both passes target -14 LUFS under the -1.5 dBTP ceiling.
+		expect(command.match(/loudnorm=I=-14:TP=-1\.5/g)).toHaveLength(2);
 		expect(existsSync(join(dirname(join(VIDEO, track.audio_file)), "plan_snapshot.md"))).toBe(true);
 	});
 });

@@ -72,11 +72,13 @@ const meSplit: Transition = async (outgoing, incoming, ctx) => {
 	];
 	const animations: Animation[] = [
 		// The easing lives on the keyframes (the effect is linear), so the rule really draws:
-		// down over 35% of its run (~210ms), then holds and fades as the doors open.
+		// down over 35% of its run (~210ms), then holds and fades as the doors open. A cubic
+		// ease-out, not the expo settle: on a 210ms draw the expo snaps most of the line in on
+		// its first frames.
 		rule.animate(
 			forward
 				? [
-						{ transform: "scaleY(0)", opacity: 1, easing: settle },
+						{ transform: "scaleY(0)", opacity: 1, easing: "cubic-bezier(0.33, 1, 0.68, 1)" },
 						{ transform: "scaleY(1)", opacity: 1, offset: 0.35 },
 						{ transform: "scaleY(1)", opacity: 0 },
 					]

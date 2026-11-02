@@ -6,8 +6,10 @@ Voiceover plus one typing SFX, no music. The cold open opens on keys: the prompt
 0.66s before the voice starts, so the VO is placed at 0.6s. The typing SFX sits exactly under the
 visual typing — burst 1 is the whole file, burst 2 adds a slice of the file's first run of keys,
 and single keys mark the paste and the Enter — on the same schedule the cold open types with
-(`components/v2/typing.ts`, `COLD_OPEN`). Mastered to -14 LUFS with a -1.5 dBTP ceiling (the
-MP4's AAC encode adds about half a dB of true peak).
+(`components/v2/typing.ts`, `COLD_OPEN`). The VO file ends with the 5.0s end hold (its
+`[[pause 5.0s]]` tail), so the track runs to the video's last frame. Mastered in two passes to
+-14 LUFS integrated with one linear gain, under a -1.5 dBTP ceiling (a true-peak guard ahead of
+the gain leaves room for the MP4's AAC encode, which adds about 0.4 dB).
 
 ### Cue 1 -- Typing, bursts 1-2
 Source: audio/originals/sfx/laptop_typing/
@@ -26,7 +28,7 @@ Slice: full file
 Place at: 0.6s
 Volume: 100%
 Fades: none
-Notes: ElevenLabs v4, Cosman-1. Word timings in audio/originals/voiceovers/v1/timing.json (track time = word time + 0.6s). First word "The" at 0.96s. Mono, panned to both channels at full level.
+Notes: ElevenLabs v4, Cosman-1. Word timings in audio/originals/voiceovers/v1/timing.json (track time = word time + 0.6s). First word "The" at 0.96s; last word "cold." ends at 64.96s, then the file's 5.0s tail (the end hold). Mono, panned to both channels at full level.
 
 ffmpeg snippet:
 [1:a] pan=stereo|c0=c0|c1=c0, adelay=600:all=1 [vo2]
@@ -66,7 +68,16 @@ ffmpeg snippet:
 
 ### Final mix command
 
+Two passes, so the master is one linear gain to -14 LUFS (single-pass loudnorm rides the gain
+and lands short of the target). The unmastered mix first goes through a true-peak guard: a
+limiter at -5.6 dBFS on the 4x-oversampled signal, so the linear gain (about +3.2 dB) leaves the
+master near -2.2 dBTP, and the MP4's AAC encode (which adds about 0.4 dB) stays under -1.5 dBTP.
+Then loudnorm measures it (pass 1) and applies the gain with the measured values and
+`linear=true` (pass 2). The mix itself (cues, volumes, fades) is unchanged.
+
 ```bash
+MIX="$(mktemp -d)/mix.wav"
+# The mix, unmastered, with the true-peak guard.
 ffmpeg -y \
   -i audio/originals/sfx/laptop_typing/audio.mp3 \
   -i audio/originals/voiceovers/v1/audio.mp3 \
@@ -78,11 +89,48 @@ ffmpeg -y \
     [t3] atrim=start=0.41:end=0.52, asetpts=PTS-STARTPTS, volume=0.6, afade=t=in:st=0:d=0.005, afade=t=out:st=0.08:d=0.03, adelay=3605:all=1 [sfx4];
     [t4] atrim=start=1.925:end=2.06, asetpts=PTS-STARTPTS, volume=0.65, afade=t=in:st=0:d=0.005, afade=t=out:st=0.095:d=0.04, adelay=4087:all=1 [sfx5];
     [sfx1][vo2][sfx3][sfx4][sfx5] amix=inputs=5:duration=longest:normalize=0 [mix];
-    [mix] loudnorm=I=-14:TP=-1.5:LRA=11 [out]
-  " -map "[out]" -ar 44100 -c:a libmp3lame -q:a 2 {TRACK_OUT}
+    [mix] aresample=176400, alimiter=limit=0.525:level=disabled:attack=1:release=60, aresample=44100 [out]
+  " -map "[out]" -c:a pcm_f32le "$MIX"
+# Pass 1: measure.
+M="$(ffmpeg -hide_banner -nostats -i "$MIX" -af loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json -f null - 2>&1 | sed -n '/^{/,/^}/p')"
+m() { printf '%s' "$M" | sed -n "s/.*\"$1\" : \"\(.*\)\".*/\1/p"; }
+# Pass 2: one linear gain to -14 LUFS. loudnorm silently falls back to dynamic mode when the
+# gain would break the ceiling, so the build fails unless it reports linear.
+P2="$(ffmpeg -y -hide_banner -nostats -i "$MIX" \
+  -af "loudnorm=I=-14:TP=-1.5:LRA=11:linear=true:measured_I=$(m input_i):measured_TP=$(m input_tp):measured_LRA=$(m input_lra):measured_thresh=$(m input_thresh):offset=$(m target_offset):print_format=json" \
+  -ar 44100 -c:a libmp3lame -q:a 2 {TRACK_OUT} 2>&1)"
+rm -rf "$(dirname "$MIX")"
+printf '%s' "$P2" | grep -q '"normalization_type" : "linear"' || { echo "loudnorm fell back to dynamic mode" >&2; exit 1; }
 ```
 
 ## Log
+
+## 2026-11-02 -- Synced timing to v1 (round 3), frame-exact
+**Segments:** all eight.
+**Total duration:** 69.98s (track); the video is 69.98s, 4,199 frames at 60fps, ending on the track's last frame.
+
+## 2026-11-02 -- Lengthened five pauses (owner's request); rebuilt v1
+**Change:** the cut's breath after "…a single prompt." 1.0 -> 1.5s, the gallery's tail 0.8 -> 1.8s, the live-dev hold 1.4 -> 1.9s, the export's tail 0.9 -> 1.6s, the agents beat's tail 1.1 -> 2.3s; `retime apply` on the same take; the mix and the two-pass master unchanged (pass 2 linear).
+**Why:** the owner watched the round-2 cut and wanted these breaths.
+**Render:** audio/tracks/v1/track.mp3 (69.98s; -14.0 LUFS integrated, -2.1 dBTP)
+
+## 2026-11-02 -- Synced timing to v1 (re-timed take, round 2), frame-exact
+**Segments:** all eight. The title card's second cue is now "video" (the tagline), the gallery drops its "Three.js" and "If" cues (send moves to "Videowright"), and the export drops "It's" (no hash section).
+**Total duration:** 66.09s (track); the video is 66.08s, 3,965 frames at 60fps, ending on the track's last frame.
+
+## 2026-11-02 -- Re-timed the take's pauses (round 2); rebuilt v1
+**Change:** after the owner's removals: the title card's tail 1.2 -> 0.8s, the gallery's tail 1.2 -> 0.8s, the live-dev hold 1.8 -> 1.4s, the agents beat's tail 1.3 -> 1.1s; `retime apply` on the same take. The final mix command now uses a portable temp dir and fails the build unless pass 2 reports linear normalization (it did).
+**Why:** the locks and annotations that those holds were sized for are gone; no beat now ends on a static hold.
+**Render:** audio/tracks/v1/track.mp3 (66.09s; -14.0 LUFS integrated, -2.1 dBTP)
+
+## 2026-11-01 -- Synced timing to v1 (re-timed take), frame-exact
+**Segments:** all eight (v2-cold-open … v2-install-cta)
+**Total duration:** 67.50s (track) = the video, 4,050 frames at 60fps. Every cued advance fires on the frame 9 frames (0.150s) before its word's frame (specs/projects/demo_v2/tools/sync_advances.mjs); the final advance is the track's last frame, 5.0s after "cold.".
+
+## 2026-11-01 -- Re-timed the take's pauses; rebuilt v1 with a two-pass master
+**Change:** pauses in voiceovers/v1/provider_script.md re-tuned to the built animation and `retime apply` re-run on the same raw take (live-dev hold 2.2 -> 1.8s, export tail 1.2 -> 0.9s, agents tail 1.0 -> 1.3s for the match cut, the end hold 0.5 -> 5.0s in the file itself; a marker after "agent," was refused: 0.18s of natural silence). The final mix command now masters in two passes: a true-peak guard (limiter at -5.6 dBFS, 4x oversampled), a loudnorm measurement, then one linear gain. The mix (cues, volumes, fades) is unchanged.
+**Why:** Phase 6: the pauses fit the animation as built; the track holds the end hold, so nothing is padded at render; single-pass loudnorm rode the gain and landed at -14.6 LUFS. Not yet adopted by the user, so v1 was rebuilt in place.
+**Render:** audio/tracks/v1/track.mp3 (67.50s; -14.0 LUFS integrated, -2.1 dBTP)
 
 ## 2026-11-01 -- Synced timing for the remaining beats (v1)
 **Segments:** v2-pixel-perfect-export, v2-voiceover-sync, v2-any-coding-agent, v2-install-cta (the full 8-segment timeline)

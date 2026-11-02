@@ -18,27 +18,60 @@ export const PANE = {
 	col: 18,
 } as const;
 
-/** Word-wraps `text` to lines of at most `cols` characters; a longer word is split. */
-export function wrapColumns(text: string, cols: number): string[] {
-	const lines: string[] = [];
-	let line = "";
+/** One wrapped line: its text and where it starts in the source text. */
+export interface WrappedLine {
+	text: string;
+	start: number;
+}
+
+/**
+ * Word-wraps `text` to lines of at most `cols` characters; a longer word is split. Each line
+ * keeps its offset in `text`, so typing through it knows which characters are on screen: a
+ * break at a space consumes the space, a break inside a split word consumes nothing.
+ */
+export function wrapSpans(text: string, cols: number): WrappedLine[] {
+	const lines: WrappedLine[] = [];
+	let line: WrappedLine | null = null;
+	let at = 0;
 	for (const word of text.split(" ")) {
 		let rest = word;
+		let restAt = at;
 		while (rest.length > cols) {
-			if (line) lines.push(line);
-			line = "";
-			lines.push(rest.slice(0, cols));
+			if (line?.text) lines.push(line);
+			line = null;
+			lines.push({ text: rest.slice(0, cols), start: restAt });
 			rest = rest.slice(cols);
+			restAt += cols;
 		}
-		if (!line) line = rest;
-		else if (line.length + 1 + rest.length <= cols) line += ` ${rest}`;
+		if (!line?.text) line = { text: rest, start: restAt };
+		else if (line.text.length + 1 + rest.length <= cols) line.text += ` ${rest}`;
 		else {
 			lines.push(line);
-			line = rest;
+			line = { text: rest, start: restAt };
 		}
+		at += word.length + 1;
 	}
-	lines.push(line);
+	lines.push(line ?? { text: "", start: text.length });
 	return lines;
+}
+
+/** Word-wraps `text` to lines of at most `cols` characters; a longer word is split. */
+export function wrapColumns(text: string, cols: number): string[] {
+	return wrapSpans(text, cols).map((line) => line.text);
+}
+
+/**
+ * The first `chars` characters of `text` as wrapped `lines`: how much of each line shows, and
+ * where the caret sits (after the last typed character; a typed break space leaves it at the
+ * end of its line).
+ */
+export function typedLines(lines: readonly WrappedLine[], chars: number) {
+	const shown = lines.map((l) => Math.max(0, Math.min(l.text.length, chars - l.start)));
+	let caretLine = 0;
+	lines.forEach((l, i) => {
+		if (l.start < chars) caretLine = i;
+	});
+	return { shown, caretLine, caretCol: shown[caretLine] };
 }
 
 export interface AgentPaneOptions {
@@ -57,8 +90,8 @@ export interface AgentInput {
 	caret: HTMLElement;
 	/** Characters per input line (after the "> " prompt). */
 	cols: number;
-	/** Shows the first `chars` characters of `lines` (wrapped text), caret after the last. */
-	show(lines: readonly string[], chars: number): void;
+	/** Shows the first `chars` characters of `text`, wrapped to the box, caret after the last. */
+	show(text: string, chars: number): void;
 	/** Moves the box so its first text line sits on row `r`. */
 	setRow(r: number): void;
 }
@@ -125,35 +158,25 @@ export function createAgentPane(host: HTMLElement, opts: AgentPaneOptions): Agen
 	const caret = document.createElement("span");
 	caret.className = "v2-caret";
 	caret.style.cssText = "position:absolute; width:17px; height:36px";
-	let shown = -1;
-	let lineCount = 0;
+	let shownText = "";
+	let shownChars = -1;
+	let spans: WrappedLine[] = wrapSpans("", inputCols);
 	const input: AgentInput = {
 		box,
 		caret,
 		cols: inputCols,
-		show: (lines, chars) => {
-			if (chars === shown && lines.length === lineCount) return;
-			shown = chars;
-			lineCount = lines.length;
-			let left = chars;
-			let caretLine = 0;
-			let caretCol = 0;
-			const html: string[] = [];
-			lines.forEach((text, i) => {
-				// A wrapped line's trailing space is part of its length when typing through it.
-				const take = Math.max(0, Math.min(text.length, left));
-				const visible = text.slice(0, take);
-				if (left > 0 || i === 0) {
-					caretLine = i;
-					caretCol = take;
-				}
-				left -= text.length + 1;
-				html.push(
-					`<div style="position:absolute; top:${i * PANE.row}px; white-space:pre">${esc(visible)}</div>`,
-				);
-			});
+		show: (text, chars) => {
+			if (text === shownText && chars === shownChars) return;
+			if (text !== shownText) spans = wrapSpans(text, inputCols);
+			shownText = text;
+			shownChars = chars;
+			const { shown, caretLine, caretCol } = typedLines(spans, chars);
+			const html = spans.map(
+				(line, i) =>
+					`<div style="position:absolute; top:${i * PANE.row}px; white-space:pre">${esc(line.text.slice(0, shown[i]))}</div>`,
+			);
 			// The box grows with the lines the text will need, as Claude Code's input does.
-			const visibleLines = Math.max(1, caretLine + 1);
+			const visibleLines = caretLine + 1;
 			lineHost.innerHTML = html.slice(0, visibleLines).join("");
 			box.style.height = `${visibleLines * PANE.row + 20}px`;
 			caret.style.left = `${caretCol * PANE.col}px`;
@@ -164,7 +187,7 @@ export function createAgentPane(host: HTMLElement, opts: AgentPaneOptions): Agen
 			box.style.top = `${rowY(r) - 10}px`;
 		},
 	};
-	input.show([""], 0);
+	input.show("", 0);
 
 	return {
 		root,

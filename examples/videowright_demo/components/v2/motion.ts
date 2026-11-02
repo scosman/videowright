@@ -55,19 +55,45 @@ export function draw(
 	return path.animate(frames, { duration, delay, easing, fill: "both" });
 }
 
-/** Masked line reveal: each element rises out of its .me-line mask. */
+/**
+ * Masked line reveal: each element rises out of its .me-line mask, from `from` (below the
+ * mask: 112% clears the mask's usual 0.12em of descender room; a mask with more room needs more).
+ */
 export function riseIn(
 	els: Element[],
 	delay: number,
 	duration = ms("--dur-slow"),
 	stagger = ms("--stagger"),
+	from = "translateY(112%)",
 ): void {
 	els.forEach((node, i) => {
-		(node as HTMLElement).animate([{ transform: "translateY(112%)" }, { transform: "none" }], {
+		(node as HTMLElement).animate([{ transform: from }, { transform: "none" }], {
 			duration,
 			delay: delay + i * stagger,
 			easing: css("--ease-settle"),
 			fill: "both",
+		});
+	});
+}
+
+/**
+ * The masked line exit: each element rises out of the top of its mask (riseIn reversed), far
+ * enough (130%) that a display face's descenders, which hang below its 0.94 line box, clear
+ * the mask too.
+ */
+export function riseOut(
+	els: Element[],
+	delay: number,
+	duration = ms("--dur-exit"),
+	stagger = ms("--stagger-tight"),
+	easing = css("--ease-exit"),
+): void {
+	els.forEach((node, i) => {
+		(node as HTMLElement).animate([{ transform: "none" }, { transform: "translateY(-130%)" }], {
+			duration,
+			delay: delay + i * stagger,
+			easing,
+			fill: "forwards",
 		});
 	});
 }

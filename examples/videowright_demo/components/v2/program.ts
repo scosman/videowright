@@ -12,14 +12,14 @@ export interface ProgramEntry {
 }
 
 export const PROGRAM: readonly ProgramEntry[] = [
-	{ id: "v2-cold-open", name: "cold-open", seconds: 7.33 },
-	{ id: "v2-title-card", name: "title-card", seconds: 6.37 },
-	{ id: "v2-web-tech-gallery", name: "gallery", seconds: 17.543 },
-	{ id: "v2-interactive-dev", name: "live-dev", seconds: 5.785 },
-	{ id: "v2-pixel-perfect-export", name: "export", seconds: 7.521 },
-	{ id: "v2-voiceover-sync", name: "vo-sync", seconds: 8.922 },
-	{ id: "v2-any-coding-agent", name: "agents", seconds: 3.737 },
-	{ id: "v2-install-cta", name: "install", seconds: 10.65 },
+	{ id: "v2-cold-open", name: "cold-open", seconds: 7.833 },
+	{ id: "v2-title-card", name: "title-card", seconds: 5.967 },
+	{ id: "v2-web-tech-gallery", name: "gallery", seconds: 18.15 },
+	{ id: "v2-interactive-dev", name: "live-dev", seconds: 5.483 },
+	{ id: "v2-pixel-perfect-export", name: "export", seconds: 7.917 },
+	{ id: "v2-voiceover-sync", name: "vo-sync", seconds: 8.917 },
+	{ id: "v2-any-coding-agent", name: "agents", seconds: 5.033 },
+	{ id: "v2-install-cta", name: "install", seconds: 10.683 },
 ];
 
 export const FPS = 60;

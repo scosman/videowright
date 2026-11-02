@@ -24,7 +24,7 @@ examples/videowright_demo/
   components/v2/                                          # demo_v2 kit (not part of the style pack)
     fonts.ts          awaitFonts(): document.fonts.load() for every face used; awaited in mount()
     stage.ts          createStage(el, opts): world root, grid plane, light/vignette/grain, HUD chrome, camera
-    hud.ts            cornerTicks, crosshairLock, dimensionLine, leaderCallout, readout (ticking), decodeText, maskReveal
+    hud.ts            decode (mono readouts), tickTo (ticking numbers), release; showHud/hideHud (persistent HUD chrome)
     motion.ts         easing/duration constants (mirroring tokens), small WAAPI helpers
     logo.ts           Videowright mark (inline SVG) + wordmark; drawIn(); sizes
     title-lockup.ts   the beat-2 title composition as a component: mount at any scale, reveal(), showFinal()
@@ -115,7 +115,7 @@ Why components live in `components/v2/` rather than in the style pack: pack samp
 
 ### `title-lockup.ts` (prop continuity)
 
-One component renders the beat-2 composition: mark, wordmark, tagline, and its HUD measurement. It takes a `scale` and a `host`, and exposes `reveal(ctx)` (the full animation) and `showFinal()` (the static end state).
+One component renders the beat-2 composition: mark, wordmark and tagline, with no HUD annotations. It takes a `host` and an optional `scale`, and exposes `reveal()` (the full animation, also as its parts: `revealMark()`, `revealWords()`, `revealTagline()`) and `showFinal()` (the static end state).
 
 - `v2-title-card` uses it full-frame.
 - `v2-interactive-dev` mounts it inside the browser viewport and calls `reveal()` on hot-reload.
@@ -165,6 +165,6 @@ Scripts:
 
 - **Segment ids** are `v2-<beat>`. The folder name equals the id.
 - **Biome style:** tabs, double quotes, semicolons.
-- **Imports:** segments and components import from `videowright` and relative paths only. The style pack's samples import only from `videowright`.
+- **Imports:** segments and components import from `videowright`, the libraries the demo's `package.json` declares (`echarts`, `three`, `lottie-web`), and relative paths. The style pack's samples import only from `videowright`.
 - **Logging:** `videos/demo_v2/PLAN.md` gets a dated log entry per phase, recording design decisions and any departure from the spec's Direction, with the reason.
 - **Commits:** one per phase on `claude/brave-heisenberg-0ypj2b`, pushed after each phase. **No pull request** (user decision).

@@ -559,8 +559,29 @@ export default defineSegment({
 		// properties, which compose with the ambient drift the rAF loop writes to transform;
 		// the grid takes 60% of the move. Past the window's edges is only ever under the mask.
 		let cam: Camera = { tx: 0, ty: 0, s: 1 };
+		// Window chrome outside the framed region: anything the mask's fading edge would cut in
+		// half (a ghost "WA" of the WALL readout, half a nav label) is hidden with the mask.
+		const chrome = ["url", "wall", ...NAV.map((_, i) => `nav-${i}`)].map((ref) => stage.ref(ref));
+		const shown = (el: HTMLElement, c: Camera) => {
+			if (c.s === 1) return 1;
+			const b = boxOf(el);
+			const x = 960 + c.tx + c.s * (b.x - 960);
+			const y = 540 + c.ty + c.s * (b.y - 540);
+			const inside =
+				x >= FOCUS.left &&
+				x + c.s * b.w <= FOCUS.right &&
+				y >= FOCUS.top &&
+				y + c.s * b.h <= FOCUS.bottom;
+			return inside ? 1 : 0;
+		};
 		const moveCamera = (to: Camera, duration: number, delay = 0) => {
 			const timing = { duration, delay, easing: css("--ease-draw"), fill: "both" as const };
+			for (const el of chrome) {
+				el.animate([{ opacity: shown(el, cam) }, { opacity: shown(el, to) }], {
+					...timing,
+					easing: "linear",
+				});
+			}
 			const at = (c: Camera, k: number) => ({
 				translate: `${(c.tx * k).toFixed(2)}px ${(c.ty * k).toFixed(2)}px`,
 				scale: `${(1 + (c.s - 1) * k).toFixed(4)}`,
@@ -574,10 +595,15 @@ export default defineSegment({
 			});
 			cam = to;
 		};
-		// Centre the region, then clamp the move so the window's edges stay at or beyond the
-		// mask's inner edges. Screen x of a world x is 960 + tx + zoom * (x - 960) (y: 540).
+		// Fit the region inside the mask's inner edges (FOCUS), centre it, then clamp the move so
+		// the window's edges stay at or beyond them. Screen x of a world x is
+		// 960 + tx + zoom * (x - 960) (y: 540).
 		const frameOn = (r: Box): Camera => {
-			const zoom = Math.min(1.4, 1600 / r.w, 800 / r.h);
+			const zoom = Math.min(
+				1.4,
+				(FOCUS.right - FOCUS.left) / r.w,
+				(FOCUS.bottom - FOCUS.top) / r.h,
+			);
 			const fit = (
 				want: number,
 				near: number,

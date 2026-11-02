@@ -3,7 +3,7 @@
        reference PNG supplied by the user (2026-10-31). Strokes are <line>s so
        they can be drawn in with stroke-dashoffset. -->
   <defs>
-    <linearGradient id="vw-a" gradientUnits="userSpaceOnUse" x1="80" y1="40" x2="228" y2="292">
+    <linearGradient id="vw-a" gradientUnits="userSpaceOnUse" x1="114" y1="40" x2="228" y2="292">
       <stop offset="0" stop-color="#FF8A3D"/>
       <stop offset="0.38" stop-color="#F2456F"/>
       <stop offset="0.72" stop-color="#8E2FD8"/>
@@ -22,7 +22,7 @@
       <stop offset="1" stop-color="#FF9A3C"/>
     </linearGradient>
   </defs>
-  <line class="vw-stroke vw-stroke-a" x1="80" y1="60" x2="222" y2="276" stroke="url(#vw-a)" stroke-width="78" stroke-linecap="round"/>
+  <line class="vw-stroke vw-stroke-a" x1="114" y1="60" x2="222" y2="276" stroke="url(#vw-a)" stroke-width="78" stroke-linecap="round"/>
   <line class="vw-stroke vw-stroke-b" x1="330" y1="60" x2="222" y2="276" stroke="url(#vw-b)" stroke-width="78" stroke-linecap="round"/>
   <line class="vw-stroke vw-stroke-c" x1="488" y1="60" x2="372" y2="276" stroke="url(#vw-c)" stroke-width="78" stroke-linecap="round"/>
 </svg>

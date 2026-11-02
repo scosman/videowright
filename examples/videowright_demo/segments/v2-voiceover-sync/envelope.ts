@@ -4,13 +4,16 @@
 
 /** One level (0-35) per 0.1s of the track. */
 export const ENVELOPE =
-	"0009500a5uqyxwwswpjlmcttv9rro4cqrvtuumworwwpqojrdpxofmf008nq0owvnns85000000000axvywwdnsphp" +
-	"wsnnonhotspxumdga00qru0owussfllice70000000000009uuqquogprtuou7uotl90000000rywsqlog80ssftwt" +
-	"nmljd0000000roys1atttrstskh810slassvutd3kvvxk70000000tuwwqrzx9wvmqtvqd0auvtnorlro5fqfh0000" +
-	"0007qxrrypvutpvwqtl00kwyvwgmgo0f00000000000iswtcstwqupmvtnknl0eqnhwqsedxmoole3000000000000" +
-	"0000000000cuwsvxuq0taoshqpih9000000qolqjvwvith0dplnrausrhtlkc000pxwojrkk9ga00000000000lwiu" +
-	"xcgwuwoshuvutttig90000qesstqsqplpsfuwslquuoilda0000uvxwtrn0lsnsvvmqijf1000000000000000uqyy" +
-	"xurgu8qg0vrvvusrgqohgc80000000000rnxyuvvrsncpowetrtqjqkssorpkid000jxwwtxxwrdpupgsunrdpnf20" +
-	"0000";
+	"0009500a5uqxxwwswpjmncsuwbtsp5drtwuvvoxqswxqrpksepxpfng008oq0owvpos9500000000000000bwwyvwe" +
+	"ntqiqxtonooipttqyvndhb00rsv0oxvsrgllidf700000000aturrupgqstvpu9vpul90000000rxxtqloh90ssfsw" +
+	"uomljd0000000spxt2auuusstskh810slatsvtte3kvvxk80000000tvwwqrzxavvmruvqe0buvuoormro5frgh000" +
+	"00003qxrqxpvvtpuwrtl00kwyvwhmgp0f00000000000000000gtvtcsuwquqmvunlnl0dqnhwqtedwmpolf300000" +
+	"00000000000000duwtvwur0taothrpjh9000000qplrjvwviti0dpmnrausrhtllc000qxwpjrkk9gb00000000000" +
+	"0000lvitxdhvuwoshvvuuttjg90000qetttqsqplosftvtlquupilda0000tvxwurn0lsnsvvnqiig100000000000" +
+	"0000uqxxxurgu9qg0vrvvusrgqohgc900000000000000000000000rowyuvvrtncpnvftrtqkqkssorpkid000ixv" +
+	"wtwxwrdpupgstnrbpog200000000000000000000000000000000000000000000000000";
 
 export const ENVELOPE_STEP_S = 0.1;
+
+/** SHA-256 of the track this envelope was read from: a test fails once the track changes. */
+export const TRACK_SHA256 = "3fa6116e0fda2a550dce9b861ca5cfb7e308b9ed167715fad4ebb712ac2eceb2";

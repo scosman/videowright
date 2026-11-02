@@ -1,31 +1,37 @@
 import { defineSegment } from "videowright";
-import { type AgentPane, createAgentPane, wrapColumns } from "../../components/v2/agent.js";
+import { type AgentPane, createAgentPane } from "../../components/v2/agent.js";
 import { type Browser, createBrowser } from "../../components/v2/browser.js";
 import { fontsReady } from "../../components/v2/fonts.js";
-import { hudProbe, showHud } from "../../components/v2/hud.js";
-import { css, ms, tidy } from "../../components/v2/motion.js";
+import { showHud } from "../../components/v2/hud.js";
+import { css, ms } from "../../components/v2/motion.js";
 import { type Stage, createStage, flare, startAmbient } from "../../components/v2/stage.js";
 import { sweepReveal } from "../../components/v2/sweep.js";
-import { spinnerGlyph, tui } from "../../components/v2/terminal.js";
+import { tui } from "../../components/v2/terminal.js";
 import { type TitleLockup, createTitleLockup } from "../../components/v2/title-lockup.js";
+import { charsAt, typeSchedule } from "../../components/v2/typing.js";
 
 // Beat 4: the live loop. Claude Code on the left, the dev server's preview on the right,
 // still showing the first draft's off-brand title card. The request types in (the VO is
-// saying it), the agent edits two files, and on "reloads" the preview hot-reloads into the
+// saying it), the agent replies in one line, and on "reloads" the preview hot-reloads into the
 // real title card: the same title-lockup component as beat 2, on the same stage, playing its
 // reveal in miniature. Then the frame holds on the result.
 
 /** This segment's advances (s): Enter on "and", the hot reload on "reloads", the exit. */
-const ADV = [1.9, 2.96, 5.785];
+const ADV = [1.9, 2.95, 5.483];
 
-const PROMPT =
-	"update the title card to our latest branding (name, tagline, design guide, colors), and add some motion";
+const PROMPT = "update to new logo and style";
 /**
- * ms per typed character: the 103-character request must land between "Request" and "and"
- * (~1.8s), so it types fast. Phase 6 can widen the pause before "Request" if it reads rushed.
+ * The request types at a calm human pace: from TYPE_AT (as the split's left door passes the
+ * input box), about KEY_MS a key with ±30% jitter, its last key at least ENTER_BEAT before
+ * Enter ("and"). A window too short for that pace compresses the rhythm to fit (sub-beat
+ * timing derives from the advance window).
  */
-const CHAR_MS = 16;
-const TYPE_AT = 120;
+const KEY_MS = 52;
+const TYPE_AT = 300;
+const ENTER_BEAT = 100;
+const RHYTHM = { jitter: 0.3, beat: 1.4, beatAfter: /\s/ };
+/** The agent's one-line reply, then the hot reload's confirmation. */
+const REPLY = "Updating title-card.ts…";
 
 /** The split: the agent pane ends left of it, the browser starts right of it. */
 const SPLIT = 800;
@@ -39,8 +45,8 @@ const PREVIEW_SCALE = FRAME.w / 1920;
 const KEY_AGENT = { x: 460, y: 520 };
 const KEY_BROWSER = { x: 1300, y: 500 };
 
-/** Transcript rows. */
-const ROW = { history: 3, input: 6, update: 11, status: 14, nextInput: 16 } as const;
+/** Transcript rows: the request, the reply, the confirmation, then the next prompt. */
+const ROW = { input: 3, update: 5, status: 6, nextInput: 8 } as const;
 
 let host: HTMLElement | null = null;
 let stage: Stage;
@@ -64,7 +70,7 @@ function frameLayer(parent: HTMLElement): { clip: HTMLElement; canvas: HTMLEleme
 
 export default defineSegment({
 	id: "v2-interactive-dev",
-	advances: [1.9, 2.96, 5.785],
+	advances: [1.9, 2.95, 5.483],
 	voiceover: "Request changes in your coding agent, and the preview hot reloads.",
 	notes:
 		"Entered on me-split (its line is this scene's divider, data-split-x). The request types from frame 1 ('Request'). Advance 1: Enter, 0.15s before 'and'. Advance 2: the hot reload, 0.15s before 'reloads'. Advance 3: exit, 0.15s before the export beat's 'One'.",
@@ -81,8 +87,6 @@ export default defineSegment({
 			title: "videowright_demo — claude",
 			cwd: "~/videowright_demo",
 		});
-		pane.line(ROW.history, tui.say("Video is ready. Preview:"));
-		pane.line(ROW.history + 1, tui.code("npm run dev"), 2);
 		pane.input.setRow(ROW.input);
 
 		// ── The browser on the dev server, showing the draft ──
@@ -115,23 +119,21 @@ export default defineSegment({
 				<div class="v2-draft-name">VideoRight</div>
 				<div class="v2-draft-tag">Video Agent Tool</div>
 			</div>`;
-		// The real title card, ready behind it: the beat-2 stage and lockup, unlabelled at this
-		// scale (its HUD labels would fall under the 22px floor on screen).
+		// The real title card, ready behind it: the beat-2 stage and lockup.
 		const real = frameLayer(view);
 		live = real.clip;
 		live.style.visibility = "hidden";
-		preview = createStage(real.canvas, { key: { x: 940, y: 470 }, scanPhase: 1800 });
+		preview = createStage(real.canvas, { key: { x: 940, y: 510 }, scanPhase: 1800 });
 		preview.root.insertAdjacentHTML(
 			"beforeend",
 			'<div class="me-hud"><div class="me-frame"></div></div>',
 		);
-		lockup = createTitleLockup(preview.content, { labels: false });
+		lockup = createTitleLockup(preview.content);
 
 		showHud(el, {
 			beat: 4,
 			total: 8,
 			section: "Live preview",
-			probe: "LOCALHOST:5173 · VITE HMR",
 			// The split lands its line at 30%; the readouts change as the panes open.
 			delay: 260,
 			signal: ctx.signal,
@@ -140,22 +142,25 @@ export default defineSegment({
 
 	async play(ctx) {
 		if (!host) return;
-		const { signal } = ctx;
 		const amb = startAmbient(ctx, stage);
-		const lines = wrapColumns(PROMPT, pane.input.cols);
 
 		// ── The request types in ──
 		const typeStart = amb.now() + TYPE_AT;
+		const keys = typeSchedule(
+			PROMPT,
+			typeStart,
+			Math.min(typeStart + (PROMPT.length - 1) * KEY_MS, amb.now() + ADV[0] * 1000 - ENTER_BEAT),
+			3,
+			RHYTHM,
+		);
 		let entered = false;
-		let lastKey = 0;
 		amb.add((t) => {
 			if (entered) return false;
-			const n = Math.min(PROMPT.length, Math.max(0, Math.floor(tidy(t - typeStart) / CHAR_MS) + 1));
-			const chars = t < typeStart ? 0 : n;
-			if (chars > 0) lastKey = typeStart + (chars - 1) * CHAR_MS;
-			pane.input.show(lines, chars);
+			const chars = charsAt(keys, t);
+			const lastKey = chars > 0 ? keys[chars - 1] : typeStart;
+			pane.input.show(PROMPT, chars);
 			// Solid while keys land, blinking once idle.
-			const idle = t - Math.max(lastKey, typeStart);
+			const idle = t - lastKey;
 			pane.input.caret.style.opacity =
 				t < typeStart || idle < 400 || Math.floor((idle - 400) / 530) % 2 === 1 ? "1" : "0";
 			return true;
@@ -168,32 +173,14 @@ export default defineSegment({
 		await ctx.waitForNext();
 		// ── Enter ("and the preview…"): the request goes in, Claude edits the files ──
 		entered = true;
-		lines.forEach((text, i) => {
-			pane.line(
-				ROW.input + i,
-				`<span class="v2-dim">${i === 0 ? "&gt; " : "  "}${esc(text)}</span>`,
-			);
-		});
-		pane.input.show([""], 0);
+		// The request moves into the transcript, echoed as Claude Code does; the agent replies.
+		pane.line(ROW.input, tui.echo(PROMPT));
+		pane.input.show("", 0);
 		pane.input.setRow(ROW.nextInput);
-		const enteredAt = amb.now();
-		const update = ["Updating segments/title-card.ts,", "styles/tokens.css…"];
 		setTimeout(() => {
-			pane.line(ROW.update, tui.say(update[0]));
-			pane.line(ROW.update + 1, update[1], 2);
+			if (!ctx.signal.aborted) pane.line(ROW.update, tui.say(REPLY));
 		}, 220);
-		let resolved = false;
-		amb.add((t) => {
-			if (resolved) return false;
-			const since = t - enteredAt;
-			if (since >= 380) {
-				const secs = Math.floor(since / 1000) + 1;
-				pane.line(ROW.status, tui.spinner(spinnerGlyph(since), "Hot-reloading…", `${secs}s`));
-			}
-			return true;
-		});
 		pane.input.caret.style.opacity = "1";
-		hudProbe("EDIT · 2 FILES", 300, signal);
 		// The eye goes to the preview: the key light glides over to the browser.
 		key.animate(
 			[
@@ -206,7 +193,6 @@ export default defineSegment({
 		await ctx.waitForNext();
 		// ── "reloads": hot update. The draft is swept away top to bottom and the real title
 		// card plays its reveal, live, in the preview ──
-		resolved = true;
 		pane.line(ROW.status, '<span class="v2-ok">✓</span> Done. Hot-reloaded.');
 		const hmr = browser.viewport.querySelector('[data-ref="hmr"]') as HTMLElement;
 		(browser.viewport.querySelector('[data-ref="hmr-text"]') as HTMLElement).textContent =
@@ -220,20 +206,9 @@ export default defineSegment({
 			],
 			{ duration: 2400, easing: css("--ease-settle"), fill: "forwards" },
 		);
-		const swept = sweepReveal(browser.viewport, live, draft, FRAME, { axis: "y", duration: 460 });
-		// The update lands: the preview's edge flashes cyan once, like the instrument confirming.
-		const edge = document.createElement("div");
-		edge.style.cssText = `position:absolute; left:${FRAME.x}px; top:${FRAME.y}px; width:${FRAME.w}px; height:${FRAME.h}px; pointer-events:none; box-shadow: inset 0 0 0 3px var(--cyan), inset 0 0 48px rgba(91, 216, 245, 0.28); opacity:0`;
-		browser.viewport.appendChild(edge);
-		edge.animate([{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 0 }], {
-			duration: 900,
-			delay: swept - 80,
-			easing: css("--ease-settle"),
-			fill: "both",
-		});
-		lockup.reveal(amb);
+		sweepReveal(browser.viewport, live, draft, FRAME, { axis: "y", duration: 460 });
+		lockup.reveal();
 		flare(stage, BROWSER.x + FRAME.x + FRAME.w / 2, BROWSER.y + 64 + FRAME.y + FRAME.h / 2, 120);
-		hudProbe("HOT UPDATE · STATE KEPT", 200, signal);
 
 		// Hold on the result; the ambient drift is back at rest before the exit.
 		const restFor = ms("--dur-exit") * 1.4;
@@ -246,5 +221,3 @@ export default defineSegment({
 		host = null;
 	},
 });
-
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
